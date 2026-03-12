@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { FiSearch, FiEdit2, FiTrash2, FiX } from 'react-icons/fi';
-import './StudentInformation.css';
+import '../styles/StudentInformation.css';
 
 const students = [
   {

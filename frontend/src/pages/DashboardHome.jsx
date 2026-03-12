@@ -1,6 +1,6 @@
 import React from 'react';
 import { FiUsers, FiBriefcase, FiBookOpen, FiActivity } from 'react-icons/fi';
-import './DashboardHome.css';
+import '../styles/DashboardHome.css';
 
 const DashboardHome = () => {
   return (
