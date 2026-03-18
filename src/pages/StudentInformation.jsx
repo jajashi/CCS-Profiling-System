@@ -1,9 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { FiSearch, FiEdit2, FiTrash2, FiX } from 'react-icons/fi';
-import './StudentInformation.css';
-import maleAvatar from '../assets/images/male.jpg';
-import femaleAvatar from '../assets/images/female.jpg';
-
+import femaleImage from '../assets/images/female.jpg';
+import maleImage from '../assets/images/male.jpg';
+import '../styles/StudentInformation.css';
 
 const students = [
   {
@@ -202,6 +201,13 @@ const StudentInformation = () => {
   const [query, setQuery] = useState('');
   const [selectedStudent, setSelectedStudent] = useState(null);
 
+  const getProfileImage = (gender) => {
+    const normalized = (gender || '').trim().toLowerCase();
+    if (normalized === 'male') return maleImage;
+    if (normalized === 'female') return femaleImage;
+    return femaleImage;
+  };
+
   const filteredStudents = useMemo(() => {
     const term = query.toLowerCase().trim();
     if (!term) return students;
@@ -222,9 +228,6 @@ const StudentInformation = () => {
   }, [query]);
 
   const handleRowClick = (student) => {
-    const isFemale = String(student.gender).toLowerCase() === 'female';
-    const profileImage = isFemale ? femaleAvatar : maleAvatar;
-    setSelectedStudent({ ...student, profileImage });
     setSelectedStudent(student);
   };
 
@@ -332,25 +335,20 @@ const StudentInformation = () => {
       {selectedStudent && (
         <div className="student-modal-backdrop" onClick={() => setSelectedStudent(null)}>
           <div className="student-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-breadcrumb">
-              <button
-                type="button"
-                className="breadcrumb-link"
-                onClick={() => setSelectedStudent(null)}
-              >
+            <div className="breadcrumb-bar">
+              <button className="breadcrumb-link" type="button" onClick={() => setSelectedStudent(null)}>
                 Students
               </button>
-              <span className="breadcrumb-sep">/</span>
+              <span className="breadcrumb-separator">/</span>
               <span className="breadcrumb-current">
                 {selectedStudent.firstName} {selectedStudent.lastName}
               </span>
             </div>
-
             <div className="modal-header">
-              <div className="modal-identity">
+              <div className="profile-header">
                 <img
                   className="profile-avatar"
-                  src={selectedStudent.profileImage}
+                  src={getProfileImage(selectedStudent.gender)}
                   alt={`${selectedStudent.firstName} ${selectedStudent.lastName}`}
                 />
                 <div>
@@ -360,13 +358,6 @@ const StudentInformation = () => {
                   </h3>
                   <p className="modal-subtitle">ID: {selectedStudent.id}</p>
                 </div>
-            <div className="modal-header">
-              <div>
-                <p className="modal-eyebrow">Student Details</p>
-                <h3>
-                  {selectedStudent.firstName} {selectedStudent.middleName} {selectedStudent.lastName}
-                </h3>
-                <p className="modal-subtitle">ID: {selectedStudent.id}</p>
               </div>
               <button className="modal-close" onClick={() => setSelectedStudent(null)} aria-label="Close dialog">
                 <FiX />
@@ -374,108 +365,57 @@ const StudentInformation = () => {
             </div>
 
             <div className="modal-grid">
-              <div className="detail-field">
-                <label className="label">Program / Course</label>
-                <input type="text" value={selectedStudent.program} readOnly />
-              </div>
-              <div className="detail-field">
-                <label className="label">Year Level</label>
-                <input type="text" value={selectedStudent.yearLevel} readOnly />
-              </div>
-              <div className="detail-field">
-                <label className="label">Section</label>
-                <input type="text" value={selectedStudent.section} readOnly />
-              </div>
-              <div className="detail-field">
-                <label className="label">Enrollment Status</label>
-                <input type="text" value={selectedStudent.status} readOnly />
-              </div>
-              <div className="detail-field">
-                <label className="label">Scholarship</label>
-                <input type="text" value={selectedStudent.scholarship} readOnly />
-              </div>
-              <div className="detail-field">
-                <label className="label">Date Enrolled</label>
-                <input type="text" value={selectedStudent.dateEnrolled} readOnly />
-              </div>
-              <div className="detail-field">
-                <label className="label">Date of Birth</label>
-                <input type="text" value={selectedStudent.dob} readOnly />
-              </div>
-              <div className="detail-field">
-                <label className="label">Gender</label>
-                <input type="text" value={selectedStudent.gender} readOnly />
-              </div>
-              <div className="detail-field">
-                <label className="label">Contact Number</label>
-                <input type="text" value={selectedStudent.contact} readOnly />
-              </div>
-              <div className="detail-field">
-                <label className="label">Email Address</label>
-                <input type="text" value={selectedStudent.email} readOnly />
-              </div>
-              <div className="detail-field">
-                <label className="label">Guardian</label>
-                <input type="text" value={selectedStudent.guardian} readOnly />
-              </div>
-              <div className="detail-field">
-                <label className="label">Guardian Contact Info</label>
-                <input type="text" value={selectedStudent.guardianContact} readOnly />
-              </div>
-              <div className="detail-field">
-                <label className="label">Violation</label>
-                <input type="text" value={selectedStudent.violation} readOnly />
               <div>
                 <p className="label">Program / Course</p>
-                <p className="value">{selectedStudent.program}</p>
+                <input className="readonly-field" type="text" value={selectedStudent.program} readOnly />
               </div>
               <div>
                 <p className="label">Year Level</p>
-                <p className="value">{selectedStudent.yearLevel}</p>
+                <input className="readonly-field" type="text" value={selectedStudent.yearLevel} readOnly />
               </div>
               <div>
                 <p className="label">Section</p>
-                <p className="value">{selectedStudent.section}</p>
+                <input className="readonly-field" type="text" value={selectedStudent.section} readOnly />
               </div>
               <div>
                 <p className="label">Enrollment Status</p>
-                <p className="value">{selectedStudent.status}</p>
+                <input className="readonly-field" type="text" value={selectedStudent.status} readOnly />
               </div>
               <div>
                 <p className="label">Scholarship</p>
-                <p className="value">{selectedStudent.scholarship}</p>
+                <input className="readonly-field" type="text" value={selectedStudent.scholarship} readOnly />
               </div>
               <div>
                 <p className="label">Date Enrolled</p>
-                <p className="value">{selectedStudent.dateEnrolled}</p>
+                <input className="readonly-field" type="text" value={selectedStudent.dateEnrolled} readOnly />
               </div>
               <div>
                 <p className="label">Date of Birth</p>
-                <p className="value">{selectedStudent.dob}</p>
+                <input className="readonly-field" type="text" value={selectedStudent.dob} readOnly />
               </div>
               <div>
                 <p className="label">Gender</p>
-                <p className="value">{selectedStudent.gender}</p>
+                <input className="readonly-field" type="text" value={selectedStudent.gender} readOnly />
               </div>
               <div>
                 <p className="label">Contact Number</p>
-                <p className="value">{selectedStudent.contact}</p>
+                <input className="readonly-field" type="text" value={selectedStudent.contact} readOnly />
               </div>
               <div>
                 <p className="label">Email Address</p>
-                <p className="value">{selectedStudent.email}</p>
+                <input className="readonly-field" type="text" value={selectedStudent.email} readOnly />
               </div>
               <div>
                 <p className="label">Guardian</p>
-                <p className="value">{selectedStudent.guardian}</p>
+                <input className="readonly-field" type="text" value={selectedStudent.guardian} readOnly />
               </div>
               <div>
                 <p className="label">Guardian Contact Info</p>
-                <p className="value">{selectedStudent.guardianContact}</p>
+                <input className="readonly-field" type="text" value={selectedStudent.guardianContact} readOnly />
               </div>
               <div>
                 <p className="label">Violation</p>
-                <p className="value">{selectedStudent.violation}</p>
+                <input className="readonly-field" type="text" value={selectedStudent.violation} readOnly />
               </div>
             </div>
           </div>
