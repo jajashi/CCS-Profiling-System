@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { FiSearch, FiEdit2, FiTrash2, FiX } from 'react-icons/fi';
 import './StudentInformation.css';
-import maleAvatar from '../assets/images/male.webp';
+import maleAvatar from '../assets/images/male.jpg';
 import femaleAvatar from '../assets/images/female.jpg';
+
 
 const students = [
   {
@@ -224,6 +225,7 @@ const StudentInformation = () => {
     const isFemale = String(student.gender).toLowerCase() === 'female';
     const profileImage = isFemale ? femaleAvatar : maleAvatar;
     setSelectedStudent({ ...student, profileImage });
+    setSelectedStudent(student);
   };
 
   return (
@@ -358,6 +360,13 @@ const StudentInformation = () => {
                   </h3>
                   <p className="modal-subtitle">ID: {selectedStudent.id}</p>
                 </div>
+            <div className="modal-header">
+              <div>
+                <p className="modal-eyebrow">Student Details</p>
+                <h3>
+                  {selectedStudent.firstName} {selectedStudent.middleName} {selectedStudent.lastName}
+                </h3>
+                <p className="modal-subtitle">ID: {selectedStudent.id}</p>
               </div>
               <button className="modal-close" onClick={() => setSelectedStudent(null)} aria-label="Close dialog">
                 <FiX />
@@ -416,6 +425,57 @@ const StudentInformation = () => {
               <div className="detail-field">
                 <label className="label">Violation</label>
                 <input type="text" value={selectedStudent.violation} readOnly />
+              <div>
+                <p className="label">Program / Course</p>
+                <p className="value">{selectedStudent.program}</p>
+              </div>
+              <div>
+                <p className="label">Year Level</p>
+                <p className="value">{selectedStudent.yearLevel}</p>
+              </div>
+              <div>
+                <p className="label">Section</p>
+                <p className="value">{selectedStudent.section}</p>
+              </div>
+              <div>
+                <p className="label">Enrollment Status</p>
+                <p className="value">{selectedStudent.status}</p>
+              </div>
+              <div>
+                <p className="label">Scholarship</p>
+                <p className="value">{selectedStudent.scholarship}</p>
+              </div>
+              <div>
+                <p className="label">Date Enrolled</p>
+                <p className="value">{selectedStudent.dateEnrolled}</p>
+              </div>
+              <div>
+                <p className="label">Date of Birth</p>
+                <p className="value">{selectedStudent.dob}</p>
+              </div>
+              <div>
+                <p className="label">Gender</p>
+                <p className="value">{selectedStudent.gender}</p>
+              </div>
+              <div>
+                <p className="label">Contact Number</p>
+                <p className="value">{selectedStudent.contact}</p>
+              </div>
+              <div>
+                <p className="label">Email Address</p>
+                <p className="value">{selectedStudent.email}</p>
+              </div>
+              <div>
+                <p className="label">Guardian</p>
+                <p className="value">{selectedStudent.guardian}</p>
+              </div>
+              <div>
+                <p className="label">Guardian Contact Info</p>
+                <p className="value">{selectedStudent.guardianContact}</p>
+              </div>
+              <div>
+                <p className="label">Violation</p>
+                <p className="value">{selectedStudent.violation}</p>
               </div>
             </div>
           </div>
