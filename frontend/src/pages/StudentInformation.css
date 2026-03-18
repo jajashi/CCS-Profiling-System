@@ -196,12 +196,58 @@
   padding: 1.5rem;
 }
 
+.modal-breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+  font-size: 0.85rem;
+  color: #5f6368;
+}
+
+.breadcrumb-link {
+  background: none;
+  border: none;
+  color: #ff5f00;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.breadcrumb-link:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb-sep {
+  color: #c1c7cd;
+}
+
+.breadcrumb-current {
+  font-weight: 600;
+  color: #1e293b;
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 1rem;
   margin-bottom: 1.25rem;
+}
+
+.modal-identity {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.profile-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  object-fit: cover;
+  border: 2px solid #ff8c00;
+  background: #fff3e8;
 }
 
 .modal-eyebrow {
@@ -245,6 +291,27 @@
   font-size: 0.82rem;
   text-transform: uppercase;
   letter-spacing: 0.02em;
+}
+
+.detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.detail-field input {
+  border: 1px solid #e5edf5;
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.95rem;
+  color: #1e293b;
+  background: #f8fafc;
+}
+
+.detail-field input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255, 140, 0, 0.15);
+  border-color: #ff8c00;
 }
 
 .value {
