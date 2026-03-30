@@ -1,0 +1,223 @@
+/**
+ * One-time seed: inserts mock students matching the frontend mock data.
+ * Run: npm run seed (from backend directory, with .env and MongoDB available).
+ */
+require('dotenv').config();
+
+const mongoose = require('mongoose');
+const Student = require('../models/Student');
+
+const MOCK_STUDENTS = [
+  {
+    id: '2023-001',
+    firstName: 'Althea',
+    middleName: 'M.',
+    lastName: 'Santos',
+    gender: 'Female',
+    dob: '2005-02-18',
+    program: 'BSCS',
+    yearLevel: '2',
+    section: 'CS2A',
+    status: 'Enrolled',
+    scholarship: 'Academic Scholar',
+    email: 'althea.santos@ccs.edu',
+    contact: '+63 917 555 1001',
+    dateEnrolled: '2023-08-21',
+    guardian: 'Maria Santos',
+    guardianContact: '+63 917 777 8800',
+    violation: 'None',
+  },
+  {
+    id: '2023-002',
+    firstName: 'Bryan',
+    middleName: 'L.',
+    lastName: 'Reyes',
+    gender: 'Male',
+    dob: '2004-11-05',
+    program: 'BSIT',
+    yearLevel: '3',
+    section: 'IT3B',
+    status: 'Enrolled',
+    scholarship: "Dean's Lister",
+    email: 'bryan.reyes@ccs.edu',
+    contact: '+63 917 555 1002',
+    dateEnrolled: '2022-08-22',
+    guardian: 'Leo Reyes',
+    guardianContact: '+63 917 555 9988',
+    violation: 'None',
+  },
+  {
+    id: '2023-003',
+    firstName: 'Claire',
+    middleName: 'D.',
+    lastName: 'Valdez',
+    gender: 'Female',
+    dob: '2005-07-12',
+    program: 'BSCS',
+    yearLevel: '1',
+    section: 'CS1C',
+    status: 'Enrolled',
+    scholarship: 'None',
+    email: 'claire.valdez@ccs.edu',
+    contact: '+63 917 555 1003',
+    dateEnrolled: '2024-08-23',
+    guardian: 'Diana Valdez',
+    guardianContact: '+63 917 555 8833',
+    violation: 'None',
+  },
+  {
+    id: '2023-004',
+    firstName: 'Dylan',
+    middleName: 'R.',
+    lastName: 'Lopez',
+    gender: 'Male',
+    dob: '2003-03-30',
+    program: 'BSEMC',
+    yearLevel: '4',
+    section: 'EM4A',
+    status: 'On Leave',
+    scholarship: 'Athletic Grant',
+    email: 'dylan.lopez@ccs.edu',
+    contact: '+63 917 555 1004',
+    dateEnrolled: '2021-08-20',
+    guardian: 'Rosa Lopez',
+    guardianContact: '+63 917 555 4411',
+    violation: 'None',
+  },
+  {
+    id: '2023-005',
+    firstName: 'Elaine',
+    middleName: 'C.',
+    lastName: 'Tan',
+    gender: 'Female',
+    dob: '2004-01-15',
+    program: 'BSIT',
+    yearLevel: '3',
+    section: 'IT3A',
+    status: 'Enrolled',
+    scholarship: 'CHED Scholar',
+    email: 'elaine.tan@ccs.edu',
+    contact: '+63 917 555 1005',
+    dateEnrolled: '2022-08-22',
+    guardian: 'Carlos Tan',
+    guardianContact: '+63 917 555 2288',
+    violation: 'Warning (late)',
+  },
+  {
+    id: '2023-006',
+    firstName: 'Franco',
+    middleName: 'N.',
+    lastName: 'Garcia',
+    gender: 'Male',
+    dob: '2003-09-08',
+    program: 'BSCS',
+    yearLevel: '4',
+    section: 'CS4B',
+    status: 'Enrolled',
+    scholarship: 'None',
+    email: 'franco.garcia@ccs.edu',
+    contact: '+63 917 555 1006',
+    dateEnrolled: '2021-08-20',
+    guardian: 'Norma Garcia',
+    guardianContact: '+63 917 555 6699',
+    violation: 'Academic probation',
+  },
+  {
+    id: '2023-007',
+    firstName: 'Giselle',
+    middleName: 'P.',
+    lastName: 'Chua',
+    gender: 'Female',
+    dob: '2005-04-27',
+    program: 'BSIS',
+    yearLevel: '2',
+    section: 'IS2A',
+    status: 'Enrolled',
+    scholarship: 'Academic Scholar',
+    email: 'giselle.chua@ccs.edu',
+    contact: '+63 917 555 1007',
+    dateEnrolled: '2023-08-21',
+    guardian: 'Patricia Chua',
+    guardianContact: '+63 917 555 4477',
+    violation: 'None',
+  },
+  {
+    id: '2023-008',
+    firstName: 'Hans',
+    middleName: 'E.',
+    lastName: 'Uy',
+    gender: 'Male',
+    dob: '2004-06-02',
+    program: 'BSIT',
+    yearLevel: '3',
+    section: 'IT3C',
+    status: 'Enrolled',
+    scholarship: 'Industry Partner',
+    email: 'hans.uy@ccs.edu',
+    contact: '+63 917 555 1008',
+    dateEnrolled: '2022-08-22',
+    guardian: 'Erica Uy',
+    guardianContact: '+63 917 555 6622',
+    violation: 'None',
+  },
+  {
+    id: '2023-009',
+    firstName: 'Isabel',
+    middleName: 'V.',
+    lastName: 'Cruz',
+    gender: 'Female',
+    dob: '2005-12-10',
+    program: 'BSIS',
+    yearLevel: '2',
+    section: 'IS2B',
+    status: 'Enrolled',
+    scholarship: 'None',
+    email: 'isabel.cruz@ccs.edu',
+    contact: '+63 917 555 1009',
+    dateEnrolled: '2023-08-21',
+    guardian: 'Vicente Cruz',
+    guardianContact: '+63 917 555 5577',
+    violation: 'None',
+  },
+  {
+    id: '2023-010',
+    firstName: 'Javier',
+    middleName: 'S.',
+    lastName: 'Delos Reyes',
+    gender: 'Male',
+    dob: '2003-10-19',
+    program: 'BSEMC',
+    yearLevel: '4',
+    section: 'EM4B',
+    status: 'Graduating',
+    scholarship: 'None',
+    email: 'javier.delosreyes@ccs.edu',
+    contact: '+63 917 555 1010',
+    dateEnrolled: '2021-08-20',
+    guardian: 'Sara Delos Reyes',
+    guardianContact: '+63 917 555 3344',
+    violation: 'None',
+  },
+];
+
+async function run() {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    console.error('MONGODB_URI is not set.');
+    process.exit(1);
+  }
+  await mongoose.connect(uri);
+  console.log('Database connected');
+
+  await Student.deleteMany({ id: { $in: MOCK_STUDENTS.map((s) => s.id) } });
+  await Student.insertMany(MOCK_STUDENTS);
+  console.log(`Seeded ${MOCK_STUDENTS.length} students.`);
+
+  await mongoose.disconnect();
+  process.exit(0);
+}
+
+run().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
