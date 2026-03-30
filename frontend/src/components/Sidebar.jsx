@@ -16,10 +16,10 @@ const Sidebar = () => {
     <aside className="sidebar">
       <div className="sidebar-header">
         <div className="sidebar-logo">
-          <img 
-            src={logoSrc} 
-            alt="CCS" 
-            className="logo-img" 
+          <img
+            src={logoSrc}
+            alt="CCS"
+            className="logo-img"
             onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }}
           />
           <span style={{ display: 'none' }} className="text-logo">CCS</span>
@@ -35,7 +35,7 @@ const Sidebar = () => {
               <span className="nav-text">Dashboard</span>
             </NavLink>
           </li>
-          
+
           <li className="nav-item">
             <NavLink to="/dashboard/student-info" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
               <span className="nav-icon"><FiUsers /></span>
