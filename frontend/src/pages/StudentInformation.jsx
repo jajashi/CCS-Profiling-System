@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from 'react';
-import { FiSearch, FiEdit2, FiTrash2, FiX } from 'react-icons/fi';
+import React, { useEffect, useMemo, useState } from 'react';
+import { FiPlus, FiSearch, FiEdit2, FiTrash2, FiX } from 'react-icons/fi';
 import femaleImage from '../assets/images/female.jpg';
 import maleImage from '../assets/images/male.jpg';
+import AddStudentForm from '../components/AddStudentForm';
 import '../styles/StudentInformation.css';
 
-const students = [
+const mockStudents = [
   {
     id: '2023-001',
     firstName: 'Althea',
@@ -200,6 +201,12 @@ const students = [
 const StudentInformation = () => {
   const [query, setQuery] = useState('');
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [students, setStudents] = useState(mockStudents);
+  const [loadingStudents, setLoadingStudents] = useState(true);
+  const [studentLoadError, setStudentLoadError] = useState('');
+  const [isStudentFormOpen, setIsStudentFormOpen] = useState(false);
+  const [studentFormMode, setStudentFormMode] = useState('create');
+  const [studentFormTarget, setStudentFormTarget] = useState(null);
 
   const getProfileImage = (gender) => {
     const normalized = (gender || '').trim().toLowerCase();
@@ -207,6 +214,31 @@ const StudentInformation = () => {
     if (normalized === 'female') return femaleImage;
     return femaleImage;
   };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    (async () => {
+      try {
+        const res = await fetch('/api/students');
+        if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+        const data = await res.json();
+        if (isMounted && Array.isArray(data)) {
+          setStudents(data);
+        }
+      } catch {
+        if (isMounted) {
+          setStudentLoadError('Could not load students from the server. Showing sample data.');
+        }
+      } finally {
+        if (isMounted) setLoadingStudents(false);
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const filteredStudents = useMemo(() => {
     const term = query.toLowerCase().trim();
@@ -225,7 +257,20 @@ const StudentInformation = () => {
         .toLowerCase()
         .includes(term),
     );
-  }, [query]);
+  }, [query, students]);
+
+  const nextStudentId = useMemo(() => {
+    const prefix = '2201';
+    const manualMax = 899;
+    const maxSuffix = students
+      .map((student) => String(student.id || ''))
+      .filter((id) => id.startsWith(prefix) && id.length === 7)
+      .map((id) => Number.parseInt(id.slice(prefix.length), 10))
+      .filter((value) => Number.isInteger(value) && value <= manualMax)
+      .reduce((max, current) => (current > max ? current : max), 0);
+
+    return `${prefix}${String(maxSuffix + 1).padStart(3, '0')}`;
+  }, [students]);
 
   const handleRowClick = (student) => {
     setSelectedStudent(student);
@@ -251,12 +296,34 @@ const StudentInformation = () => {
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
-          <div className="toolbar-meta">
+          <div className="toolbar-meta flex items-center justify-between gap-4">
             <span className="meta-chip">
               {filteredStudents.length} of {students.length} students
             </span>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedStudent(null);
+                setStudentFormMode('create');
+                setStudentFormTarget(null);
+                setIsStudentFormOpen(true);
+              }}
+              className="inline-flex min-h-[44px] min-w-[160px] items-center justify-center whitespace-nowrap rounded-xl bg-[#ff7f00] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#e67300] focus:outline-none focus:ring-2 focus:ring-[#fff3e6]"
+              aria-label="Add a new student"
+              disabled={loadingStudents}
+              title={loadingStudents ? 'Loading students...' : 'Add Student'}
+            >
+              <FiPlus />
+              <span>Add Student</span>
+            </button>
           </div>
         </div>
+
+        {studentLoadError ? (
+          <div className="mt-3 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 border border-red-200">
+            {studentLoadError}
+          </div>
+        ) : null}
 
         <div className="table-responsive">
           <table className="student-table">
@@ -310,7 +377,19 @@ const StudentInformation = () => {
                   <td>{student.violation}</td>
                   <td>
                     <div className="action-buttons" onClick={(e) => e.stopPropagation()}>
-                      <button className="action-btn edit" type="button">
+                      <button
+                        className="action-btn edit"
+                        type="button"
+                        disabled={!student._id}
+                        aria-label="Edit student"
+                        title={student._id ? 'Edit student' : 'Editing unavailable for sample data'}
+                        onClick={() => {
+                          setStudentFormMode('edit');
+                          setStudentFormTarget(student);
+                          setIsStudentFormOpen(true);
+                          setSelectedStudent(null);
+                        }}
+                      >
                         <FiEdit2 />
                       </button>
                       <button className="action-btn delete" type="button">
@@ -359,9 +438,31 @@ const StudentInformation = () => {
                   <p className="modal-subtitle">ID: {selectedStudent.id}</p>
                 </div>
               </div>
-              <button className="modal-close" onClick={() => setSelectedStudent(null)} aria-label="Close dialog">
-                <FiX />
-              </button>
+              <div className="flex items-start gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStudentFormMode('edit');
+                    setStudentFormTarget(selectedStudent);
+                    setIsStudentFormOpen(true);
+                    setSelectedStudent(null);
+                  }}
+                  disabled={!selectedStudent?._id}
+                  className="modal-edit-btn"
+                  title={selectedStudent?._id ? 'Edit student' : 'Editing unavailable for sample data'}
+                >
+                  <FiEdit2 />
+                  <span>Edit</span>
+                </button>
+                <button
+                  className="modal-close"
+                  onClick={() => setSelectedStudent(null)}
+                  aria-label="Close dialog"
+                  type="button"
+                >
+                  <FiX />
+                </button>
+              </div>
             </div>
 
             <div className="modal-grid">
@@ -421,6 +522,27 @@ const StudentInformation = () => {
           </div>
         </div>
       )}
+
+      {isStudentFormOpen ? (
+        <AddStudentForm
+          mode={studentFormMode}
+          initialData={studentFormTarget}
+          nextStudentId={nextStudentId}
+          targetMongoId={studentFormTarget?._id}
+          onClose={() => setIsStudentFormOpen(false)}
+          onCreated={(createdStudent) => {
+            setStudents((prev) => [createdStudent, ...prev]);
+            setQuery('');
+            setSelectedStudent(createdStudent);
+          }}
+          onUpdated={(updatedStudent) => {
+            setStudents((prev) =>
+              prev.map((s) => (s._id && updatedStudent._id && s._id === updatedStudent._id ? updatedStudent : s)),
+            );
+            setSelectedStudent(updatedStudent);
+          }}
+        />
+      ) : null}
     </div>
   );
 };
