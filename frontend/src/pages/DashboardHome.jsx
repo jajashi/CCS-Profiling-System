@@ -1,8 +1,33 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { FiUsers, FiBriefcase, FiBookOpen, FiActivity } from 'react-icons/fi';
 import '../styles/DashboardHome.css';
 
 const DashboardHome = () => {
+  const [studentCount, setStudentCount] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    (async () => {
+      try {
+        const res = await fetch('/api/students');
+        if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+        const data = await res.json();
+        if (isMounted && Array.isArray(data)) {
+          setStudentCount(data.length);
+        }
+      } catch {
+        if (isMounted) {
+          setStudentCount(null);
+        }
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <div className="dashboard-home">
       <div className="page-header">
@@ -17,7 +42,7 @@ const DashboardHome = () => {
           </div>
           <div className="stat-details">
             <p className="stat-label">Total Students</p>
-            <h3 className="stat-value">1,245</h3>
+            <h3 className="stat-value">{studentCount === null ? '--' : studentCount.toLocaleString()}</h3>
           </div>
         </div>
         
