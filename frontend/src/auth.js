@@ -31,7 +31,7 @@ export const auth = {
     try {
       const userData = localStorage.getItem('ccs_user');
       return userData ? JSON.parse(userData) : null;
-    } catch (err) {
+    } catch {
       return null;
     }
   },

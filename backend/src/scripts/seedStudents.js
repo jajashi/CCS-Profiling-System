@@ -6,10 +6,12 @@ require('dotenv').config();
 
 const mongoose = require('mongoose');
 const Student = require('../models/Student');
+const SEED_ID_PREFIX = '2201';
+const SEED_ID_START = 901;
 
 const MOCK_STUDENTS = [
   {
-    id: '2023-001',
+    id: '2201901',
     firstName: 'Althea',
     middleName: 'M.',
     lastName: 'Santos',
@@ -28,7 +30,7 @@ const MOCK_STUDENTS = [
     violation: 'None',
   },
   {
-    id: '2023-002',
+    id: '2201902',
     firstName: 'Bryan',
     middleName: 'L.',
     lastName: 'Reyes',
@@ -47,7 +49,7 @@ const MOCK_STUDENTS = [
     violation: 'None',
   },
   {
-    id: '2023-003',
+    id: '2201903',
     firstName: 'Claire',
     middleName: 'D.',
     lastName: 'Valdez',
@@ -66,15 +68,15 @@ const MOCK_STUDENTS = [
     violation: 'None',
   },
   {
-    id: '2023-004',
+    id: '2201904',
     firstName: 'Dylan',
     middleName: 'R.',
     lastName: 'Lopez',
     gender: 'Male',
     dob: '2003-03-30',
-    program: 'BSEMC',
+    program: 'BSIT',
     yearLevel: '4',
-    section: 'EM4A',
+    section: 'IT4A',
     status: 'On Leave',
     scholarship: 'Athletic Grant',
     email: 'dylan.lopez@ccs.edu',
@@ -85,7 +87,7 @@ const MOCK_STUDENTS = [
     violation: 'None',
   },
   {
-    id: '2023-005',
+    id: '2201905',
     firstName: 'Elaine',
     middleName: 'C.',
     lastName: 'Tan',
@@ -104,7 +106,7 @@ const MOCK_STUDENTS = [
     violation: 'Warning (late)',
   },
   {
-    id: '2023-006',
+    id: '2201906',
     firstName: 'Franco',
     middleName: 'N.',
     lastName: 'Garcia',
@@ -123,7 +125,7 @@ const MOCK_STUDENTS = [
     violation: 'Academic probation',
   },
   {
-    id: '2023-007',
+    id: '2201907',
     firstName: 'Giselle',
     middleName: 'P.',
     lastName: 'Chua',
@@ -142,7 +144,7 @@ const MOCK_STUDENTS = [
     violation: 'None',
   },
   {
-    id: '2023-008',
+    id: '2201908',
     firstName: 'Hans',
     middleName: 'E.',
     lastName: 'Uy',
@@ -161,7 +163,7 @@ const MOCK_STUDENTS = [
     violation: 'None',
   },
   {
-    id: '2023-009',
+    id: '2201909',
     firstName: 'Isabel',
     middleName: 'V.',
     lastName: 'Cruz',
@@ -180,15 +182,15 @@ const MOCK_STUDENTS = [
     violation: 'None',
   },
   {
-    id: '2023-010',
+    id: '2201910',
     firstName: 'Javier',
     middleName: 'S.',
     lastName: 'Delos Reyes',
     gender: 'Male',
     dob: '2003-10-19',
-    program: 'BSEMC',
+    program: 'BSIT',
     yearLevel: '4',
-    section: 'EM4B',
+    section: 'IT4B',
     status: 'Graduating',
     scholarship: 'None',
     email: 'javier.delosreyes@ccs.edu',
@@ -200,6 +202,12 @@ const MOCK_STUDENTS = [
   },
 ];
 
+// Deterministic seed IDs so re-running seed updates the same records.
+const SEEDED_STUDENTS = MOCK_STUDENTS.map((student, index) => ({
+  ...student,
+  id: `${SEED_ID_PREFIX}${String(SEED_ID_START + index).padStart(3, '0')}`,
+}));
+
 async function run() {
   const uri = process.env.MONGODB_URI;
   if (!uri) {
@@ -209,9 +217,16 @@ async function run() {
   await mongoose.connect(uri);
   console.log('Database connected');
 
-  await Student.deleteMany({ id: { $in: MOCK_STUDENTS.map((s) => s.id) } });
-  await Student.insertMany(MOCK_STUDENTS);
-  console.log(`Seeded ${MOCK_STUDENTS.length} students.`);
+  await Student.bulkWrite(
+    SEEDED_STUDENTS.map((student) => ({
+      updateOne: {
+        filter: { id: student.id },
+        update: { $set: student },
+        upsert: true,
+      },
+    })),
+  );
+  console.log(`Seeded ${SEEDED_STUDENTS.length} students.`);
 
   await mongoose.disconnect();
   process.exit(0);
