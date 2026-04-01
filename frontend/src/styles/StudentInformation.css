@@ -101,6 +101,12 @@
   align-items: center;
 }
 
+.filter-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 .filter-select {
   width: 100%;
   padding: 0.55rem 2rem 0.55rem 0.75rem;
@@ -116,6 +122,33 @@
 
 .filter-select:hover {
   border-color: #cbd5e1;
+}
+
+.filter-input {
+  width: 100%;
+  padding: 0.55rem 2.5rem 0.55rem 0.75rem;
+  border: 1px solid #e5edf5;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #1e293b;
+  background: #ffffff;
+  font-weight: 500;
+}
+
+.filter-input:hover {
+  border-color: #cbd5e1;
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: #ff8c00;
+  box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.15);
+}
+
+.filter-input:disabled {
+  background: #f8fafc;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .filter-select:focus {
@@ -140,11 +173,21 @@
   font-size: 0.9rem;
 }
 
-.filter-clear-btn {
+.filter-select-wrapper .filter-clear-btn {
   position: absolute;
   right: 2.2rem;
   top: 50%;
   transform: translateY(-50%);
+}
+
+.filter-input-wrapper .filter-clear-btn {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.filter-clear-btn {
   width: 20px;
   height: 20px;
   border-radius: 50%;
@@ -195,6 +238,62 @@
 .clear-filters-btn svg {
   width: 14px;
   height: 14px;
+}
+
+.filter-toggle-btn {
+  height: 40px;
+  padding: 0 0.85rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #5f6368;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.filter-toggle-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+.filter-toggle-btn.active {
+  background: #ffede0;
+  border-color: #ff8c00;
+  color: #ff5f00;
+}
+
+.filter-toggle-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.filter-toolbar {
+  overflow-x: auto;
+}
+
+.filter-toolbar::-webkit-scrollbar {
+  height: 6px;
+}
+
+.filter-toolbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+
+.filter-toolbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.filter-toolbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .table-responsive {

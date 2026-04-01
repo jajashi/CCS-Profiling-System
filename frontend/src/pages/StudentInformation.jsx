@@ -12,6 +12,7 @@ import {
   FiTrash2,
   FiX,
   FiRotateCcw,
+  FiFilter,
 } from "react-icons/fi";
 import femaleImage from "../assets/images/female.jpg";
 import maleImage from "../assets/images/male.jpg";
@@ -229,7 +230,14 @@ const StudentInformation = () => {
   const [deleteError, setDeleteError] = useState("");
   const [programFilter, setProgramFilter] = useState("");
   const [skillFilter, setSkillFilter] = useState("");
+  const [yearLevelFilter, setYearLevelFilter] = useState("");
+  const [sectionFilter, setSectionFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [scholarshipFilter, setScholarshipFilter] = useState("");
+  const [genderFilter, setGenderFilter] = useState("");
+  const [violationFilter, setViolationFilter] = useState("");
   const [isFetching, setIsFetching] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   const searchInputRef = useRef(null);
 
@@ -251,6 +259,39 @@ const StudentInformation = () => {
     { value: "Problem Solving", label: "Problem Solving" },
   ];
 
+  const YEAR_LEVEL_OPTIONS = [
+    { value: "1", label: "Year 1" },
+    { value: "2", label: "Year 2" },
+    { value: "3", label: "Year 3" },
+    { value: "4", label: "Year 4" },
+  ];
+
+  const STATUS_OPTIONS = [
+    { value: "Enrolled", label: "Enrolled" },
+    { value: "On Leave", label: "On Leave" },
+    { value: "Graduating", label: "Graduating" },
+  ];
+
+  const GENDER_OPTIONS = [
+    { value: "Male", label: "Male" },
+    { value: "Female", label: "Female" },
+  ];
+
+  const VIOLATION_OPTIONS = [
+    { value: "None", label: "None" },
+    { value: "Warning (late)", label: "Warning (late)" },
+    { value: "Academic probation", label: "Academic probation" },
+  ];
+
+  const SCHOLARSHIP_OPTIONS = [
+    { value: "Academic Scholar", label: "Academic Scholar" },
+    { value: "Dean's Lister", label: "Dean's Lister" },
+    { value: "CHED Scholar", label: "CHED Scholar" },
+    { value: "Athletic Grant", label: "Athletic Grant" },
+    { value: "Industry Partner", label: "Industry Partner" },
+    { value: "None", label: "None" },
+  ];
+
   const getProfileImage = (gender) => {
     const normalized = (gender || "").trim().toLowerCase();
     if (normalized === "male") return maleImage;
@@ -268,6 +309,12 @@ const StudentInformation = () => {
       if (filters.search) params.set("search", filters.search);
       if (filters.program) params.set("program", filters.program);
       if (filters.skill) params.set("skill", filters.skill);
+      if (filters.yearLevel) params.set("yearLevel", filters.yearLevel);
+      if (filters.section) params.set("section", filters.section);
+      if (filters.status) params.set("status", filters.status);
+      if (filters.scholarship) params.set("scholarship", filters.scholarship);
+      if (filters.gender) params.set("gender", filters.gender);
+      if (filters.violation) params.set("violation", filters.violation);
 
       const queryString = params.toString();
       const url = `/api/students${queryString ? `?${queryString}` : ""}`;
@@ -305,14 +352,37 @@ const StudentInformation = () => {
       search: debouncedQuery,
       program: programFilter,
       skill: skillFilter,
+      yearLevel: yearLevelFilter,
+      section: sectionFilter,
+      status: statusFilter,
+      scholarship: scholarshipFilter,
+      gender: genderFilter,
+      violation: violationFilter,
     });
-  }, [debouncedQuery, programFilter, skillFilter, fetchStudents]);
+  }, [
+    debouncedQuery,
+    programFilter,
+    skillFilter,
+    yearLevelFilter,
+    sectionFilter,
+    statusFilter,
+    scholarshipFilter,
+    genderFilter,
+    violationFilter,
+    fetchStudents,
+  ]);
 
   const handleClearFilters = () => {
     setQuery("");
     setDebouncedQuery("");
     setProgramFilter("");
     setSkillFilter("");
+    setYearLevelFilter("");
+    setSectionFilter("");
+    setStatusFilter("");
+    setScholarshipFilter("");
+    setGenderFilter("");
+    setViolationFilter("");
   };
 
   const nextStudentId = useMemo(() => {
@@ -402,60 +472,135 @@ const StudentInformation = () => {
           </div>
           <div className="toolbar-meta flex items-center justify-between gap-4">
             <span className="meta-chip">{students.length} students</span>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedStudent(null);
-                setStudentFormMode("create");
-                setStudentFormTarget(null);
-                setIsStudentFormOpen(true);
-              }}
-              className="inline-flex min-h-[44px] min-w-[160px] items-center justify-center whitespace-nowrap rounded-xl bg-[#ff7f00] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#e67300] focus:outline-none focus:ring-2 focus:ring-[#fff3e6]"
-              aria-label="Add a new student"
-              disabled={loadingStudents || isFetching}
-              title={
-                loadingStudents || isFetching
-                  ? "Loading students..."
-                  : "Add Student"
-              }>
-              <FiPlus />
-              <span>Add Student</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className={`filter-toggle-btn ${showFilters ? "active" : ""}`}
+                onClick={() => setShowFilters(!showFilters)}
+                title="Toggle advanced filters">
+                <FiFilter />
+                <span>Filters</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedStudent(null);
+                  setStudentFormMode("create");
+                  setStudentFormTarget(null);
+                  setIsStudentFormOpen(true);
+                }}
+                className="inline-flex min-h-[44px] min-w-[160px] items-center justify-center whitespace-nowrap rounded-xl bg-[#ff7f00] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#e67300] focus:outline-none focus:ring-2 focus:ring-[#fff3e6]"
+                aria-label="Add a new student"
+                disabled={loadingStudents || isFetching}
+                title={
+                  loadingStudents || isFetching
+                    ? "Loading students..."
+                    : "Add Student"
+                }>
+                <FiPlus />
+                <span>Add Student</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="filter-toolbar">
-          <div className="filter-group">
-            <FilterDropdown
-              label="Program"
-              value={programFilter}
-              options={PROGRAM_OPTIONS}
-              onChange={setProgramFilter}
-              onClear={() => setProgramFilter("")}
-              placeholder="All Programs"
-              disabled={isFetching}
-            />
-            <FilterDropdown
-              label="Skills"
-              value={skillFilter}
-              options={SKILL_OPTIONS}
-              onChange={setSkillFilter}
-              onClear={() => setSkillFilter("")}
-              placeholder="All Skills"
-              disabled={isFetching}
-            />
+        {showFilters && (
+          <div className="filter-toolbar">
+            <div className="filter-group">
+              <FilterDropdown
+                label="Program"
+                value={programFilter}
+                options={PROGRAM_OPTIONS}
+                onChange={setProgramFilter}
+                onClear={() => setProgramFilter("")}
+                placeholder="All Programs"
+                disabled={isFetching}
+              />
+              <FilterDropdown
+                label="Year Level"
+                value={yearLevelFilter}
+                options={YEAR_LEVEL_OPTIONS}
+                onChange={setYearLevelFilter}
+                onClear={() => setYearLevelFilter("")}
+                placeholder="All Years"
+                disabled={isFetching}
+              />
+              <FilterDropdown
+                label="Section"
+                value={sectionFilter}
+                options={[]}
+                onChange={setSectionFilter}
+                onClear={() => setSectionFilter("")}
+                placeholder="All Sections"
+                disabled={isFetching}
+                customInput={true}
+              />
+              <FilterDropdown
+                label="Status"
+                value={statusFilter}
+                options={STATUS_OPTIONS}
+                onChange={setStatusFilter}
+                onClear={() => setStatusFilter("")}
+                placeholder="All Statuses"
+                disabled={isFetching}
+              />
+              <FilterDropdown
+                label="Scholarship"
+                value={scholarshipFilter}
+                options={SCHOLARSHIP_OPTIONS}
+                onChange={setScholarshipFilter}
+                onClear={() => setScholarshipFilter("")}
+                placeholder="All Scholarships"
+                disabled={isFetching}
+              />
+              <FilterDropdown
+                label="Gender"
+                value={genderFilter}
+                options={GENDER_OPTIONS}
+                onChange={setGenderFilter}
+                onClear={() => setGenderFilter("")}
+                placeholder="All Genders"
+                disabled={isFetching}
+              />
+              <FilterDropdown
+                label="Skills"
+                value={skillFilter}
+                options={SKILL_OPTIONS}
+                onChange={setSkillFilter}
+                onClear={() => setSkillFilter("")}
+                placeholder="All Skills"
+                disabled={isFetching}
+              />
+              <FilterDropdown
+                label="Violation"
+                value={violationFilter}
+                options={VIOLATION_OPTIONS}
+                onChange={setViolationFilter}
+                onClear={() => setViolationFilter("")}
+                placeholder="All Violations"
+                disabled={isFetching}
+              />
+            </div>
+            {(programFilter ||
+              skillFilter ||
+              yearLevelFilter ||
+              sectionFilter ||
+              statusFilter ||
+              scholarshipFilter ||
+              genderFilter ||
+              violationFilter ||
+              query) && (
+              <button
+                type="button"
+                className="clear-filters-btn"
+                onClick={handleClearFilters}
+                disabled={isFetching}>
+                <FiRotateCcw />
+                Clear Filters
+              </button>
+            )}
           </div>
-          {(programFilter || skillFilter || query) && (
-            <button
-              type="button"
-              className="clear-filters-btn"
-              onClick={handleClearFilters}
-              disabled={isFetching}>
-              <FiRotateCcw />
-              Clear Filters
-            </button>
-          )}
-        </div>
+        )}
 
         {studentLoadError ? (
           <div className="mt-3 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 border border-red-200">
@@ -558,7 +703,15 @@ const StudentInformation = () => {
                   <td colSpan="18" className="empty-row">
                     {isFetching
                       ? "Loading students..."
-                      : query || programFilter || skillFilter
+                      : query ||
+                          programFilter ||
+                          skillFilter ||
+                          yearLevelFilter ||
+                          sectionFilter ||
+                          statusFilter ||
+                          scholarshipFilter ||
+                          genderFilter ||
+                          violationFilter
                         ? `No students found matching your filters.`
                         : "No students available."}
                   </td>

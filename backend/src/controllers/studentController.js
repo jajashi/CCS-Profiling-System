@@ -30,7 +30,17 @@ async function generateNextStudentId() {
 
 async function getStudents(req, res, next) {
   try {
-    const { program, skill, yearLevel, section, status, search } = req.query;
+    const {
+      program,
+      skill,
+      yearLevel,
+      section,
+      status,
+      scholarship,
+      gender,
+      violation,
+      search,
+    } = req.query;
 
     const filter = {};
 
@@ -52,6 +62,18 @@ async function getStudents(req, res, next) {
 
     if (status && status.trim() !== "") {
       filter.status = status.trim();
+    }
+
+    if (scholarship && scholarship.trim() !== "") {
+      filter.scholarship = scholarship.trim();
+    }
+
+    if (gender && gender.trim() !== "") {
+      filter.gender = gender.trim();
+    }
+
+    if (violation && violation.trim() !== "") {
+      filter.violation = violation.trim();
     }
 
     if (search && search.trim() !== "") {
