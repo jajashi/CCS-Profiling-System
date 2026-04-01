@@ -1,67 +1,82 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import '../styles/AddStudentForm.css';
+import React, { useEffect, useMemo, useState } from "react";
+import "../styles/AddStudentForm.css";
+
+const SKILL_OPTIONS = [
+  { value: "Programming", label: "Programming" },
+  { value: "Web Development", label: "Web Development" },
+  { value: "Database Management", label: "Database Management" },
+  { value: "UI/UX Design", label: "UI/UX Design" },
+  { value: "Data Analysis", label: "Data Analysis" },
+  { value: "Communication", label: "Communication" },
+  { value: "Leadership", label: "Leadership" },
+  { value: "Problem Solving", label: "Problem Solving" },
+];
 
 const emptyForm = {
-  id: '',
-  firstName: '',
-  middleName: '',
-  lastName: '',
-  gender: '',
-  dob: '',
-  program: '',
-  yearLevel: '',
-  section: '',
-  status: '',
-  scholarship: '',
-  email: '',
-  contact: '',
-  dateEnrolled: '',
-  guardian: '',
-  guardianContact: '',
-  violation: '',
+  id: "",
+  firstName: "",
+  middleName: "",
+  lastName: "",
+  gender: "",
+  dob: "",
+  program: "",
+  yearLevel: "",
+  section: "",
+  status: "",
+  scholarship: "",
+  email: "",
+  contact: "",
+  dateEnrolled: "",
+  guardian: "",
+  guardianContact: "",
+  violation: "",
+  skills: [],
 };
 
 function isNonEmpty(value) {
-  return value !== undefined && value !== null && String(value).trim().length > 0;
+  return (
+    value !== undefined && value !== null && String(value).trim().length > 0
+  );
 }
 
 function isValidEmail(value) {
-  const v = String(value || '').trim();
+  const v = String(value || "").trim();
   if (!v) return true; // optional
   // Simple, pragmatic email check.
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
 
 function isValidPhone(value) {
-  const v = String(value || '').trim();
+  const v = String(value || "").trim();
   if (!v) return true; // optional
   return /^09\d{9}$/.test(v);
 }
 
 function mapStudentToFormData(student) {
   return {
-    id: String(student?.id ?? ''),
-    firstName: String(student?.firstName ?? ''),
-    middleName: String(student?.middleName ?? ''),
-    lastName: String(student?.lastName ?? ''),
-    gender: String(student?.gender ?? ''),
-    dob: String(student?.dob ?? ''),
-    program: String(student?.program ?? ''),
-    yearLevel: String(student?.yearLevel ?? ''),
-    section: String(student?.section ?? ''),
-    status: String(student?.status ?? ''),
-    scholarship: String(student?.scholarship ?? ''),
-    email: String(student?.email ?? ''),
-    contact: String(student?.contact ?? ''),
-    dateEnrolled: String(student?.dateEnrolled ?? ''),
-    guardian: String(student?.guardian ?? ''),
-    guardianContact: String(student?.guardianContact ?? ''),
-    violation: String(student?.violation ?? ''),
+    id: String(student?.id ?? ""),
+    firstName: String(student?.firstName ?? ""),
+    middleName: String(student?.middleName ?? ""),
+    lastName: String(student?.lastName ?? ""),
+    gender: String(student?.gender ?? ""),
+    dob: String(student?.dob ?? ""),
+    program: String(student?.program ?? ""),
+    yearLevel: String(student?.yearLevel ?? ""),
+    section: String(student?.section ?? ""),
+    status: String(student?.status ?? ""),
+    scholarship: String(student?.scholarship ?? ""),
+    email: String(student?.email ?? ""),
+    contact: String(student?.contact ?? ""),
+    dateEnrolled: String(student?.dateEnrolled ?? ""),
+    guardian: String(student?.guardian ?? ""),
+    guardianContact: String(student?.guardianContact ?? ""),
+    violation: String(student?.violation ?? ""),
+    skills: Array.isArray(student?.skills) ? student.skills : [],
   };
 }
 
 export default function AddStudentForm({
-  mode = 'create',
+  mode = "create",
   initialData,
   nextStudentId,
   targetMongoId,
@@ -71,14 +86,14 @@ export default function AddStudentForm({
 }) {
   const [formData, setFormData] = useState(emptyForm);
   const [errors, setErrors] = useState({});
-  const [submitError, setSubmitError] = useState('');
+  const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
-  const controlClass = 'add-student-control mt-1 block';
-  const labelClass = 'add-student-label';
+  const controlClass = "add-student-control mt-1 block";
+  const labelClass = "add-student-label";
 
-  const isEditMode = mode === 'edit';
+  const isEditMode = mode === "edit";
 
   useEffect(() => {
     if (isEditMode && initialData) {
@@ -86,31 +101,35 @@ export default function AddStudentForm({
     } else {
       setFormData({
         ...emptyForm,
-        id: nextStudentId || '',
+        id: nextStudentId || "",
       });
     }
     setErrors({});
-    setSubmitError('');
+    setSubmitError("");
     setSubmitting(false);
     setShowPreview(false);
   }, [isEditMode, initialData, nextStudentId]);
 
   const validationRules = useMemo(() => {
     const base = [
-      { key: 'firstName', label: 'First Name', required: true },
-      { key: 'lastName', label: 'Last Name', required: true },
-      { key: 'program', label: 'Program', required: true },
-      { key: 'yearLevel', label: 'Year Level', required: true },
-      { key: 'section', label: 'Section', required: true },
-      { key: 'status', label: 'Enrollment Status', required: true },
-      { key: 'email', label: 'Email Address', required: true },
-      { key: 'contact', label: 'Contact Number', required: true },
-      { key: 'dateEnrolled', label: 'Date Enrolled', required: true },
-      { key: 'guardian', label: 'Guardian', required: true },
-      { key: 'guardianContact', label: 'Guardian Contact Information', required: true },
+      { key: "firstName", label: "First Name", required: true },
+      { key: "lastName", label: "Last Name", required: true },
+      { key: "program", label: "Program", required: true },
+      { key: "yearLevel", label: "Year Level", required: true },
+      { key: "section", label: "Section", required: true },
+      { key: "status", label: "Enrollment Status", required: true },
+      { key: "email", label: "Email Address", required: true },
+      { key: "contact", label: "Contact Number", required: true },
+      { key: "dateEnrolled", label: "Date Enrolled", required: true },
+      { key: "guardian", label: "Guardian", required: true },
+      {
+        key: "guardianContact",
+        label: "Guardian Contact Information",
+        required: true,
+      },
     ];
     if (isEditMode) {
-      return [{ key: 'id', label: 'Student ID', required: true }, ...base];
+      return [{ key: "id", label: "Student ID", required: true }, ...base];
     }
     return base;
   }, [isEditMode]);
@@ -124,19 +143,23 @@ export default function AddStudentForm({
     }
 
     if (!isValidEmail(formData.email)) {
-      next.email = 'Enter a valid email address.';
+      next.email = "Enter a valid email address.";
     }
 
     if (!isValidPhone(formData.contact)) {
-      next.contact = 'Contact number must start with 09 and contain 11 digits.';
+      next.contact = "Contact number must start with 09 and contain 11 digits.";
     }
 
     if (!isValidPhone(formData.guardianContact)) {
-      next.guardianContact = 'Guardian contact must start with 09 and contain 11 digits.';
+      next.guardianContact =
+        "Guardian contact must start with 09 and contain 11 digits.";
     }
 
-    if (isNonEmpty(formData.yearLevel) && !/^[0-9]{1,2}$/.test(String(formData.yearLevel).trim())) {
-      next.yearLevel = 'Year Level must be a number (e.g., 1, 2, 3, 4).';
+    if (
+      isNonEmpty(formData.yearLevel) &&
+      !/^[0-9]{1,2}$/.test(String(formData.yearLevel).trim())
+    ) {
+      next.yearLevel = "Year Level must be a number (e.g., 1, 2, 3, 4).";
     }
 
     return next;
@@ -154,15 +177,18 @@ export default function AddStudentForm({
     setSubmitting(true);
     try {
       if (isEditMode && !targetMongoId) {
-        setSubmitError('Missing student identifier for editing.');
+        setSubmitError("Missing student identifier for editing.");
         return;
       }
 
-      const res = await fetch(isEditMode ? `/api/students/${targetMongoId}` : '/api/students', {
-        method: isEditMode ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
+      const res = await fetch(
+        isEditMode ? `/api/students/${targetMongoId}` : "/api/students",
+        {
+          method: isEditMode ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        },
+      );
 
       const data = await res.json().catch(() => null);
 
@@ -177,13 +203,17 @@ export default function AddStudentForm({
       }
 
       if (res.status === 400) {
-        setSubmitError(data?.message || 'Please review the form and try again.');
+        setSubmitError(
+          data?.message || "Please review the form and try again.",
+        );
         return;
       }
 
-      setSubmitError('Something went wrong. Please try again in a moment.');
+      setSubmitError("Something went wrong. Please try again in a moment.");
     } catch {
-      setSubmitError('Network error. Please check your connection and try again.');
+      setSubmitError(
+        "Network error. Please check your connection and try again.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -191,10 +221,10 @@ export default function AddStudentForm({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitError('');
+    setSubmitError("");
 
     if (!isEditMode && !formData.id) {
-      setSubmitError('Student ID is not ready yet. Please try again.');
+      setSubmitError("Student ID is not ready yet. Please try again.");
       return;
     }
 
@@ -216,22 +246,30 @@ export default function AddStudentForm({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 sm:p-6" role="dialog" aria-modal="true">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 sm:p-6"
+      role="dialog"
+      aria-modal="true">
       <div className="w-full max-w-5xl overflow-hidden rounded-3xl add-student-dialog">
         <div className="flex items-center justify-between border-b bg-slate-50 add-student-header">
           <div>
-            <p className="add-student-eyebrow">{isEditMode ? 'Student Details' : 'New Student'}</p>
-            <h3 className="add-student-title">{isEditMode ? 'Edit Student' : 'Add Student'}</h3>
+            <p className="add-student-eyebrow">
+              {isEditMode ? "Student Details" : "New Student"}
+            </p>
+            <h3 className="add-student-title">
+              {isEditMode ? "Edit Student" : "Add Student"}
+            </h3>
             <p className="add-student-subtitle">
-              {isEditMode ? 'Update the student details and save changes.' : 'Fill in the required student details.'}
+              {isEditMode
+                ? "Update the student details and save changes."
+                : "Fill in the required student details."}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="add-student-close"
-            aria-label="Close form"
-          >
+            aria-label="Close form">
             &#x2715;
           </button>
         </div>
@@ -245,350 +283,478 @@ export default function AddStudentForm({
             ) : null}
 
             {!showPreview ? (
-            <div className="add-student-grid">
-            <div>
-              <label htmlFor="id" className={labelClass}>
-                Student ID {isEditMode ? <span className="text-red-600">*</span> : null}
-              </label>
-              <input
-                id="id"
-                name="id"
-                value={formData.id}
-                onChange={handleChange}
-                className={controlClass}
-                placeholder={isEditMode ? 'e.g., 2201001' : 'Auto-generated (e.g., 2201001)'}
-                autoComplete="off"
-                readOnly={!isEditMode}
-                aria-invalid={Boolean(errors.id)}
-              />
-              <FieldError name="id" />
-            </div>
+              <div className="add-student-grid">
+                <div>
+                  <label htmlFor="id" className={labelClass}>
+                    Student ID{" "}
+                    {isEditMode ? (
+                      <span className="text-red-600">*</span>
+                    ) : null}
+                  </label>
+                  <input
+                    id="id"
+                    name="id"
+                    value={formData.id}
+                    onChange={handleChange}
+                    className={controlClass}
+                    placeholder={
+                      isEditMode
+                        ? "e.g., 2201001"
+                        : "Auto-generated (e.g., 2201001)"
+                    }
+                    autoComplete="off"
+                    readOnly={!isEditMode}
+                    aria-invalid={Boolean(errors.id)}
+                  />
+                  <FieldError name="id" />
+                </div>
 
-            <div>
-              <label htmlFor="firstName" className={labelClass}>
-                First Name <span className="text-red-600">*</span>
-              </label>
-              <input
-                id="firstName"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                className={controlClass}
-                placeholder="e.g., Althea"
-                autoComplete="off"
-                aria-invalid={Boolean(errors.firstName)}
-              />
-              <FieldError name="firstName" />
-            </div>
+                <div>
+                  <label htmlFor="firstName" className={labelClass}>
+                    First Name <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    id="firstName"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleChange}
+                    className={controlClass}
+                    placeholder="e.g., Althea"
+                    autoComplete="off"
+                    aria-invalid={Boolean(errors.firstName)}
+                  />
+                  <FieldError name="firstName" />
+                </div>
 
-            <div>
-              <label htmlFor="middleName" className={labelClass}>
-                Middle Name
-              </label>
-              <input
-                id="middleName"
-                name="middleName"
-                value={formData.middleName}
-                onChange={handleChange}
-                className={controlClass}
-                placeholder="Optional"
-                autoComplete="off"
-              />
-            </div>
+                <div>
+                  <label htmlFor="middleName" className={labelClass}>
+                    Middle Name
+                  </label>
+                  <input
+                    id="middleName"
+                    name="middleName"
+                    value={formData.middleName}
+                    onChange={handleChange}
+                    className={controlClass}
+                    placeholder="Optional"
+                    autoComplete="off"
+                  />
+                </div>
 
-            <div>
-              <label htmlFor="lastName" className={labelClass}>
-                Last Name <span className="text-red-600">*</span>
-              </label>
-              <input
-                id="lastName"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                className={controlClass}
-                placeholder="e.g., Santos"
-                autoComplete="off"
-                aria-invalid={Boolean(errors.lastName)}
-              />
-              <FieldError name="lastName" />
-            </div>
+                <div>
+                  <label htmlFor="lastName" className={labelClass}>
+                    Last Name <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    id="lastName"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleChange}
+                    className={controlClass}
+                    placeholder="e.g., Santos"
+                    autoComplete="off"
+                    aria-invalid={Boolean(errors.lastName)}
+                  />
+                  <FieldError name="lastName" />
+                </div>
 
-            <div>
-              <label htmlFor="gender" className={labelClass}>
-                Gender
-              </label>
-              <select
-                id="gender"
-                name="gender"
-                value={formData.gender}
-                onChange={handleChange}
-                className={controlClass}
-              >
-                <option value="">Select</option>
-                <option value="Female">Female</option>
-                <option value="Male">Male</option>
-              </select>
-            </div>
+                <div>
+                  <label htmlFor="gender" className={labelClass}>
+                    Gender
+                  </label>
+                  <select
+                    id="gender"
+                    name="gender"
+                    value={formData.gender}
+                    onChange={handleChange}
+                    className={controlClass}>
+                    <option value="">Select</option>
+                    <option value="Female">Female</option>
+                    <option value="Male">Male</option>
+                  </select>
+                </div>
 
-            <div>
-              <label htmlFor="dob" className={labelClass}>
-                Date of Birth
-              </label>
-              <input
-                id="dob"
-                name="dob"
-                type="date"
-                value={formData.dob}
-                onChange={handleChange}
-                className={controlClass}
-              />
-            </div>
+                <div>
+                  <label htmlFor="dob" className={labelClass}>
+                    Date of Birth
+                  </label>
+                  <input
+                    id="dob"
+                    name="dob"
+                    type="date"
+                    value={formData.dob}
+                    onChange={handleChange}
+                    className={controlClass}
+                  />
+                </div>
 
-            <div>
-              <label htmlFor="program" className={labelClass}>
-                Program / Course <span className="text-red-600">*</span>
-              </label>
-              <select
-                id="program"
-                name="program"
-                value={formData.program}
-                onChange={handleChange}
-                className={controlClass}
-                aria-invalid={Boolean(errors.program)}
-              >
-                <option value="">Select program</option>
-                <option value="BSCS">BSCS</option>
-                <option value="BSIT">BSIT</option>
-                <option value="BSIS">BSIS</option>
-              </select>
-              <FieldError name="program" />
-            </div>
+                <div>
+                  <label htmlFor="program" className={labelClass}>
+                    Program / Course <span className="text-red-600">*</span>
+                  </label>
+                  <select
+                    id="program"
+                    name="program"
+                    value={formData.program}
+                    onChange={handleChange}
+                    className={controlClass}
+                    aria-invalid={Boolean(errors.program)}>
+                    <option value="">Select program</option>
+                    <option value="BSCS">BSCS</option>
+                    <option value="BSIT">BSIT</option>
+                    <option value="BSIS">BSIS</option>
+                  </select>
+                  <FieldError name="program" />
+                </div>
 
-            <div>
-              <label htmlFor="yearLevel" className={labelClass}>
-                Year Level <span className="text-red-600">*</span>
-              </label>
-              <select
-                id="yearLevel"
-                name="yearLevel"
-                value={formData.yearLevel}
-                onChange={handleChange}
-                className={controlClass}
-                aria-invalid={Boolean(errors.yearLevel)}
-              >
-                <option value="">Select year level</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-              </select>
-              <FieldError name="yearLevel" />
-            </div>
+                <div>
+                  <label htmlFor="yearLevel" className={labelClass}>
+                    Year Level <span className="text-red-600">*</span>
+                  </label>
+                  <select
+                    id="yearLevel"
+                    name="yearLevel"
+                    value={formData.yearLevel}
+                    onChange={handleChange}
+                    className={controlClass}
+                    aria-invalid={Boolean(errors.yearLevel)}>
+                    <option value="">Select year level</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                  </select>
+                  <FieldError name="yearLevel" />
+                </div>
 
-            <div>
-              <label htmlFor="section" className={labelClass}>
-                Section <span className="text-red-600">*</span>
-              </label>
-              <input
-                id="section"
-                name="section"
-                value={formData.section}
-                onChange={handleChange}
-                className={controlClass}
-                placeholder="e.g., CS2A"
-                autoComplete="off"
-              />
-            </div>
+                <div>
+                  <label htmlFor="section" className={labelClass}>
+                    Section <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    id="section"
+                    name="section"
+                    value={formData.section}
+                    onChange={handleChange}
+                    className={controlClass}
+                    placeholder="e.g., CS2A"
+                    autoComplete="off"
+                  />
+                </div>
 
-            <div>
-              <label htmlFor="status" className={labelClass}>
-                Enrollment Status <span className="text-red-600">*</span>
-              </label>
-              <select
-                id="status"
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                className={controlClass}
-              >
-                <option value="">Select</option>
-                <option value="Enrolled">Enrolled</option>
-                <option value="On Leave">On Leave</option>
-                <option value="Graduating">Graduating</option>
-              </select>
-            </div>
+                <div>
+                  <label htmlFor="status" className={labelClass}>
+                    Enrollment Status <span className="text-red-600">*</span>
+                  </label>
+                  <select
+                    id="status"
+                    name="status"
+                    value={formData.status}
+                    onChange={handleChange}
+                    className={controlClass}>
+                    <option value="">Select</option>
+                    <option value="Enrolled">Enrolled</option>
+                    <option value="On Leave">On Leave</option>
+                    <option value="Graduating">Graduating</option>
+                  </select>
+                </div>
 
-            <div>
-              <label htmlFor="scholarship" className={labelClass}>
-                Scholarship
-              </label>
-              <input
-                id="scholarship"
-                name="scholarship"
-                value={formData.scholarship}
-                onChange={handleChange}
-                className={controlClass}
-                placeholder="Optional"
-                autoComplete="off"
-              />
-            </div>
+                <div>
+                  <label htmlFor="scholarship" className={labelClass}>
+                    Scholarship
+                  </label>
+                  <input
+                    id="scholarship"
+                    name="scholarship"
+                    value={formData.scholarship}
+                    onChange={handleChange}
+                    className={controlClass}
+                    placeholder="Optional"
+                    autoComplete="off"
+                  />
+                </div>
 
-            <div>
-              <label htmlFor="email" className={labelClass}>
-                Email Address <span className="text-red-600">*</span>
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                className={controlClass}
-                placeholder="name@example.com"
-                autoComplete="off"
-                aria-invalid={Boolean(errors.email)}
-              />
-              <FieldError name="email" />
-            </div>
+                <div>
+                  <label htmlFor="email" className={labelClass}>
+                    Email Address <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className={controlClass}
+                    placeholder="name@example.com"
+                    autoComplete="off"
+                    aria-invalid={Boolean(errors.email)}
+                  />
+                  <FieldError name="email" />
+                </div>
 
-            <div>
-              <label htmlFor="contact" className={labelClass}>
-                Contact Number <span className="text-red-600">*</span>
-              </label>
-              <input
-                id="contact"
-                name="contact"
-                value={formData.contact}
-                onChange={handleChange}
-                className={controlClass}
-                placeholder="09XXXXXXXXX"
-                autoComplete="off"
-                aria-invalid={Boolean(errors.contact)}
-              />
-              <FieldError name="contact" />
-            </div>
+                <div>
+                  <label htmlFor="contact" className={labelClass}>
+                    Contact Number <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    id="contact"
+                    name="contact"
+                    value={formData.contact}
+                    onChange={handleChange}
+                    className={controlClass}
+                    placeholder="09XXXXXXXXX"
+                    autoComplete="off"
+                    aria-invalid={Boolean(errors.contact)}
+                  />
+                  <FieldError name="contact" />
+                </div>
 
-            <div>
-              <label htmlFor="dateEnrolled" className={labelClass}>
-                Date Enrolled <span className="text-red-600">*</span>
-              </label>
-              <input
-                id="dateEnrolled"
-                name="dateEnrolled"
-                type="date"
-                value={formData.dateEnrolled}
-                onChange={handleChange}
-                className={controlClass}
-              />
-            </div>
+                <div>
+                  <label htmlFor="dateEnrolled" className={labelClass}>
+                    Date Enrolled <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    id="dateEnrolled"
+                    name="dateEnrolled"
+                    type="date"
+                    value={formData.dateEnrolled}
+                    onChange={handleChange}
+                    className={controlClass}
+                  />
+                </div>
 
-            <div>
-              <label htmlFor="guardian" className={labelClass}>
-                Guardian <span className="text-red-600">*</span>
-              </label>
-              <input
-                id="guardian"
-                name="guardian"
-                value={formData.guardian}
-                onChange={handleChange}
-                className={controlClass}
-                placeholder="Optional"
-                autoComplete="off"
-              />
-            </div>
+                <div>
+                  <label htmlFor="guardian" className={labelClass}>
+                    Guardian <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    id="guardian"
+                    name="guardian"
+                    value={formData.guardian}
+                    onChange={handleChange}
+                    className={controlClass}
+                    placeholder="Optional"
+                    autoComplete="off"
+                  />
+                </div>
 
-            <div>
-              <label htmlFor="guardianContact" className={labelClass}>
-                Guardian Contact Information <span className="text-red-600">*</span>
-              </label>
-              <input
-                id="guardianContact"
-                name="guardianContact"
-                value={formData.guardianContact}
-                onChange={handleChange}
-                className={controlClass}
-                placeholder="Optional"
-                autoComplete="off"
-                aria-invalid={Boolean(errors.guardianContact)}
-              />
-              <FieldError name="guardianContact" />
-            </div>
+                <div>
+                  <label htmlFor="guardianContact" className={labelClass}>
+                    Guardian Contact Information{" "}
+                    <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    id="guardianContact"
+                    name="guardianContact"
+                    value={formData.guardianContact}
+                    onChange={handleChange}
+                    className={controlClass}
+                    placeholder="Optional"
+                    autoComplete="off"
+                    aria-invalid={Boolean(errors.guardianContact)}
+                  />
+                  <FieldError name="guardianContact" />
+                </div>
 
-            <div className="md:col-span-2">
-              <label htmlFor="violation" className={labelClass}>
-                Violation
-              </label>
-              <select
-                id="violation"
-                name="violation"
-                value={formData.violation}
-                onChange={handleChange}
-                className={controlClass}
-              >
-                <option value="">Select violation</option>
-                <option value="None">None</option>
-                <option value="Warning (late)">Warning (late)</option>
-                <option value="Academic probation">Academic probation</option>
-              </select>
-            </div>
-          </div>
+                <div className="md:col-span-2">
+                  <label htmlFor="violation" className={labelClass}>
+                    Violation
+                  </label>
+                  <select
+                    id="violation"
+                    name="violation"
+                    value={formData.violation}
+                    onChange={handleChange}
+                    className={controlClass}>
+                    <option value="">Select violation</option>
+                    <option value="None">None</option>
+                    <option value="Warning (late)">Warning (late)</option>
+                    <option value="Academic probation">
+                      Academic probation
+                    </option>
+                  </select>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label htmlFor="skills" className={labelClass}>
+                    Skills
+                  </label>
+                  <div className="skills-grid">
+                    {SKILL_OPTIONS.map((skill) => {
+                      const isChecked = formData.skills.includes(skill.value);
+                      return (
+                        <label
+                          key={skill.value}
+                          className={`skill-checkbox ${isChecked ? "checked" : ""}`}>
+                          <input
+                            type="checkbox"
+                            name="skills"
+                            value={skill.value}
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  skills: [...prev.skills, skill.value],
+                                }));
+                              } else {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  skills: prev.skills.filter(
+                                    (s) => s !== skill.value,
+                                  ),
+                                }));
+                              }
+                            }}
+                          />
+                          <span>{skill.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             ) : (
               <div className="preview-card">
                 <h4 className="preview-title">Preview Student Details</h4>
-                <p className="preview-subtitle">Please review everything before adding this student.</p>
+                <p className="preview-subtitle">
+                  Please review everything before adding this student.
+                </p>
                 <div className="preview-grid">
-                  <div className="preview-item"><span className="preview-label">Student ID</span><span className="preview-value">{formData.id}</span></div>
-                  <div className="preview-item"><span className="preview-label">First Name</span><span className="preview-value">{formData.firstName}</span></div>
-                  <div className="preview-item"><span className="preview-label">Middle Name</span><span className="preview-value">{formData.middleName || '-'}</span></div>
-                  <div className="preview-item"><span className="preview-label">Last Name</span><span className="preview-value">{formData.lastName}</span></div>
-                  <div className="preview-item"><span className="preview-label">Gender</span><span className="preview-value">{formData.gender || '-'}</span></div>
-                  <div className="preview-item"><span className="preview-label">Date of Birth</span><span className="preview-value">{formData.dob || '-'}</span></div>
-                  <div className="preview-item"><span className="preview-label">Program</span><span className="preview-value">{formData.program}</span></div>
-                  <div className="preview-item"><span className="preview-label">Year Level</span><span className="preview-value">{formData.yearLevel}</span></div>
-                  <div className="preview-item"><span className="preview-label">Section</span><span className="preview-value">{formData.section || '-'}</span></div>
-                  <div className="preview-item"><span className="preview-label">Enrollment Status</span><span className="preview-value">{formData.status || '-'}</span></div>
-                  <div className="preview-item"><span className="preview-label">Scholarship</span><span className="preview-value">{formData.scholarship || '-'}</span></div>
-                  <div className="preview-item"><span className="preview-label">Email</span><span className="preview-value">{formData.email || '-'}</span></div>
-                  <div className="preview-item"><span className="preview-label">Contact</span><span className="preview-value">{formData.contact || '-'}</span></div>
-                  <div className="preview-item"><span className="preview-label">Date Enrolled</span><span className="preview-value">{formData.dateEnrolled || '-'}</span></div>
-                  <div className="preview-item"><span className="preview-label">Guardian</span><span className="preview-value">{formData.guardian || '-'}</span></div>
-                  <div className="preview-item"><span className="preview-label">Guardian Contact</span><span className="preview-value">{formData.guardianContact || '-'}</span></div>
-                  <div className="preview-item preview-item-full"><span className="preview-label">Violation</span><span className="preview-value">{formData.violation || '-'}</span></div>
+                  <div className="preview-item">
+                    <span className="preview-label">Student ID</span>
+                    <span className="preview-value">{formData.id}</span>
+                  </div>
+                  <div className="preview-item">
+                    <span className="preview-label">First Name</span>
+                    <span className="preview-value">{formData.firstName}</span>
+                  </div>
+                  <div className="preview-item">
+                    <span className="preview-label">Middle Name</span>
+                    <span className="preview-value">
+                      {formData.middleName || "-"}
+                    </span>
+                  </div>
+                  <div className="preview-item">
+                    <span className="preview-label">Last Name</span>
+                    <span className="preview-value">{formData.lastName}</span>
+                  </div>
+                  <div className="preview-item">
+                    <span className="preview-label">Gender</span>
+                    <span className="preview-value">
+                      {formData.gender || "-"}
+                    </span>
+                  </div>
+                  <div className="preview-item">
+                    <span className="preview-label">Date of Birth</span>
+                    <span className="preview-value">{formData.dob || "-"}</span>
+                  </div>
+                  <div className="preview-item">
+                    <span className="preview-label">Program</span>
+                    <span className="preview-value">{formData.program}</span>
+                  </div>
+                  <div className="preview-item">
+                    <span className="preview-label">Year Level</span>
+                    <span className="preview-value">{formData.yearLevel}</span>
+                  </div>
+                  <div className="preview-item">
+                    <span className="preview-label">Section</span>
+                    <span className="preview-value">
+                      {formData.section || "-"}
+                    </span>
+                  </div>
+                  <div className="preview-item">
+                    <span className="preview-label">Enrollment Status</span>
+                    <span className="preview-value">
+                      {formData.status || "-"}
+                    </span>
+                  </div>
+                  <div className="preview-item">
+                    <span className="preview-label">Scholarship</span>
+                    <span className="preview-value">
+                      {formData.scholarship || "-"}
+                    </span>
+                  </div>
+                  <div className="preview-item">
+                    <span className="preview-label">Email</span>
+                    <span className="preview-value">
+                      {formData.email || "-"}
+                    </span>
+                  </div>
+                  <div className="preview-item">
+                    <span className="preview-label">Contact</span>
+                    <span className="preview-value">
+                      {formData.contact || "-"}
+                    </span>
+                  </div>
+                  <div className="preview-item">
+                    <span className="preview-label">Date Enrolled</span>
+                    <span className="preview-value">
+                      {formData.dateEnrolled || "-"}
+                    </span>
+                  </div>
+                  <div className="preview-item">
+                    <span className="preview-label">Guardian</span>
+                    <span className="preview-value">
+                      {formData.guardian || "-"}
+                    </span>
+                  </div>
+                  <div className="preview-item">
+                    <span className="preview-label">Guardian Contact</span>
+                    <span className="preview-value">
+                      {formData.guardianContact || "-"}
+                    </span>
+                  </div>
+                  <div className="preview-item preview-item-full">
+                    <span className="preview-label">Violation</span>
+                    <span className="preview-value">
+                      {formData.violation || "-"}
+                    </span>
+                  </div>
+                  <div className="preview-item preview-item-full">
+                    <span className="preview-label">Skills</span>
+                    <span className="preview-value">
+                      {formData.skills.length > 0
+                        ? formData.skills.join(", ")
+                        : "-"}
+                    </span>
+                  </div>
                 </div>
               </div>
             )}
 
-          <div className="add-student-actions">
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={showPreview ? () => setShowPreview(false) : onClose}
+            <div className="add-student-actions">
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={showPreview ? () => setShowPreview(false) : onClose}
                   className="add-student-btn add-student-secondary"
-                disabled={submitting}
-              >
-                {showPreview ? 'Back to Edit' : 'Cancel'}
-              </button>
+                  disabled={submitting}>
+                  {showPreview ? "Back to Edit" : "Cancel"}
+                </button>
 
-              <button
-                type={showPreview && !isEditMode ? 'button' : 'submit'}
-                onClick={showPreview && !isEditMode ? submitToServer : undefined}
-                disabled={submitting}
-                  className="add-student-btn add-student-primary"
-              >
-                {submitting
-                  ? (isEditMode ? 'Saving...' : 'Adding...')
-                  : isEditMode
-                    ? 'Save Changes'
-                    : showPreview
-                      ? 'Add Student'
-                      : 'Review Details'}
-              </button>
+                <button
+                  type={showPreview && !isEditMode ? "button" : "submit"}
+                  onClick={
+                    showPreview && !isEditMode ? submitToServer : undefined
+                  }
+                  disabled={submitting}
+                  className="add-student-btn add-student-primary">
+                  {submitting
+                    ? isEditMode
+                      ? "Saving..."
+                      : "Adding..."
+                    : isEditMode
+                      ? "Save Changes"
+                      : showPreview
+                        ? "Add Student"
+                        : "Review Details"}
+                </button>
+              </div>
             </div>
-          </div>
           </div>
         </form>
       </div>
     </div>
   );
 }
-
