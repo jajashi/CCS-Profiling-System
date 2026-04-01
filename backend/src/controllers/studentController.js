@@ -30,6 +30,9 @@ async function generateNextStudentId() {
 
 async function getStudents(req, res, next) {
   try {
+    console.log("[getStudents] Full req.query:", JSON.stringify(req.query));
+    console.log("[getStudents] req.url:", req.url);
+
     const {
       program,
       skill,
@@ -86,7 +89,9 @@ async function getStudents(req, res, next) {
       ];
     }
 
+    console.log("[getStudents] Filter:", JSON.stringify(filter));
     const students = await Student.find(filter);
+    console.log(`[getStudents] Found ${students.length} students`);
     res.status(200).json(students.map((doc) => doc.toJSON()));
   } catch (err) {
     next(err);
