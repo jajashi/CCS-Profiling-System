@@ -25,7 +25,10 @@ const studentSchema = new mongoose.Schema(
     timestamps: false,
     toJSON: {
       transform(_doc, ret) {
-        delete ret._id;
+        // Keep MongoDB `_id` so the frontend can edit using the primary identifier.
+        if (ret._id && typeof ret._id.toString === 'function') {
+          ret._id = ret._id.toString();
+        }
         delete ret.__v;
         return ret;
       },
