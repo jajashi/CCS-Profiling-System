@@ -319,16 +319,35 @@ const StudentInformation = () => {
       const queryString = params.toString();
       const url = `/api/students${queryString ? `?${queryString}` : ""}`;
 
+      console.log("[fetchStudents] Fetching:", url);
+
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
       const data = await res.json();
 
+      console.log("[fetchStudents] Received:", data.length, "students");
       setStudents(Array.isArray(data) ? data : []);
-    } catch {
+    } catch (err) {
+      console.error("[fetchStudents] Error:", err);
       setStudentLoadError(
-        "Could not load students from the server. Showing sample data.",
+        `Could not load students from the server: ${err.message}. Please ensure the backend is running.`,
       );
-      setStudents(mockStudents);
+      // Only use mock data if no filters are active
+      if (
+        !filters.search &&
+        !filters.program &&
+        !filters.skill &&
+        !filters.yearLevel &&
+        !filters.section &&
+        !filters.status &&
+        !filters.scholarship &&
+        !filters.gender &&
+        !filters.violation
+      ) {
+        setStudents(mockStudents);
+      } else {
+        setStudents([]);
+      }
     } finally {
       setIsFetching(false);
       setLoadingStudents(false);
