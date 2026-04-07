@@ -13,6 +13,7 @@ const emptyForm = {
   section: '',
   status: '',
   scholarship: '',
+  profileAvatar: '',
   email: '',
   contact: '',
   dateEnrolled: '',
@@ -51,6 +52,7 @@ function mapStudentToFormData(student) {
     section: String(student?.section ?? ''),
     status: String(student?.status ?? ''),
     scholarship: String(student?.scholarship ?? ''),
+    profileAvatar: String(student?.profileAvatar ?? ''),
     email: String(student?.email ?? ''),
     contact: String(student?.contact ?? ''),
     dateEnrolled: String(student?.dateEnrolled ?? ''),
@@ -433,6 +435,22 @@ export default function AddStudentForm({
               />
             </div>
 
+            <div className="md:col-span-2">
+              <label htmlFor="profileAvatar" className={labelClass}>
+                Profile Avatar URL
+              </label>
+              <input
+                id="profileAvatar"
+                name="profileAvatar"
+                type="url"
+                value={formData.profileAvatar}
+                onChange={handleChange}
+                className={controlClass}
+                placeholder="https://example.com/avatar.jpg"
+                autoComplete="off"
+              />
+            </div>
+
             <div>
               <label htmlFor="email" className={labelClass}>
                 Email Address <span className="text-red-600">*</span>
@@ -548,6 +566,7 @@ export default function AddStudentForm({
                   <div className="preview-item"><span className="preview-label">Section</span><span className="preview-value">{formData.section || '-'}</span></div>
                   <div className="preview-item"><span className="preview-label">Enrollment Status</span><span className="preview-value">{formData.status || '-'}</span></div>
                   <div className="preview-item"><span className="preview-label">Scholarship</span><span className="preview-value">{formData.scholarship || '-'}</span></div>
+                  <div className="preview-item preview-item-full"><span className="preview-label">Profile Avatar</span><span className="preview-value">{formData.profileAvatar || '-'}</span></div>
                   <div className="preview-item"><span className="preview-label">Email</span><span className="preview-value">{formData.email || '-'}</span></div>
                   <div className="preview-item"><span className="preview-label">Contact</span><span className="preview-value">{formData.contact || '-'}</span></div>
                   <div className="preview-item"><span className="preview-label">Date Enrolled</span><span className="preview-value">{formData.dateEnrolled || '-'}</span></div>

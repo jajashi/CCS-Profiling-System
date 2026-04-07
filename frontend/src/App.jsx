@@ -4,6 +4,7 @@ import DashboardLayout from './pages/DashboardLayout';
 import DashboardHome from './pages/DashboardHome';
 import PlaceholderPage from './pages/PlaceholderPage';
 import StudentInformation from './pages/StudentInformation';
+import FacultyInformation from './pages/FacultyInformation';
 import { auth } from './auth';
 
 // Protected Route Wrapper
@@ -28,7 +29,7 @@ function App() {
       >
         <Route index element={<DashboardHome />} />
         <Route path="student-info" element={<StudentInformation />} />
-        <Route path="faculty-info" element={<PlaceholderPage title="Faculty Information" />} />
+        <Route path="faculty-info" element={<FacultyInformation />} />
         <Route path="instruction" element={<PlaceholderPage title="Instruction" />} />
         <Route path="scheduling" element={<PlaceholderPage title="Scheduling" />} />
         <Route path="events" element={<PlaceholderPage title="Events" />} />

@@ -5,6 +5,54 @@
   gap: 1.5rem;
 }
 
+.directory-hero {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-radius: 16px;
+  padding: 1.2rem 1.35rem;
+  border: 1px solid #f4d6b3;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.student-hero {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 48%, #fee2e2 100%);
+}
+
+.faculty-hero {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 45%, #fffbeb 100%);
+}
+
+.directory-hero-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #ff6a00;
+  border: 1px solid #ffd1a8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.55rem;
+  flex-shrink: 0;
+}
+
+.directory-hero-title {
+  margin: 0;
+  color: #7c2d12;
+  font-weight: 800;
+  font-size: 1.22rem;
+}
+
+.directory-hero-subtitle {
+  margin: 0.3rem 0 0;
+  color: #9a3412;
+  display: flex;
+  gap: 0.45rem;
+  align-items: flex-start;
+  font-size: 1rem;
+}
+
 .table-card {
   background: #ffffff;
   border: 1px solid #e5edf5;

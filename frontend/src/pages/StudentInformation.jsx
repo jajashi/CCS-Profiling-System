@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiPlus, FiSearch, FiEdit2, FiTrash2, FiX } from 'react-icons/fi';
+import { FiInfo, FiMail, FiPhone, FiPlus, FiSearch, FiEdit2, FiTrash2, FiUser, FiUsers, FiX } from 'react-icons/fi';
 import femaleImage from '../assets/images/female.jpg';
 import maleImage from '../assets/images/male.jpg';
 import AddStudentForm from '../components/AddStudentForm';
@@ -208,8 +208,9 @@ const StudentInformation = () => {
   const [studentFormMode, setStudentFormMode] = useState('create');
   const [studentFormTarget, setStudentFormTarget] = useState(null);
 
-  const getProfileImage = (gender) => {
-    const normalized = (gender || '').trim().toLowerCase();
+  const getStudentAvatar = (student) => {
+    if (student?.profileAvatar) return student.profileAvatar;
+    const normalized = (student?.gender || '').trim().toLowerCase();
     if (normalized === 'male') return maleImage;
     if (normalized === 'female') return femaleImage;
     return femaleImage;
@@ -278,11 +279,17 @@ const StudentInformation = () => {
 
   return (
     <div className="student-directory">
-      <div className="page-header">
-        <h2>Student Information</h2>
-        <p className="subtitle">
-          View the current student population at a glance. Click any row to see full details.
-        </p>
+      <div className="directory-hero student-hero">
+        <div className="directory-hero-icon">
+          <FiUsers />
+        </div>
+        <div>
+          <p className="directory-hero-title">Student Information</p>
+          <p className="directory-hero-subtitle">
+            <FiInfo />
+            <span>View the current student population at a glance. Click any row to see full details.</span>
+          </p>
+        </div>
       </div>
 
       <div className="table-card">
@@ -355,7 +362,12 @@ const StudentInformation = () => {
                   <td className="id-cell">
                     <span className="id-badge">{student.id}</span>
                   </td>
-                  <td>{student.firstName}</td>
+                  <td>
+                    <div className="flex items-center gap-2">
+                      <FiUser />
+                      <span>{student.firstName}</span>
+                    </div>
+                  </td>
                   <td>{student.middleName}</td>
                   <td>{student.lastName}</td>
                   <td>{student.gender}</td>
@@ -369,8 +381,18 @@ const StudentInformation = () => {
                     </span>
                   </td>
                   <td>{student.scholarship}</td>
-                  <td>{student.email}</td>
-                  <td>{student.contact}</td>
+                  <td>
+                    <div className="flex items-center gap-2">
+                      <FiMail />
+                      <span>{student.email}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div className="flex items-center gap-2">
+                      <FiPhone />
+                      <span>{student.contact}</span>
+                    </div>
+                  </td>
                   <td>{student.dateEnrolled}</td>
                   <td>{student.guardian}</td>
                   <td>{student.guardianContact}</td>
@@ -427,7 +449,7 @@ const StudentInformation = () => {
               <div className="profile-header">
                 <img
                   className="profile-avatar"
-                  src={getProfileImage(selectedStudent.gender)}
+                  src={getStudentAvatar(selectedStudent)}
                   alt={`${selectedStudent.firstName} ${selectedStudent.lastName}`}
                 />
                 <div>
@@ -466,6 +488,10 @@ const StudentInformation = () => {
             </div>
 
             <div className="modal-grid">
+              <div>
+                <p className="label">Profile Avatar URL</p>
+                <input className="readonly-field" type="text" value={selectedStudent.profileAvatar || '-'} readOnly />
+              </div>
               <div>
                 <p className="label">Program / Course</p>
                 <input className="readonly-field" type="text" value={selectedStudent.program} readOnly />

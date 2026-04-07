@@ -13,6 +13,7 @@ const studentSchema = new mongoose.Schema(
     section: { type: String, default: '' },
     status: { type: String, default: '' },
     scholarship: { type: String, default: '' },
+    profileAvatar: { type: String, default: '' },
     email: { type: String, default: '' },
     contact: { type: String, default: '' },
     dateEnrolled: { type: String, default: '' },
