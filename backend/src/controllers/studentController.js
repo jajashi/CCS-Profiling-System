@@ -137,6 +137,7 @@ async function updateStudent(req, res, next) {
       'section',
       'status',
       'scholarship',
+      'profileAvatar',
       'email',
       'contact',
       'dateEnrolled',

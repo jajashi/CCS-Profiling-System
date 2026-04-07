@@ -4,21 +4,34 @@ import '../styles/DashboardHome.css';
 
 const DashboardHome = () => {
   const [studentCount, setStudentCount] = useState(null);
+  const [facultyCount, setFacultyCount] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
 
     (async () => {
       try {
-        const res = await fetch('/api/students');
-        if (!res.ok) throw new Error(`Request failed: ${res.status}`);
-        const data = await res.json();
-        if (isMounted && Array.isArray(data)) {
-          setStudentCount(data.length);
+        const [studentRes, facultyRes] = await Promise.all([
+          fetch('/api/students'),
+          fetch('/api/faculty'),
+        ]);
+
+        if (!studentRes.ok) throw new Error(`Students request failed: ${studentRes.status}`);
+        if (!facultyRes.ok) throw new Error(`Faculty request failed: ${facultyRes.status}`);
+
+        const [studentData, facultyData] = await Promise.all([
+          studentRes.json(),
+          facultyRes.json(),
+        ]);
+
+        if (isMounted) {
+          setStudentCount(Array.isArray(studentData) ? studentData.length : null);
+          setFacultyCount(Array.isArray(facultyData) ? facultyData.length : null);
         }
       } catch {
         if (isMounted) {
           setStudentCount(null);
+          setFacultyCount(null);
         }
       }
     })();
@@ -52,7 +65,7 @@ const DashboardHome = () => {
           </div>
           <div className="stat-details">
             <p className="stat-label">Total Faculty</p>
-            <h3 className="stat-value">84</h3>
+            <h3 className="stat-value">{facultyCount === null ? '--' : facultyCount.toLocaleString()}</h3>
           </div>
         </div>
 
