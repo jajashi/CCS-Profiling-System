@@ -26,6 +26,8 @@ const PH_MOBILE_REGEX = /^09\d{9}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const URL_REGEX = /^https?:\/\/\S+$/i;
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const CERTIFICATION_SUGGESTIONS = [
   'AWS Certified Cloud Practitioner',
   'Cisco CCNA',
@@ -37,6 +39,13 @@ const CERTIFICATION_SUGGESTIONS = [
 
 function isNonEmpty(value) {
   return value !== undefined && value !== null && String(value).trim().length > 0;
+}
+
+function isValidAvatarValue(value) {
+  const avatar = String(value || '').trim();
+  if (!avatar) return true;
+  if (avatar.startsWith('data:image/')) return true;
+  return URL_REGEX.test(avatar);
 }
 
 function yearsOfServiceFromDateHired(dateHired) {
@@ -70,6 +79,7 @@ export default function AddFacultyForm({
   const [submitError, setSubmitError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [avatarInputMode, setAvatarInputMode] = useState('url');
 
   const controlClass = 'add-student-control mt-1 block';
   const labelClass = 'add-student-label';
@@ -112,6 +122,19 @@ export default function AddFacultyForm({
     setShowPreview(false);
   }, [isEditMode, initialData]);
 
+  useEffect(() => {
+    const avatar = String(formData.profileAvatar || '').trim();
+    if (!avatar) {
+      setAvatarInputMode('url');
+      return;
+    }
+    if (avatar.startsWith('data:image/')) {
+      setAvatarInputMode('upload');
+      return;
+    }
+    setAvatarInputMode('url');
+  }, [formData.profileAvatar]);
+
   const validate = () => {
     const next = {};
     const requiredFields = [
@@ -153,8 +176,8 @@ export default function AddFacultyForm({
       next.emergencyContactNumber = 'Emergency contact number must start with 09 and contain 11 digits.';
     }
 
-    if (isNonEmpty(formData.profileAvatar) && !URL_REGEX.test(formData.profileAvatar.trim())) {
-      next.profileAvatar = 'Profile Avatar must be a valid URL starting with http:// or https://.';
+    if (!isValidAvatarValue(formData.profileAvatar)) {
+      next.profileAvatar = 'Profile Avatar must be a valid URL or uploaded image.';
     }
 
     if (isNonEmpty(formData.dob) && !DATE_REGEX.test(formData.dob.trim())) {
@@ -376,17 +399,85 @@ export default function AddFacultyForm({
                       <FieldError name="department" />
                     </div>
                     <div className="md:col-span-2">
-                      <label htmlFor="profileAvatar" className={labelClass}>Profile Avatar URL</label>
-                      <input
-                        id="profileAvatar"
-                        name="profileAvatar"
-                        type="url"
-                        placeholder="https://example.com/avatar.png"
-                        value={formData.profileAvatar}
-                        onChange={handleChange}
-                        className={controlClass}
-                      />
+                      <label htmlFor="profileAvatar" className={labelClass}>Profile Avatar</label>
+                      <div className="avatar-input-mode">
+                        <label className="avatar-input-option">
+                          <input
+                            type="radio"
+                            name="avatarInputMode"
+                            value="url"
+                            checked={avatarInputMode === 'url'}
+                            onChange={() => setAvatarInputMode('url')}
+                          />
+                          <span>URL</span>
+                        </label>
+                        <label className="avatar-input-option">
+                          <input
+                            type="radio"
+                            name="avatarInputMode"
+                            value="upload"
+                            checked={avatarInputMode === 'upload'}
+                            onChange={() => setAvatarInputMode('upload')}
+                          />
+                          <span>Upload</span>
+                        </label>
+                      </div>
+                      {avatarInputMode === 'url' ? (
+                        <input
+                          id="profileAvatar"
+                          name="profileAvatar"
+                          type="url"
+                          placeholder="https://example.com/avatar.png"
+                          value={formData.profileAvatar}
+                          onChange={handleChange}
+                          className={controlClass}
+                        />
+                      ) : (
+                        <input
+                          id="profileAvatarUpload"
+                          name="profileAvatarUpload"
+                          type="file"
+                          accept="image/*"
+                          className={controlClass}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            if (!IMAGE_MIME_TYPES.includes(file.type)) {
+                              setErrors((prev) => ({
+                                ...prev,
+                                profileAvatar: 'Unsupported image type. Use JPG, PNG, WEBP, or GIF.',
+                              }));
+                              return;
+                            }
+                            if (file.size > MAX_AVATAR_BYTES) {
+                              setErrors((prev) => ({
+                                ...prev,
+                                profileAvatar: 'Image is too large. Maximum file size is 2MB.',
+                              }));
+                              return;
+                            }
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              const result = String(reader.result || '');
+                              if (result.startsWith('data:image/')) {
+                                setErrors((prev) => {
+                                  const next = { ...prev };
+                                  delete next.profileAvatar;
+                                  return next;
+                                });
+                                setFormData((prev) => ({ ...prev, profileAvatar: result }));
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }}
+                        />
+                      )}
                       <FieldError name="profileAvatar" />
+                      {formData.profileAvatar ? (
+                        <div className="avatar-preview-wrap">
+                          <img className="avatar-preview-img" src={formData.profileAvatar} alt="Faculty avatar preview" />
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 </section>

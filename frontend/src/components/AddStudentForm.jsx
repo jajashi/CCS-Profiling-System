@@ -1,6 +1,44 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import '../styles/AddStudentForm.css';
 
+const SKILL_OPTIONS = [
+  { value: 'Programming', label: 'Programming' },
+  { value: 'Web Development', label: 'Web Development' },
+  { value: 'Database Management', label: 'Database Management' },
+  { value: 'UI/UX Design', label: 'UI/UX Design' },
+  { value: 'Data Analysis', label: 'Data Analysis' },
+  { value: 'Communication', label: 'Communication' },
+  { value: 'Leadership', label: 'Leadership' },
+  { value: 'Problem Solving', label: 'Problem Solving' },
+];
+
+const SCHOLARSHIP_OPTIONS = [
+  'Academic Scholar',
+  "Dean's Lister",
+  'CHED Scholar',
+  'Athletic Grant',
+  'Industry Partner',
+  'None',
+];
+const URL_REGEX = /^https?:\/\/\S+$/i;
+const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+
+function getSectionOptions(program, yearLevel) {
+  const programMap = {
+    BSCS: 'CS',
+    BSIT: 'IT',
+    BSIS: 'IS',
+  };
+
+  const prefix = programMap[String(program || '').trim()];
+  const year = String(yearLevel || '').trim();
+  if (!prefix || !year) return [];
+  if (!['1', '2', '3', '4'].includes(year)) return [];
+
+  return ['A', 'B', 'C'].map((suffix) => `${prefix}${year}${suffix}`);
+}
+
 const emptyForm = {
   id: '',
   firstName: '',
@@ -20,6 +58,7 @@ const emptyForm = {
   guardian: '',
   guardianContact: '',
   violation: '',
+  skills: [],
 };
 
 function isNonEmpty(value) {
@@ -37,6 +76,13 @@ function isValidPhone(value) {
   const v = String(value || '').trim();
   if (!v) return true; // optional
   return /^09\d{9}$/.test(v);
+}
+
+function isValidAvatarValue(value) {
+  const avatar = String(value || '').trim();
+  if (!avatar) return true;
+  if (avatar.startsWith('data:image/')) return true;
+  return URL_REGEX.test(avatar);
 }
 
 function mapStudentToFormData(student) {
@@ -59,6 +105,7 @@ function mapStudentToFormData(student) {
     guardian: String(student?.guardian ?? ''),
     guardianContact: String(student?.guardianContact ?? ''),
     violation: String(student?.violation ?? ''),
+    skills: Array.isArray(student?.skills) ? student.skills : [],
   };
 }
 
@@ -76,6 +123,7 @@ export default function AddStudentForm({
   const [submitError, setSubmitError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [avatarInputMode, setAvatarInputMode] = useState('url');
 
   const controlClass = 'add-student-control mt-1 block';
   const labelClass = 'add-student-label';
@@ -96,6 +144,31 @@ export default function AddStudentForm({
     setSubmitting(false);
     setShowPreview(false);
   }, [isEditMode, initialData, nextStudentId]);
+
+  useEffect(() => {
+    const avatar = String(formData.profileAvatar || '').trim();
+    if (!avatar) {
+      setAvatarInputMode('url');
+      return;
+    }
+    if (avatar.startsWith('data:image/')) {
+      setAvatarInputMode('upload');
+      return;
+    }
+    setAvatarInputMode('url');
+  }, [formData.profileAvatar]);
+
+  const availableSections = useMemo(
+    () => getSectionOptions(formData.program, formData.yearLevel),
+    [formData.program, formData.yearLevel],
+  );
+
+  useEffect(() => {
+    if (!formData.section) return;
+    if (!availableSections.includes(formData.section)) {
+      setFormData((prev) => ({ ...prev, section: '' }));
+    }
+  }, [availableSections, formData.section]);
 
   const validationRules = useMemo(() => {
     const base = [
@@ -139,6 +212,10 @@ export default function AddStudentForm({
 
     if (isNonEmpty(formData.yearLevel) && !/^[0-9]{1,2}$/.test(String(formData.yearLevel).trim())) {
       next.yearLevel = 'Year Level must be a number (e.g., 1, 2, 3, 4).';
+    }
+
+    if (!isValidAvatarValue(formData.profileAvatar)) {
+      next.profileAvatar = 'Profile Avatar must be a valid URL or uploaded image.';
     }
 
     return next;
@@ -391,15 +468,27 @@ export default function AddStudentForm({
               <label htmlFor="section" className={labelClass}>
                 Section <span className="text-red-600">*</span>
               </label>
-              <input
+              <select
                 id="section"
                 name="section"
                 value={formData.section}
                 onChange={handleChange}
                 className={controlClass}
-                placeholder="e.g., CS2A"
-                autoComplete="off"
-              />
+                aria-invalid={Boolean(errors.section)}
+                disabled={!formData.program || !formData.yearLevel}
+              >
+                <option value="">
+                  {!formData.program || !formData.yearLevel
+                    ? 'Select program and year level first'
+                    : 'Select section'}
+                </option>
+                {availableSections.map((section) => (
+                  <option key={section} value={section}>
+                    {section}
+                  </option>
+                ))}
+              </select>
+              <FieldError name="section" />
             </div>
 
             <div>
@@ -424,31 +513,105 @@ export default function AddStudentForm({
               <label htmlFor="scholarship" className={labelClass}>
                 Scholarship
               </label>
-              <input
+              <select
                 id="scholarship"
                 name="scholarship"
                 value={formData.scholarship}
                 onChange={handleChange}
                 className={controlClass}
-                placeholder="Optional"
-                autoComplete="off"
-              />
+              >
+                <option value="">Select scholarship (optional)</option>
+                {SCHOLARSHIP_OPTIONS.map((scholarship) => (
+                  <option key={scholarship} value={scholarship}>
+                    {scholarship}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="md:col-span-2">
               <label htmlFor="profileAvatar" className={labelClass}>
-                Profile Avatar URL
+                Profile Avatar
               </label>
-              <input
-                id="profileAvatar"
-                name="profileAvatar"
-                type="url"
-                value={formData.profileAvatar}
-                onChange={handleChange}
-                className={controlClass}
-                placeholder="https://example.com/avatar.jpg"
-                autoComplete="off"
-              />
+              <div className="avatar-input-mode">
+                <label className="avatar-input-option">
+                  <input
+                    type="radio"
+                    name="avatarInputMode"
+                    value="url"
+                    checked={avatarInputMode === 'url'}
+                    onChange={() => setAvatarInputMode('url')}
+                  />
+                  <span>URL</span>
+                </label>
+                <label className="avatar-input-option">
+                  <input
+                    type="radio"
+                    name="avatarInputMode"
+                    value="upload"
+                    checked={avatarInputMode === 'upload'}
+                    onChange={() => setAvatarInputMode('upload')}
+                  />
+                  <span>Upload</span>
+                </label>
+              </div>
+              {avatarInputMode === 'url' ? (
+                <input
+                  id="profileAvatar"
+                  name="profileAvatar"
+                  type="url"
+                  value={formData.profileAvatar}
+                  onChange={handleChange}
+                  className={controlClass}
+                  placeholder="https://example.com/avatar.jpg"
+                  autoComplete="off"
+                />
+              ) : (
+                <input
+                  id="profileAvatarUpload"
+                  name="profileAvatarUpload"
+                  type="file"
+                  accept="image/*"
+                  className={controlClass}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (!IMAGE_MIME_TYPES.includes(file.type)) {
+                      setErrors((prev) => ({
+                        ...prev,
+                        profileAvatar: 'Unsupported image type. Use JPG, PNG, WEBP, or GIF.',
+                      }));
+                      return;
+                    }
+                    if (file.size > MAX_AVATAR_BYTES) {
+                      setErrors((prev) => ({
+                        ...prev,
+                        profileAvatar: 'Image is too large. Maximum file size is 2MB.',
+                      }));
+                      return;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      const result = String(reader.result || '');
+                      if (result.startsWith('data:image/')) {
+                        setErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.profileAvatar;
+                          return next;
+                        });
+                        setFormData((prev) => ({ ...prev, profileAvatar: result }));
+                      }
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                />
+              )}
+              <FieldError name="profileAvatar" />
+              {formData.profileAvatar ? (
+                <div className="avatar-preview-wrap">
+                  <img className="avatar-preview-img" src={formData.profileAvatar} alt="Student avatar preview" />
+                </div>
+              ) : null}
             </div>
 
             <div>
@@ -549,6 +712,37 @@ export default function AddStudentForm({
                 <option value="Academic probation">Academic probation</option>
               </select>
             </div>
+
+            <div className="md:col-span-2">
+              <label htmlFor="skills" className={labelClass}>
+                Skills
+              </label>
+              <div className="skills-grid">
+                {SKILL_OPTIONS.map((skill) => {
+                  const isChecked = formData.skills.includes(skill.value);
+                  return (
+                    <label key={skill.value} className={`skill-checkbox ${isChecked ? 'checked' : ''}`}>
+                      <input
+                        type="checkbox"
+                        value={skill.value}
+                        checked={isChecked}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFormData((prev) => ({ ...prev, skills: [...prev.skills, skill.value] }));
+                          } else {
+                            setFormData((prev) => ({
+                              ...prev,
+                              skills: prev.skills.filter((s) => s !== skill.value),
+                            }));
+                          }
+                        }}
+                      />
+                      <span>{skill.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
           </div>
             ) : (
               <div className="preview-card">
@@ -573,6 +767,7 @@ export default function AddStudentForm({
                   <div className="preview-item"><span className="preview-label">Guardian</span><span className="preview-value">{formData.guardian || '-'}</span></div>
                   <div className="preview-item"><span className="preview-label">Guardian Contact</span><span className="preview-value">{formData.guardianContact || '-'}</span></div>
                   <div className="preview-item preview-item-full"><span className="preview-label">Violation</span><span className="preview-value">{formData.violation || '-'}</span></div>
+                  <div className="preview-item preview-item-full"><span className="preview-label">Skills</span><span className="preview-value">{formData.skills.length ? formData.skills.join(', ') : '-'}</span></div>
                 </div>
               </div>
             )}

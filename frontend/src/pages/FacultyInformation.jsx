@@ -138,7 +138,7 @@ const FacultyInformation = () => {
         </div>
 
         {successMessage ? (
-          <div className="mt-3 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700 border border-emerald-200">
+          <div className="page-success-alert">
             {successMessage}
           </div>
         ) : null}

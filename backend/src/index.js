@@ -14,7 +14,7 @@ if (!PORT) {
   process.exit(1);
 }
 
-app.use(express.json());
+app.use(express.json({ limit: '8mb' }));
 
 app.use('/api/students', studentRoutes);
 app.use('/api/faculty', facultyRoutes);
@@ -22,8 +22,12 @@ app.use('/api/specializations', specializationRoutes);
 
 app.use((err, _req, res, _next) => {
   const status = err.status || 500;
-  const message =
+  let message =
     status === 500 ? 'Internal server error.' : err.message || 'Request failed.';
+
+  if (status === 413) {
+    message = 'Uploaded image is too large. Please use a smaller file.';
+  }
 
   if (status >= 500) {
     console.error(err);
