@@ -248,10 +248,17 @@ async function updateFaculty(req, res, next) {
       return res.status(404).json({ message: 'Faculty record not found.' });
     }
 
-    if (payload.updatedAt && String(payload.updatedAt) !== String(current.updatedAt)) {
-      return res.status(409).json({
-        message: 'This faculty record was modified by another user. Please refresh and try again.',
-      });
+    if (payload.updatedAt) {
+      const clientUpdatedAt = new Date(payload.updatedAt);
+      const serverUpdatedAt = new Date(current.updatedAt);
+      const clientTime = clientUpdatedAt.getTime();
+      const serverTime = serverUpdatedAt.getTime();
+
+      if (!Number.isNaN(clientTime) && !Number.isNaN(serverTime) && clientTime !== serverTime) {
+        return res.status(409).json({
+          message: 'This faculty record was modified by another user. Please refresh and try again.',
+        });
+      }
     }
 
     const specializations = await resolveSpecializationIds(payload.specializations);

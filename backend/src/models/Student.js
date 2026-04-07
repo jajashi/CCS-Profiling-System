@@ -20,6 +20,7 @@ const studentSchema = new mongoose.Schema(
     guardian: { type: String, default: '' },
     guardianContact: { type: String, default: '' },
     violation: { type: String, default: '' },
+    skills: { type: [String], default: [] },
   },
   {
     id: false,

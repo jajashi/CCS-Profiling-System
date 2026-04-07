@@ -22,9 +22,41 @@ async function generateNextStudentId() {
   return `${STUDENT_ID_PREFIX}${suffix}`;
 }
 
-async function getStudents(_req, res, next) {
+async function getStudents(req, res, next) {
   try {
-    const students = await Student.find();
+    const {
+      program,
+      skill,
+      yearLevel,
+      section,
+      status,
+      scholarship,
+      gender,
+      violation,
+      search,
+    } = req.query;
+
+    const filter = {};
+    if (program) filter.program = String(program).trim();
+    if (skill) filter.skills = { $in: [String(skill).trim()] };
+    if (yearLevel) filter.yearLevel = String(yearLevel).trim();
+    if (section) filter.section = new RegExp(`^${String(section).trim()}$`, 'i');
+    if (status) filter.status = String(status).trim();
+    if (scholarship) filter.scholarship = new RegExp(`^${String(scholarship).trim()}$`, 'i');
+    if (gender) filter.gender = String(gender).trim();
+    if (violation) filter.violation = String(violation).trim();
+
+    if (search && String(search).trim()) {
+      const searchRegex = new RegExp(String(search).trim(), 'i');
+      filter.$or = [
+        { firstName: searchRegex },
+        { lastName: searchRegex },
+        { id: searchRegex },
+        { email: searchRegex },
+      ];
+    }
+
+    const students = await Student.find(filter);
     res.status(200).json(students.map((doc) => doc.toJSON()));
   } catch (err) {
     next(err);
@@ -74,6 +106,9 @@ async function createStudent(req, res, next) {
       lastName: String(payload.lastName).trim(),
       program: String(payload.program).trim(),
       yearLevel: String(payload.yearLevel).trim(),
+      skills: Array.isArray(payload.skills)
+        ? payload.skills.map((s) => String(s).trim()).filter(Boolean)
+        : [],
     };
 
     const created = await Student.create(normalized);
@@ -157,6 +192,9 @@ async function updateStudent(req, res, next) {
     for (const key of stringKeys) {
       normalized[key] = String(payload[key] ?? '').trim();
     }
+    normalized.skills = Array.isArray(payload.skills)
+      ? payload.skills.map((s) => String(s).trim()).filter(Boolean)
+      : [];
 
     const updated = await Student.findByIdAndUpdate(mongoId, normalized, {
       new: true,
@@ -185,4 +223,22 @@ async function updateStudent(req, res, next) {
   }
 }
 
-module.exports = { getStudents, createStudent, updateStudent };
+async function deleteStudent(req, res, next) {
+  try {
+    const mongoId = req.params.id;
+
+    const deleted = await Student.findByIdAndDelete(mongoId);
+    if (!deleted) {
+      return res.status(404).json({ message: 'Student not found.' });
+    }
+
+    return res.status(204).send();
+  } catch (err) {
+    if (err && err.name === 'CastError') {
+      return res.status(400).json({ message: 'Invalid student identifier.' });
+    }
+    return next(err);
+  }
+}
+
+module.exports = { getStudents, createStudent, updateStudent, deleteStudent };
