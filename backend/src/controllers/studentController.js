@@ -37,22 +37,57 @@ async function getStudents(req, res, next) {
     } = req.query;
 
     const filter = {};
-    if (program) filter.program = String(program).trim();
-    if (skill) filter.skills = { $in: [String(skill).trim()] };
-    if (yearLevel) filter.yearLevel = String(yearLevel).trim();
-    if (section) filter.section = new RegExp(`^${String(section).trim()}$`, 'i');
-    if (status) filter.status = String(status).trim();
-    if (scholarship) filter.scholarship = new RegExp(`^${String(scholarship).trim()}$`, 'i');
-    if (gender) filter.gender = String(gender).trim();
-    if (violation) filter.violation = String(violation).trim();
 
-    if (search && String(search).trim()) {
-      const searchRegex = new RegExp(String(search).trim(), 'i');
+    if (program && program.trim() !== "") {
+      filter.program = program.trim();
+    }
+
+    if (skill && skill.trim() !== "") {
+      // Support multiple skills (comma-separated or array)
+      const skills = Array.isArray(skill)
+        ? skill
+        : skill.split(",").map((s) => s.trim());
+      filter.skills = { $all: skills };
+    }
+
+    if (yearLevel && yearLevel.trim() !== "") {
+      filter.yearLevel = yearLevel.trim();
+    }
+
+    if (section && section.trim() !== "") {
+      filter.section = section.trim();
+    }
+
+    if (status && status.trim() !== "") {
+      filter.status = status.trim();
+    }
+
+    if (scholarship && scholarship.trim() !== "") {
+      filter.scholarship = scholarship.trim();
+    }
+
+    if (gender && gender.trim() !== "") {
+      filter.gender = gender.trim();
+    }
+
+    if (violation && violation.trim() !== "") {
+      filter.violation = violation.trim();
+    }
+
+    if (search && search.trim() !== "") {
+      const searchRegex = new RegExp(search.trim(), "i");
       filter.$or = [
         { firstName: searchRegex },
         { lastName: searchRegex },
         { id: searchRegex },
         { email: searchRegex },
+        { program: searchRegex },
+        { section: searchRegex },
+        { status: searchRegex },
+        { scholarship: searchRegex },
+        { gender: searchRegex },
+        { violation: searchRegex },
+        { guardian: searchRegex },
       ];
     }
 
@@ -195,6 +230,13 @@ async function updateStudent(req, res, next) {
     normalized.skills = Array.isArray(payload.skills)
       ? payload.skills.map((s) => String(s).trim()).filter(Boolean)
       : [];
+
+    // Handle skills array separately
+    if (Array.isArray(payload.skills)) {
+      normalized.skills = payload.skills;
+    } else if (payload.skills === undefined || payload.skills === null) {
+      normalized.skills = [];
+    }
 
     const updated = await Student.findByIdAndUpdate(mongoId, normalized, {
       new: true,
