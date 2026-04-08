@@ -334,7 +334,7 @@ async function run() {
 
   // Clear existing seeded students (IDs 2201901-2201999)
   const clearResult = await Student.deleteMany({
-    id: { $regex: /^22019[0-9]{2}$/ },
+    id: { $regex: /^2201/ },
   });
   console.log(`Cleared ${clearResult.deletedCount} existing seeded students.`);
 
