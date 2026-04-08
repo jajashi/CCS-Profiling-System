@@ -1,10 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FiBriefcase, FiEdit2, FiInfo, FiMail, FiPhone, FiPlus, FiSearch, FiTrash2, FiUserCheck, FiX } from 'react-icons/fi';
+import { useNavigate, useParams } from 'react-router-dom';
 import AddFacultyForm from '../components/AddFacultyForm';
 import femaleImage from '../assets/images/female.jpg';
+import { useAuth } from '../context/AuthContext';
 import '../styles/StudentInformation.css';
 
 const FacultyInformation = () => {
+  const navigate = useNavigate();
+  const { employeeId: selectedEmployeeId } = useParams();
+  const { isAdmin } = useAuth();
   const [faculty, setFaculty] = useState([]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -36,6 +41,15 @@ const FacultyInformation = () => {
   useEffect(() => {
     loadFaculty();
   }, []);
+
+  useEffect(() => {
+    if (!selectedEmployeeId) {
+      setSelectedFaculty(null);
+      return;
+    }
+    const match = faculty.find((member) => String(member.employeeId) === String(selectedEmployeeId));
+    setSelectedFaculty(match || null);
+  }, [selectedEmployeeId, faculty]);
 
   useEffect(() => {
     if (!successMessage) return undefined;
@@ -124,16 +138,18 @@ const FacultyInformation = () => {
             <span className="meta-chip">
               {filteredFaculty.length} of {faculty.length} faculty
             </span>
-            <button
-              type="button"
-              onClick={openCreateForm}
-              className="inline-flex min-h-[44px] min-w-[180px] items-center justify-center whitespace-nowrap rounded-xl bg-[#ff7f00] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#e67300] focus:outline-none focus:ring-2 focus:ring-[#fff3e6]"
-              aria-label="Add new faculty"
-              disabled={loading}
-            >
-              <FiPlus />
-              <span>Add New Faculty</span>
-            </button>
+            {isAdmin ? (
+              <button
+                type="button"
+                onClick={openCreateForm}
+                className="inline-flex min-h-[44px] min-w-[180px] items-center justify-center whitespace-nowrap rounded-xl bg-[#ff7f00] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#e67300] focus:outline-none focus:ring-2 focus:ring-[#fff3e6]"
+                aria-label="Add new faculty"
+                disabled={loading}
+              >
+                <FiPlus />
+                <span>Add New Faculty</span>
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -167,7 +183,7 @@ const FacultyInformation = () => {
             </thead>
             <tbody>
               {filteredFaculty.map((member) => (
-                <tr key={member.employeeId || member._id} onClick={() => setSelectedFaculty(member)}>
+                <tr key={member.employeeId || member._id} onClick={() => navigate(`/dashboard/faculty-info/${encodeURIComponent(member.employeeId)}`)}>
                   <td className="id-cell">
                     <span className="id-badge">{member.employeeId || '-'}</span>
                   </td>
@@ -200,24 +216,28 @@ const FacultyInformation = () => {
                   </td>
                   <td>
                     <div className="action-buttons" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        className="action-btn edit"
-                        type="button"
-                        aria-label="Edit faculty"
-                        title="Edit faculty"
-                        onClick={() => openEditForm(member.employeeId)}
-                      >
-                        <FiEdit2 />
-                      </button>
-                      <button
-                        className="action-btn delete"
-                        type="button"
-                        disabled
-                        aria-label="Delete faculty (not available)"
-                        title="Delete is disabled (no faculty delete endpoint)"
-                      >
-                        <FiTrash2 />
-                      </button>
+                      {isAdmin ? (
+                        <>
+                          <button
+                            className="action-btn edit"
+                            type="button"
+                            aria-label="Edit faculty"
+                            title="Edit faculty"
+                            onClick={() => openEditForm(member.employeeId)}
+                          >
+                            <FiEdit2 />
+                          </button>
+                          <button
+                            className="action-btn delete"
+                            type="button"
+                            disabled
+                            aria-label="Delete faculty (not available)"
+                            title="Delete is disabled (no faculty delete endpoint)"
+                          >
+                            <FiTrash2 />
+                          </button>
+                        </>
+                      ) : null}
                     </div>
                   </td>
                 </tr>
@@ -235,10 +255,10 @@ const FacultyInformation = () => {
       </div>
 
       {selectedFaculty ? (
-        <div className="student-modal-backdrop" onClick={() => setSelectedFaculty(null)}>
+        <div className="student-modal-backdrop" onClick={() => navigate('/dashboard/faculty-info')}>
           <div className="student-modal" onClick={(e) => e.stopPropagation()}>
             <div className="breadcrumb-bar">
-              <button className="breadcrumb-link" type="button" onClick={() => setSelectedFaculty(null)}>
+              <button className="breadcrumb-link" type="button" onClick={() => navigate('/dashboard/faculty-info')}>
                 Faculty
               </button>
               <span className="breadcrumb-separator">/</span>
@@ -262,20 +282,22 @@ const FacultyInformation = () => {
                 </div>
               </div>
               <div className="flex items-start gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedFaculty(null);
-                    openEditForm(selectedFaculty.employeeId);
-                  }}
-                  className="modal-edit-btn"
-                >
-                  <FiEdit2 />
-                  <span>Edit Profile</span>
-                </button>
+                {isAdmin ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedFaculty(null);
+                      openEditForm(selectedFaculty.employeeId);
+                    }}
+                    className="modal-edit-btn"
+                  >
+                    <FiEdit2 />
+                    <span>Edit Profile</span>
+                  </button>
+                ) : null}
                 <button
                   className="modal-close"
-                  onClick={() => setSelectedFaculty(null)}
+                  onClick={() => navigate('/dashboard/faculty-info')}
                   aria-label="Close dialog"
                   type="button"
                 >
