@@ -9,8 +9,12 @@ import toast from "react-hot-toast";
 import {
   FiPlus,
   FiSearch,
+  FiUser,
+  FiMail,
+  FiPhone,
   FiEdit2,
   FiTrash2,
+  FiInfo,
   FiX,
   FiRotateCcw,
   FiFilter,
@@ -644,70 +648,45 @@ const StudentInformation = () => {
             />
           </div>
           <div className="toolbar-meta flex items-center justify-between gap-4">
-            <span className="meta-chip">
-              {students.length} students
-            </span>
+            <div className="student-count-badge">
+              <FiUsers />
+              <span>{students.length} students</span>
+            </div>
             <button
               type="button"
-              className={`filter-toggle-btn ${showFilters ? 'active' : ''}`}
+              className={`filter-toggle-btn ${showFilters ? "active" : ""}`}
               onClick={() => setShowFilters((prev) => !prev)}
               title="Toggle advanced filters"
             >
               <FiFilter />
               <span>Filters</span>
+              {activeFilterCount > 0 && (
+                <span className="filter-badge">{activeFilterCount}</span>
+              )}
             </button>
             {isAdmin ? (
               <button
                 type="button"
                 onClick={() => {
                   setSelectedStudent(null);
-                  setStudentFormMode('create');
+                  setStudentFormMode("create");
                   setStudentFormTarget(null);
                   setIsStudentFormOpen(true);
                 }}
-                className="inline-flex min-h-[44px] min-w-[160px] items-center justify-center whitespace-nowrap rounded-xl bg-[#ff7f00] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#e67300] focus:outline-none focus:ring-2 focus:ring-[#fff3e6]"
+                className="add-student-btn"
                 aria-label="Add a new student"
                 disabled={loadingStudents || isFetching}
-                title={loadingStudents || isFetching ? 'Loading students...' : 'Add Student'}
+                title={
+                  loadingStudents || isFetching
+                    ? "Loading students..."
+                    : "Add Student"
+                }
               >
                 <FiPlus />
-                <span>Add Student</span>
+                <span>Add student</span>
               </button>
             ) : null}
-          <div className="student-count-badge">
-            <FiUsers />
-            <span>{students.length} students</span>
           </div>
-          <button
-            type="button"
-            className={`filter-toggle-btn ${showFilters ? "active" : ""}`}
-            onClick={() => setShowFilters(!showFilters)}
-            title="Toggle advanced filters">
-            <FiFilter />
-            <span>Filters</span>
-            {activeFilterCount > 0 && (
-              <span className="filter-badge">{activeFilterCount}</span>
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedStudent(null);
-              setStudentFormMode("create");
-              setStudentFormTarget(null);
-              setIsStudentFormOpen(true);
-            }}
-            className="add-student-btn"
-            aria-label="Add a new student"
-            disabled={loadingStudents || isFetching}
-            title={
-              loadingStudents || isFetching
-                ? "Loading students..."
-                : "Add Student"
-            }>
-            <FiPlus />
-            <span>Add student</span>
-          </button>
         </div>
 
         {showFilters ? (
