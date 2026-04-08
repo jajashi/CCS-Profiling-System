@@ -3,6 +3,8 @@ require('dotenv').config();
 const express = require('express');
 const { connectDB } = require('./config/database');
 const studentRoutes = require('./routes/studentRoutes');
+const facultyRoutes = require('./routes/facultyRoutes');
+const specializationRoutes = require('./routes/specializationRoutes');
 
 const app = express();
 const PORT = process.env.PORT;
@@ -12,9 +14,27 @@ if (!PORT) {
   process.exit(1);
 }
 
-app.use(express.json());
+app.use(express.json({ limit: '8mb' }));
 
 app.use('/api/students', studentRoutes);
+app.use('/api/faculty', facultyRoutes);
+app.use('/api/specializations', specializationRoutes);
+
+app.use((err, _req, res, _next) => {
+  const status = err.status || 500;
+  let message =
+    status === 500 ? 'Internal server error.' : err.message || 'Request failed.';
+
+  if (status === 413) {
+    message = 'Uploaded image is too large. Please use a smaller file.';
+  }
+
+  if (status >= 500) {
+    console.error(err);
+  }
+
+  res.status(status).json({ message });
+});
 
 async function start() {
   try {
