@@ -237,7 +237,15 @@ const mockStudents = [
 const StudentInformation = () => {
   const navigate = useNavigate();
   const { id: selectedStudentId } = useParams();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isStudent, user } = useAuth();
+
+  useEffect(() => {
+    if (isStudent && user?.studentId) {
+      if (selectedStudentId !== user.studentId) {
+        navigate(`/dashboard/student-info/${user.studentId}`, { replace: true });
+      }
+    }
+  }, [isStudent, user, selectedStudentId, navigate]);
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -586,7 +594,8 @@ const StudentInformation = () => {
       setSelectedStudent(null);
       return;
     }
-    const match = students.find((student) => String(student.id) === String(selectedStudentId));
+    const match = students.find((student) => String(student.id) === String(selectedStudentId)) 
+               || mockStudents.find((student) => String(student.id) === String(selectedStudentId));
     setSelectedStudent(match || null);
   }, [selectedStudentId, students]);
 
@@ -621,22 +630,39 @@ const StudentInformation = () => {
 
   return (
     <div className="student-directory">
-      <div className="directory-hero student-hero">
-        <div className="directory-hero-icon">
-          <FiUsers />
+      {isStudent ? (
+        <div className="profile-hero-student">
+          <div className="profile-hero-content">
+            {/* <div className="profile-hero-icon">
+              <FiUser />
+            </div> */}
+            <div className="profile-hero-text">
+              <h2 className="profile-hero-title">Student Profile</h2>
+              <p className="profile-hero-subtitle">
+                View your personal and academic records.
+              </p>
+            </div>
+          </div>
         </div>
-        <div>
-          <p className="directory-hero-title">Student Information</p>
-          <p className="directory-hero-subtitle">
-            <FiInfo />
-            <span>View the current student population at a glance. Click any row to see full details.</span>
-          </p>
+      ) : (
+        <div className="directory-hero student-hero">
+          <div className="directory-hero-icon">
+            <FiUsers />
+          </div>
+          <div>
+            <p className="directory-hero-title">Student Information</p>
+            <p className="directory-hero-subtitle">
+              <FiInfo />
+              <span>View the current student population at a glance. Click any row to see full details.</span>
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="table-card">
-        {/* ===== Top Toolbar ===== */}
-        <div className="table-toolbar">
+      {!isStudent && (
+        <div className="table-card">
+          {/* ===== Top Toolbar ===== */}
+          <div className="table-toolbar">
           <div className="search-box">
             <FiSearch />
             <input
@@ -974,20 +1000,23 @@ const StudentInformation = () => {
             </tbody>
           </table>
         </div>
-      </div>
+        </div>
+      )}
 
       {selectedStudent && (
-        <div className="student-modal-backdrop" onClick={() => navigate('/dashboard/student-info')}>
+        <div className={isStudent ? "student-full-page" : "student-modal-backdrop"} onClick={() => !isStudent && navigate('/dashboard/student-info')}>
           <div className="student-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="breadcrumb-bar">
-              <button className="breadcrumb-link" type="button" onClick={() => navigate('/dashboard/student-info')}>
-                Students
-              </button>
-              <span className="breadcrumb-separator">/</span>
-              <span className="breadcrumb-current">
-                {selectedStudent.firstName} {selectedStudent.lastName}
-              </span>
-            </div>
+            {!isStudent && (
+              <div className="breadcrumb-bar">
+                <button className="breadcrumb-link" type="button" onClick={() => navigate('/dashboard/student-info')}>
+                  Students
+                </button>
+                <span className="breadcrumb-separator">/</span>
+                <span className="breadcrumb-current">
+                  {selectedStudent.firstName} {selectedStudent.lastName}
+                </span>
+              </div>
+            )}
             <div className="modal-header">
               <div className="profile-header">
                 <img
@@ -1021,106 +1050,124 @@ const StudentInformation = () => {
                     <span>Edit</span>
                   </button>
                 ) : null}
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleDeleteClick(selectedStudent);
-                    setSelectedStudent(null);
-                  }}
-                  disabled={!selectedStudent?._id}
-                  className="modal-edit-btn modal-delete-btn"
-                  title={
-                    selectedStudent?._id
-                      ? "Delete student"
-                      : "Deleting unavailable for sample data"
-                  }>
-                  <FiTrash2 />
-                  <span>Delete</span>
-                </button>
-                <button
-                  className="modal-close"
-                  onClick={() => navigate('/dashboard/student-info')}
-                  aria-label="Close dialog"
-                  type="button"
-                >
-                  <FiX />
-                </button>
+                {!isStudent && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleDeleteClick(selectedStudent);
+                      setSelectedStudent(null);
+                    }}
+                    disabled={!selectedStudent?._id}
+                    className="modal-edit-btn modal-delete-btn"
+                    title={
+                      selectedStudent?._id
+                        ? "Delete student"
+                        : "Deleting unavailable for sample data"
+                    }>
+                    <FiTrash2 />
+                    <span>Delete</span>
+                  </button>
+                )}
+                {!isStudent && (
+                  <button
+                    className="modal-close"
+                    onClick={() => navigate('/dashboard/student-info')}
+                    aria-label="Close dialog"
+                    type="button"
+                  >
+                    <FiX />
+                  </button>
+                )}
               </div>
             </div>
 
-            <div className="modal-grid">
-              <div>
-                <p className="label">Profile Avatar URL</p>
-                <input className="readonly-field" type="text" value={selectedStudent.profileAvatar || '-'} readOnly />
-              </div>
-              <div>
-                <p className="label">Program / Course</p>
-                <input className="readonly-field" type="text" value={selectedStudent.program} readOnly />
-              </div>
-              <div>
-                <p className="label">Year Level</p>
-                <input className="readonly-field" type="text" value={selectedStudent.yearLevel} readOnly />
-              </div>
-              <div>
-                <p className="label">Section</p>
-                <input className="readonly-field" type="text" value={selectedStudent.section} readOnly />
-              </div>
-              <div>
-                <p className="label">Enrollment Status</p>
-                <input className="readonly-field" type="text" value={selectedStudent.status} readOnly />
-              </div>
-              <div>
-                <p className="label">Scholarship</p>
-                <input className="readonly-field" type="text" value={selectedStudent.scholarship} readOnly />
-              </div>
-              <div>
-                <p className="label">Date Enrolled</p>
-                <input className="readonly-field" type="text" value={selectedStudent.dateEnrolled} readOnly />
-              </div>
-              <div>
-                <p className="label">Date of Birth</p>
-                <input className="readonly-field" type="text" value={selectedStudent.dob} readOnly />
-              </div>
-              <div>
-                <p className="label">Gender</p>
-                <input className="readonly-field" type="text" value={selectedStudent.gender} readOnly />
-              </div>
-              <div>
-                <p className="label">Contact Number</p>
-                <input className="readonly-field" type="text" value={selectedStudent.contact} readOnly />
-              </div>
-              <div>
-                <p className="label">Email Address</p>
-                <input className="readonly-field" type="text" value={selectedStudent.email} readOnly />
-              </div>
-              <div>
-                <p className="label">Guardian</p>
-                <input className="readonly-field" type="text" value={selectedStudent.guardian} readOnly />
-              </div>
-              <div>
-                <p className="label">Guardian Contact Info</p>
-                <input className="readonly-field" type="text" value={selectedStudent.guardianContact} readOnly />
-              </div>
-              <div>
-                <p className="label">Violation</p>
-                <input className="readonly-field" type="text" value={selectedStudent.violation} readOnly />
-              </div>
-              <div style={{ gridColumn: "1 / -1" }}>
-                <p className="label">Skills</p>
-                {selectedStudent.skills && selectedStudent.skills.length > 0 ? (
-                  <div className="skills-grid">
-                    {selectedStudent.skills.map((skill, idx) => (
-                      <span key={idx} className="skill-badge">
-                        <FiAward />
-                        {skill}
-                      </span>
-                    ))}
+            <div className="profile-details-container">
+              <div className="profile-section">
+                <h4 className="section-title">Academic Information</h4>
+                <div className="modal-grid">
+                  <div>
+                    <p className="label">Program / Course</p>
+                    <input className="readonly-field" type="text" value={selectedStudent.program} readOnly />
                   </div>
-                ) : (
-                  <p className="skills-empty" style={{ marginTop: "0.5rem" }}>
-                    No skills listed
-                  </p>
-                )}
+                  <div>
+                    <p className="label">Year Level</p>
+                    <input className="readonly-field" type="text" value={selectedStudent.yearLevel} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Section</p>
+                    <input className="readonly-field" type="text" value={selectedStudent.section} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Enrollment Status</p>
+                    <input className="readonly-field" type="text" value={selectedStudent.status} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Scholarship</p>
+                    <input className="readonly-field" type="text" value={selectedStudent.scholarship} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Date Enrolled</p>
+                    <input className="readonly-field" type="text" value={selectedStudent.dateEnrolled} readOnly />
+                  </div>
+                </div>
+              </div>
+
+              <div className="profile-section">
+                <h4 className="section-title">Personal Information</h4>
+                <div className="modal-grid">
+                  <div>
+                    <p className="label">Date of Birth</p>
+                    <input className="readonly-field" type="text" value={selectedStudent.dob} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Gender</p>
+                    <input className="readonly-field" type="text" value={selectedStudent.gender} readOnly />
+                  </div>
+                  <div style={{ gridColumn: isStudent ? "span 1" : "span 2" }}>
+                    <p className="label">Violation</p>
+                    <input className="readonly-field" type="text" value={selectedStudent.violation} readOnly />
+                  </div>
+                </div>
+              </div>
+
+              <div className="profile-section">
+                <h4 className="section-title">Contact & Guardian Details</h4>
+                <div className="modal-grid">
+                  <div>
+                    <p className="label">Contact Number</p>
+                    <input className="readonly-field" type="text" value={selectedStudent.contact} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Email Address</p>
+                    <input className="readonly-field" type="text" value={selectedStudent.email} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Guardian Name</p>
+                    <input className="readonly-field" type="text" value={selectedStudent.guardian} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Guardian Contact</p>
+                    <input className="readonly-field" type="text" value={selectedStudent.guardianContact} readOnly />
+                  </div>
+                </div>
+              </div>
+
+              <div className="profile-section">
+                <h4 className="section-title">Skills & Competencies</h4>
+                <div className="skills-container-full">
+                  {selectedStudent.skills && selectedStudent.skills.length > 0 ? (
+                    <div className="skills-grid">
+                      {selectedStudent.skills.map((skill, idx) => (
+                        <span key={idx} className="skill-badge">
+                          <FiAward />
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="skills-empty">No skills listed</p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
