@@ -9,31 +9,33 @@ import './index.css';
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
-      <App />
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 3000,
-          style: {
-            background: "#fff",
-            color: "#363636",
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-            borderRadius: "10px",
-          },
-          success: {
-            iconTheme: {
-              primary: "#16a34a",
-              secondary: "#fff",
+      <AuthProvider>
+        <App />
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              background: "#fff",
+              color: "#363636",
+              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+              borderRadius: "10px",
             },
-          },
-          error: {
-            iconTheme: {
-              primary: "#dc2626",
-              secondary: "#fff",
+            success: {
+              iconTheme: {
+                primary: "#16a34a",
+                secondary: "#fff",
+              },
             },
-          },
-        }}
-      />
+            error: {
+              iconTheme: {
+                primary: "#dc2626",
+                secondary: "#fff",
+              },
+            },
+          }}
+        />
+      </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>,
 );
