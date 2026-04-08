@@ -7,48 +7,48 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 const Student = require("../models/Student");
 const SEED_ID_PREFIX = "2201";
-const SEED_ID_START = 901;
+const SEED_ID_START = 1;
 
 const MOCK_STUDENTS = [
   {
-    id: "2201901",
-    firstName: "Althea",
-    middleName: "M.",
-    lastName: "Santos",
-    gender: "Female",
-    dob: "2005-02-18",
+    id: "2201001",
+    firstName: "Jan Earl",
+    middleName: "Eclarinal",
+    lastName: "Olivar",
+    gender: "Male",
+    dob: "2004-05-15",
     program: "BSCS",
-    yearLevel: "2",
-    section: "CS2A",
+    yearLevel: "3",
+    section: "CS3A",
     status: "Enrolled",
-    scholarship: "Academic Scholar",
-    email: "althea.santos@ccs.edu",
-    contact: "09175551001",
-    dateEnrolled: "2023-08-21",
-    guardian: "Maria Santos",
-    guardianContact: "09177778800",
+    scholarship: "Full Scholar",
+    email: "janearl.olivar@ccs.edu",
+    contact: "09175550001",
+    dateEnrolled: "2022-08-15",
+    guardian: "Maria Olivar",
+    guardianContact: "09175551122",
     violation: "None",
-    skills: ["Programming", "Web Development", "Problem Solving"],
+    skills: ["Fullstack Development", "Project Management"],
   },
   {
-    id: "2201902",
-    firstName: "Bryan",
-    middleName: "L.",
-    lastName: "Reyes",
-    gender: "Male",
-    dob: "2004-11-05",
+    id: "2201002",
+    firstName: "Eden",
+    middleName: "Santos",
+    lastName: "Nataya",
+    gender: "Female",
+    dob: "2005-09-20",
     program: "BSIT",
-    yearLevel: "3",
-    section: "IT3B",
+    yearLevel: "2",
+    section: "IT2B",
     status: "Enrolled",
     scholarship: "Dean's Lister",
-    email: "bryan.reyes@ccs.edu",
-    contact: "09175551002",
-    dateEnrolled: "2022-08-22",
-    guardian: "Leo Reyes",
-    guardianContact: "09175559988",
+    email: "eden.nataya@ccs.edu",
+    contact: "09175550002",
+    dateEnrolled: "2023-08-12",
+    guardian: "Leo Nataya",
+    guardianContact: "09175553344",
     violation: "None",
-    skills: ["Database Management", "Data Analysis", "Communication"],
+    skills: ["UI/UX Design", "Graphic Arts", "Creative Writing"],
   },
   {
     id: "2201903",
@@ -334,7 +334,7 @@ async function run() {
 
   // Clear existing seeded students (IDs 2201901-2201999)
   const clearResult = await Student.deleteMany({
-    id: { $regex: /^22019[0-9]{2}$/ },
+    id: { $regex: /^2201/ },
   });
   console.log(`Cleared ${clearResult.deletedCount} existing seeded students.`);
 

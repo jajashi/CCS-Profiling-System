@@ -5,6 +5,7 @@ const { connectDB } = require('./config/database');
 const studentRoutes = require('./routes/studentRoutes');
 const facultyRoutes = require('./routes/facultyRoutes');
 const specializationRoutes = require('./routes/specializationRoutes');
+const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 const PORT = process.env.PORT;
@@ -16,6 +17,7 @@ if (!PORT) {
 
 app.use(express.json({ limit: '8mb' }));
 
+app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/faculty', facultyRoutes);
 app.use('/api/specializations', specializationRoutes);

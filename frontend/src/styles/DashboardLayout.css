@@ -1,3 +1,22 @@
+/* --- STUDENT SPECIFIC LAYOUT --- */
+.student-layout {
+  --primary: #f97316;
+  --primary-hover: #ea580c;
+  --primary-light: #fff7ed;
+  --bg-color: #fffaf5; 
+}
+
+.student-layout .nav-link.active {
+  background: linear-gradient(135deg, #f97316, #fb923c);
+  box-shadow: 0 10px 20px rgba(249, 115, 22, 0.2);
+}
+
+.student-layout .user-avatar.student-avatar {
+  background: linear-gradient(135deg, #f97316, #fbbf24);
+  box-shadow: 0 4px 10px rgba(249, 115, 22, 0.3);
+}
+
+/* General Layout adjustments */
 .dashboard-container {
   display: flex;
   height: 100vh;
@@ -11,7 +30,6 @@
   display: flex;
   flex-direction: column;
   min-width: 0; 
-  /* Prevent flex flex-child from overflowing */
 }
 
 /* --- SIDEBAR --- */
@@ -127,9 +145,7 @@
 /* --- TOPBAR --- */
 .topbar {
   height: 64px;
-  background-color: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background-color: #ffffff;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;

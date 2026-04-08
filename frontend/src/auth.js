@@ -1,26 +1,31 @@
-const MOCK_USERS = [
-  { username: 'admin', password: 'password', name: 'System Admin', role: 'admin' },
-  { username: 'user001', password: 'user123456', name: 'User 001', role: 'user' }
-];
-
 export const auth = {
-  login(username, password) {
-    const user = MOCK_USERS.find(
-      (u) => (u.username === username || u.username === username.toLowerCase())
-    );
+  async login(username, password) {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
 
-    if (!user) {
-      return { success: false, error: 'Invalid username' };
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // We store the user data and the token
+        const userData = {
+          ...data.user,
+          token: data.token
+        };
+        localStorage.setItem('ccs_user', JSON.stringify(userData));
+        return { success: true };
+      } else {
+        return { success: false, error: data.message || 'Login failed' };
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      return { success: false, error: 'Cannot connect to server. Please try again.' };
     }
-
-    if (user.password !== password) {
-      return { success: false, error: 'Invalid password' };
-    }
-
-    // Omit password from saved data
-    const { password: _, ...userData } = user;
-    localStorage.setItem('ccs_user', JSON.stringify(userData));
-    return { success: true };
   },
 
   logout() {

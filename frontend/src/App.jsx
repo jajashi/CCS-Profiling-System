@@ -27,6 +27,17 @@ const AdminRoute = ({ children }) => {
   return children;
 };
 
+const NonStudentRoute = ({ children }) => {
+  const { isAuthenticated, isStudent } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  if (isStudent) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+};
+
 function App() {
   return (
     <Routes>
@@ -42,8 +53,10 @@ function App() {
         <Route index element={<DashboardHome />} />
         <Route path="student-info" element={<StudentInformation />} />
         <Route path="student-info/:id" element={<StudentInformation />} />
-        <Route path="faculty-info" element={<FacultyInformation />} />
-        <Route path="faculty-info/:employeeId" element={<FacultyInformation />} />
+        
+        <Route path="faculty-info" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />
+        <Route path="faculty-info/:employeeId" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />
+        
         <Route
           path="reports"
           element={(
@@ -52,9 +65,9 @@ function App() {
             </AdminRoute>
           )}
         />
-        <Route path="instruction" element={<PlaceholderPage title="Instruction" />} />
-        <Route path="scheduling" element={<PlaceholderPage title="Scheduling" />} />
-        <Route path="events" element={<PlaceholderPage title="Events" />} />
+        <Route path="instruction" element={<NonStudentRoute><PlaceholderPage title="Instruction" /></NonStudentRoute>} />
+        <Route path="scheduling" element={<NonStudentRoute><PlaceholderPage title="Scheduling" /></NonStudentRoute>} />
+        <Route path="events" element={<NonStudentRoute><PlaceholderPage title="Events" /></NonStudentRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
