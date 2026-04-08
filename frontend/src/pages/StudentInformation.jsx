@@ -17,12 +17,14 @@ import {
   FiAward,
   FiUsers,
 } from "react-icons/fi";
+import { useNavigate, useParams } from 'react-router-dom';
 import femaleImage from "../assets/images/female.jpg";
 import maleImage from "../assets/images/male.jpg";
 import AddStudentForm from "../components/AddStudentForm";
 import DeleteConfirmationModal from "../components/DeleteConfirmationModal";
 import FilterDropdown from "../components/FilterDropdown";
 import SkillsFilter from "../components/SkillsFilter";
+import { useAuth } from '../context/AuthContext';
 import "../styles/StudentInformation.css";
 
 const mockStudents = [
@@ -47,16 +49,16 @@ const mockStudents = [
     skills: ["Programming", "Web Development", "Problem Solving"],
   },
   {
-    id: "2023-002",
-    firstName: "Bryan",
-    middleName: "L.",
-    lastName: "Reyes",
-    gender: "Male",
-    dob: "2004-11-05",
-    program: "BSIT",
-    yearLevel: "3",
-    section: "IT3B",
-    status: "Enrolled",
+    id: '2023-002',
+    firstName: 'Bryan',
+    middleName: 'L.',
+    lastName: 'Reyes',
+    gender: 'Male',
+    dob: '2004-11-05',
+    program: 'BSIT',
+    yearLevel: '3',
+    section: 'IT3B',
+    status: 'Enrolled',
     scholarship: "Dean's Lister",
     email: "bryan.reyes@ccs.edu",
     contact: "+63 917 555 1002",
@@ -229,14 +231,18 @@ const mockStudents = [
 ];
 
 const StudentInformation = () => {
-  const [query, setQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const navigate = useNavigate();
+  const { id: selectedStudentId } = useParams();
+  const { isAdmin } = useAuth();
+  const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [students, setStudents] = useState(mockStudents);
   const [loadingStudents, setLoadingStudents] = useState(true);
-  const [studentLoadError, setStudentLoadError] = useState("");
+  const [studentLoadError, setStudentLoadError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [isStudentFormOpen, setIsStudentFormOpen] = useState(false);
-  const [studentFormMode, setStudentFormMode] = useState("create");
+  const [studentFormMode, setStudentFormMode] = useState('create');
   const [studentFormTarget, setStudentFormTarget] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -255,69 +261,73 @@ const StudentInformation = () => {
 
   const searchInputRef = useRef(null);
 
-  const PROGRAM_OPTIONS = [
-    { value: "BSCS", label: "BS Computer Science" },
-    { value: "BSIT", label: "BS Information Technology" },
-  ];
-
-  const SKILL_OPTIONS = [
-    { value: "Programming", label: "Programming" },
-    { value: "Web Development", label: "Web Development" },
-    { value: "Database Management", label: "Database Management" },
-    { value: "UI/UX Design", label: "UI/UX Design" },
-    { value: "Data Analysis", label: "Data Analysis" },
-    { value: "Communication", label: "Communication" },
-    { value: "Leadership", label: "Leadership" },
-    { value: "Problem Solving", label: "Problem Solving" },
-  ];
-
-  const YEAR_LEVEL_OPTIONS = [
-    { value: "1", label: "Year 1" },
-    { value: "2", label: "Year 2" },
-    { value: "3", label: "Year 3" },
-    { value: "4", label: "Year 4" },
-  ];
-
-  const STATUS_OPTIONS = [
-    { value: "Enrolled", label: "Enrolled" },
-    { value: "On Leave", label: "On Leave" },
-    { value: "Graduating", label: "Graduating" },
-  ];
-
-  const GENDER_OPTIONS = [
-    { value: "Male", label: "Male" },
-    { value: "Female", label: "Female" },
-  ];
-
-  const VIOLATION_OPTIONS = [
-    { value: "None", label: "None" },
-    { value: "Warning (late)", label: "Warning (late)" },
-    { value: "Academic probation", label: "Academic probation" },
-  ];
-
-  const SCHOLARSHIP_OPTIONS = [
-    { value: "Academic Scholar", label: "Academic Scholar" },
-    { value: "Dean's Lister", label: "Dean's Lister" },
-    { value: "CHED Scholar", label: "CHED Scholar" },
-    { value: "Athletic Grant", label: "Athletic Grant" },
-    { value: "Industry Partner", label: "Industry Partner" },
-    { value: "None", label: "None" },
-  ];
-
-  const getProfileImage = (gender) => {
-    const normalized = (gender || "").trim().toLowerCase();
-    if (normalized === "male") return maleImage;
-    if (normalized === "female") return femaleImage;
+  const getStudentAvatar = (student) => {
+    if (student?.profileAvatar) return student.profileAvatar;
+    const normalized = (student?.gender || '').trim().toLowerCase();
+    if (normalized === 'male') return maleImage;
+    if (normalized === 'female') return femaleImage;
     return femaleImage;
   };
 
+  const PROGRAM_OPTIONS = [
+    { value: 'BSCS', label: 'BS Computer Science' },
+    { value: 'BSIT', label: 'BS Information Technology' },
+  ];
+  const SECTION_OPTIONS = [
+    { value: 'CS1A', label: 'CS1A' }, { value: 'CS1B', label: 'CS1B' }, { value: 'CS1C', label: 'CS1C' },
+    { value: 'CS2A', label: 'CS2A' }, { value: 'CS2B', label: 'CS2B' }, { value: 'CS2C', label: 'CS2C' },
+    { value: 'CS3A', label: 'CS3A' }, { value: 'CS3B', label: 'CS3B' }, { value: 'CS3C', label: 'CS3C' },
+    { value: 'CS4A', label: 'CS4A' }, { value: 'CS4B', label: 'CS4B' }, { value: 'CS4C', label: 'CS4C' },
+    { value: 'IT1A', label: 'IT1A' }, { value: 'IT1B', label: 'IT1B' }, { value: 'IT1C', label: 'IT1C' },
+    { value: 'IT2A', label: 'IT2A' }, { value: 'IT2B', label: 'IT2B' }, { value: 'IT2C', label: 'IT2C' },
+    { value: 'IT3A', label: 'IT3A' }, { value: 'IT3B', label: 'IT3B' }, { value: 'IT3C', label: 'IT3C' },
+    { value: 'IT4A', label: 'IT4A' }, { value: 'IT4B', label: 'IT4B' }, { value: 'IT4C', label: 'IT4C' },
+  ];
+  const SKILL_OPTIONS = [
+    { value: 'Programming', label: 'Programming' },
+    { value: 'Web Development', label: 'Web Development' },
+    { value: 'Database Management', label: 'Database Management' },
+    { value: 'UI/UX Design', label: 'UI/UX Design' },
+    { value: 'Data Analysis', label: 'Data Analysis' },
+    { value: 'Communication', label: 'Communication' },
+    { value: 'Leadership', label: 'Leadership' },
+    { value: 'Problem Solving', label: 'Problem Solving' },
+  ];
+  const YEAR_LEVEL_OPTIONS = [
+    { value: '1', label: 'Year 1' },
+    { value: '2', label: 'Year 2' },
+    { value: '3', label: 'Year 3' },
+    { value: '4', label: 'Year 4' },
+  ];
+  const STATUS_OPTIONS = [
+    { value: 'Enrolled', label: 'Enrolled' },
+    { value: 'On Leave', label: 'On Leave' },
+    { value: 'Graduating', label: 'Graduating' },
+  ];
+  const GENDER_OPTIONS = [
+    { value: 'Male', label: 'Male' },
+    { value: 'Female', label: 'Female' },
+  ];
+  const VIOLATION_OPTIONS = [
+    { value: 'None', label: 'None' },
+    { value: 'Warning (late)', label: 'Warning (late)' },
+    { value: 'Academic probation', label: 'Academic probation' },
+  ];
+  const SCHOLARSHIP_OPTIONS = [
+    { value: 'Academic Scholar', label: 'Academic Scholar' },
+    { value: "Dean's Lister", label: "Dean's Lister" },
+    { value: 'CHED Scholar', label: 'CHED Scholar' },
+    { value: 'Athletic Grant', label: 'Athletic Grant' },
+    { value: 'Industry Partner', label: 'Industry Partner' },
+    { value: 'None', label: 'None' },
+  ];
+
   const fetchStudents = useCallback(async (filters = {}) => {
     setIsFetching(true);
-    setStudentLoadError("");
+    setStudentLoadError('');
 
     try {
       const params = new URLSearchParams();
-
       if (filters.search) params.set("search", filters.search);
       if (filters.program) params.set("program", filters.program);
       if (filters.skill && filters.skill.length > 0) {
@@ -338,8 +348,6 @@ const StudentInformation = () => {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
       const data = await res.json();
-
-      console.log("[fetchStudents] Received:", data.length, "students");
       setStudents(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("[fetchStudents] Error:", err);
@@ -363,8 +371,8 @@ const StudentInformation = () => {
         setStudents([]);
       }
     } finally {
-      setIsFetching(false);
       setLoadingStudents(false);
+      setIsFetching(false);
     }
   }, []);
 
@@ -373,10 +381,13 @@ const StudentInformation = () => {
   }, [fetchStudents]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedQuery(query);
-    }, 400);
+    if (!successMessage) return undefined;
+    const timer = setTimeout(() => setSuccessMessage(''), 3500);
+    return () => clearTimeout(timer);
+  }, [successMessage]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query), 350);
     return () => clearTimeout(timer);
   }, [query]);
 
@@ -550,77 +561,73 @@ const StudentInformation = () => {
   };
 
   const nextStudentId = useMemo(() => {
-    const prefix = "2201";
+    const prefix = '2201';
     const manualMax = 899;
     const maxSuffix = students
-      .map((student) => String(student.id || ""))
+      .map((student) => String(student.id || ''))
       .filter((id) => id.startsWith(prefix) && id.length === 7)
       .map((id) => Number.parseInt(id.slice(prefix.length), 10))
       .filter((value) => Number.isInteger(value) && value <= manualMax)
       .reduce((max, current) => (current > max ? current : max), 0);
 
-    return `${prefix}${String(maxSuffix + 1).padStart(3, "0")}`;
+    return `${prefix}${String(maxSuffix + 1).padStart(3, '0')}`;
   }, [students]);
 
   const handleRowClick = (student) => {
-    setSelectedStudent(student);
+    navigate(`/dashboard/student-info/${encodeURIComponent(student.id)}`);
   };
+
+  useEffect(() => {
+    if (!selectedStudentId) {
+      setSelectedStudent(null);
+      return;
+    }
+    const match = students.find((student) => String(student.id) === String(selectedStudentId));
+    setSelectedStudent(match || null);
+  }, [selectedStudentId, students]);
 
   const handleDeleteClick = (student) => {
     setDeleteTarget(student);
-    setDeleteError("");
+    setDeleteError('');
     setIsDeleteModalOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget?._id) return;
-
     setIsDeleting(true);
-    setDeleteError("");
-
+    setDeleteError('');
     try {
-      const res = await fetch(`/api/students/${deleteTarget._id}`, {
-        method: "DELETE",
-      });
-
+      const res = await fetch(`/api/students/${deleteTarget._id}`, { method: 'DELETE' });
       if (res.status === 200 || res.status === 204) {
         setStudents((prev) => prev.filter((s) => s._id !== deleteTarget._id));
         toast.success("Student record successfully deleted!");
         setIsDeleteModalOpen(false);
         setDeleteTarget(null);
-      } else if (res.status === 404) {
-        setDeleteError(
-          "Student record not found. It may have been deleted already.",
-        );
-      } else {
-        const errorData = await res.json().catch(() => ({}));
-        setDeleteError(
-          errorData.message || `Request failed with status ${res.status}`,
-        );
+        if (selectedStudent?._id === deleteTarget._id) setSelectedStudent(null);
+        return;
       }
-    } catch (err) {
-      setDeleteError(
-        "Network error. Please check your connection and try again.",
-      );
+      const payload = await res.json().catch(() => ({}));
+      setDeleteError(payload.message || 'Delete failed.');
+    } catch {
+      setDeleteError('Network error. Please check your connection and try again.');
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const handleDeleteCancel = () => {
-    setIsDeleteModalOpen(false);
-    setDeleteTarget(null);
-    setDeleteError("");
-  };
-
   return (
     <div className="student-directory">
-      <div className="page-header">
-        <h2>Student Information</h2>
-        <p className="subtitle">
-          View the current student population at a glance. Click any row to see
-          full details.
-        </p>
+      <div className="directory-hero student-hero">
+        <div className="directory-hero-icon">
+          <FiUsers />
+        </div>
+        <div>
+          <p className="directory-hero-title">Student Information</p>
+          <p className="directory-hero-subtitle">
+            <FiInfo />
+            <span>View the current student population at a glance. Click any row to see full details.</span>
+          </p>
+        </div>
       </div>
 
       <div className="table-card">
@@ -636,6 +643,37 @@ const StudentInformation = () => {
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
+          <div className="toolbar-meta flex items-center justify-between gap-4">
+            <span className="meta-chip">
+              {students.length} students
+            </span>
+            <button
+              type="button"
+              className={`filter-toggle-btn ${showFilters ? 'active' : ''}`}
+              onClick={() => setShowFilters((prev) => !prev)}
+              title="Toggle advanced filters"
+            >
+              <FiFilter />
+              <span>Filters</span>
+            </button>
+            {isAdmin ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedStudent(null);
+                  setStudentFormMode('create');
+                  setStudentFormTarget(null);
+                  setIsStudentFormOpen(true);
+                }}
+                className="inline-flex min-h-[44px] min-w-[160px] items-center justify-center whitespace-nowrap rounded-xl bg-[#ff7f00] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#e67300] focus:outline-none focus:ring-2 focus:ring-[#fff3e6]"
+                aria-label="Add a new student"
+                disabled={loadingStudents || isFetching}
+                title={loadingStudents || isFetching ? 'Loading students...' : 'Add Student'}
+              >
+                <FiPlus />
+                <span>Add Student</span>
+              </button>
+            ) : null}
           <div className="student-count-badge">
             <FiUsers />
             <span>{students.length} students</span>
@@ -672,6 +710,26 @@ const StudentInformation = () => {
           </button>
         </div>
 
+        {showFilters ? (
+          <div className="filter-toolbar">
+            <div className="filter-group">
+              <FilterDropdown label="Program" value={programFilter} options={PROGRAM_OPTIONS} onChange={setProgramFilter} onClear={() => setProgramFilter('')} placeholder="All Programs" disabled={isFetching} />
+              <FilterDropdown label="Year Level" value={yearLevelFilter} options={YEAR_LEVEL_OPTIONS} onChange={setYearLevelFilter} onClear={() => setYearLevelFilter('')} placeholder="All Years" disabled={isFetching} />
+              <FilterDropdown label="Section" value={sectionFilter} options={SECTION_OPTIONS} onChange={setSectionFilter} onClear={() => setSectionFilter('')} placeholder="All Sections" disabled={isFetching} />
+              <FilterDropdown label="Status" value={statusFilter} options={STATUS_OPTIONS} onChange={setStatusFilter} onClear={() => setStatusFilter('')} placeholder="All Statuses" disabled={isFetching} />
+              <FilterDropdown label="Scholarship" value={scholarshipFilter} options={SCHOLARSHIP_OPTIONS} onChange={setScholarshipFilter} onClear={() => setScholarshipFilter('')} placeholder="All Scholarships" disabled={isFetching} />
+              <FilterDropdown label="Gender" value={genderFilter} options={GENDER_OPTIONS} onChange={setGenderFilter} onClear={() => setGenderFilter('')} placeholder="All Genders" disabled={isFetching} />
+              <FilterDropdown label="Skills" value={skillFilter} options={SKILL_OPTIONS} onChange={setSkillFilter} onClear={() => setSkillFilter('')} placeholder="All Skills" disabled={isFetching} />
+              <FilterDropdown label="Violation" value={violationFilter} options={VIOLATION_OPTIONS} onChange={setViolationFilter} onClear={() => setViolationFilter('')} placeholder="All Violations" disabled={isFetching} />
+            </div>
+            {(query || programFilter || skillFilter || yearLevelFilter || sectionFilter || statusFilter || scholarshipFilter || genderFilter || violationFilter) ? (
+              <button type="button" className="clear-filters-btn" onClick={handleClearFilters} disabled={isFetching}>
+                <FiRotateCcw />
+                Clear Filters
+              </button>
+            ) : null}
+          </div>
+        ) : null}
         {/* ===== Filter Panel ===== */}
         {showFilters && (
           <>
@@ -795,6 +853,11 @@ const StudentInformation = () => {
             {studentLoadError}
           </div>
         ) : null}
+        {successMessage ? (
+          <div className="page-success-alert">
+            {successMessage}
+          </div>
+        ) : null}
 
         <div className="table-responsive">
           <table className="student-table">
@@ -827,7 +890,12 @@ const StudentInformation = () => {
                   <td className="id-cell">
                     <span className="id-badge">{student.id}</span>
                   </td>
-                  <td>{student.firstName}</td>
+                  <td>
+                    <div className="flex items-center gap-2">
+                      <FiUser />
+                      <span>{student.firstName}</span>
+                    </div>
+                  </td>
                   <td>{student.middleName}</td>
                   <td>{student.lastName}</td>
                   <td>{student.gender}</td>
@@ -836,14 +904,23 @@ const StudentInformation = () => {
                   <td>{student.yearLevel}</td>
                   <td>{student.section}</td>
                   <td>
-                    <span
-                      className={`status-badge status-${student.status.replace(" ", "").toLowerCase()}`}>
+                    <span className={`status-badge status-${student.status.replace(' ', '').toLowerCase()}`}>
                       {student.status}
                     </span>
                   </td>
                   <td>{student.scholarship}</td>
-                  <td>{student.email}</td>
-                  <td>{student.contact}</td>
+                  <td>
+                    <div className="flex items-center gap-2">
+                      <FiMail />
+                      <span>{student.email}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div className="flex items-center gap-2">
+                      <FiPhone />
+                      <span>{student.contact}</span>
+                    </div>
+                  </td>
                   <td>{student.dateEnrolled}</td>
                   <td>{student.guardian}</td>
                   <td>{student.guardianContact}</td>
@@ -862,40 +939,36 @@ const StudentInformation = () => {
                     )}
                   </td>
                   <td>
-                    <div
-                      className="action-buttons"
-                      onClick={(e) => e.stopPropagation()}>
-                      <button
-                        className="action-btn edit"
-                        type="button"
-                        disabled={!student._id}
-                        aria-label="Edit student"
-                        title={
-                          student._id
-                            ? "Edit student"
-                            : "Editing unavailable for sample data"
-                        }
-                        onClick={() => {
-                          setStudentFormMode("edit");
-                          setStudentFormTarget(student);
-                          setIsStudentFormOpen(true);
-                          setSelectedStudent(null);
-                        }}>
-                        <FiEdit2 />
-                      </button>
-                      <button
-                        className="action-btn delete"
-                        type="button"
-                        disabled={!student._id}
-                        aria-label="Delete student"
-                        title={
-                          student._id
-                            ? "Delete student"
-                            : "Deleting unavailable for sample data"
-                        }
-                        onClick={() => handleDeleteClick(student)}>
-                        <FiTrash2 />
-                      </button>
+                    <div className="action-buttons" onClick={(e) => e.stopPropagation()}>
+                      {isAdmin ? (
+                        <>
+                          <button
+                            className="action-btn edit"
+                            type="button"
+                            disabled={!student._id}
+                            aria-label="Edit student"
+                            title={student._id ? 'Edit student' : 'Editing unavailable for sample data'}
+                            onClick={() => {
+                              setStudentFormMode('edit');
+                              setStudentFormTarget(student);
+                              setIsStudentFormOpen(true);
+                              setSelectedStudent(null);
+                            }}
+                          >
+                            <FiEdit2 />
+                          </button>
+                          <button
+                            className="action-btn delete"
+                            type="button"
+                            disabled={!student._id}
+                            aria-label="Delete student"
+                            title={student._id ? 'Delete student' : 'Deleting unavailable for sample data'}
+                            onClick={() => handleDeleteClick(student)}
+                          >
+                            <FiTrash2 />
+                          </button>
+                        </>
+                      ) : null}
                     </div>
                   </td>
                 </tr>
@@ -925,15 +998,10 @@ const StudentInformation = () => {
       </div>
 
       {selectedStudent && (
-        <div
-          className="student-modal-backdrop"
-          onClick={() => setSelectedStudent(null)}>
+        <div className="student-modal-backdrop" onClick={() => navigate('/dashboard/student-info')}>
           <div className="student-modal" onClick={(e) => e.stopPropagation()}>
             <div className="breadcrumb-bar">
-              <button
-                className="breadcrumb-link"
-                type="button"
-                onClick={() => setSelectedStudent(null)}>
+              <button className="breadcrumb-link" type="button" onClick={() => navigate('/dashboard/student-info')}>
                 Students
               </button>
               <span className="breadcrumb-separator">/</span>
@@ -945,37 +1013,35 @@ const StudentInformation = () => {
               <div className="profile-header">
                 <img
                   className="profile-avatar"
-                  src={getProfileImage(selectedStudent.gender)}
+                  src={getStudentAvatar(selectedStudent)}
                   alt={`${selectedStudent.firstName} ${selectedStudent.lastName}`}
                 />
                 <div>
                   <p className="modal-eyebrow">Student Details</p>
                   <h3>
-                    {selectedStudent.firstName} {selectedStudent.middleName}{" "}
-                    {selectedStudent.lastName}
+                    {selectedStudent.firstName} {selectedStudent.middleName} {selectedStudent.lastName}
                   </h3>
                   <p className="modal-subtitle">ID: {selectedStudent.id}</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStudentFormMode("edit");
-                    setStudentFormTarget(selectedStudent);
-                    setIsStudentFormOpen(true);
-                    setSelectedStudent(null);
-                  }}
-                  disabled={!selectedStudent?._id}
-                  className="modal-edit-btn"
-                  title={
-                    selectedStudent?._id
-                      ? "Edit student"
-                      : "Editing unavailable for sample data"
-                  }>
-                  <FiEdit2 />
-                  <span>Edit</span>
-                </button>
+                {isAdmin ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStudentFormMode('edit');
+                      setStudentFormTarget(selectedStudent);
+                      setIsStudentFormOpen(true);
+                      setSelectedStudent(null);
+                    }}
+                    disabled={!selectedStudent?._id}
+                    className="modal-edit-btn"
+                    title={selectedStudent?._id ? 'Edit student' : 'Editing unavailable for sample data'}
+                  >
+                    <FiEdit2 />
+                    <span>Edit</span>
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => {
@@ -994,9 +1060,10 @@ const StudentInformation = () => {
                 </button>
                 <button
                   className="modal-close"
-                  onClick={() => setSelectedStudent(null)}
+                  onClick={() => navigate('/dashboard/student-info')}
                   aria-label="Close dialog"
-                  type="button">
+                  type="button"
+                >
                   <FiX />
                 </button>
               </div>
@@ -1004,121 +1071,60 @@ const StudentInformation = () => {
 
             <div className="modal-grid">
               <div>
+                <p className="label">Profile Avatar URL</p>
+                <input className="readonly-field" type="text" value={selectedStudent.profileAvatar || '-'} readOnly />
+              </div>
+              <div>
                 <p className="label">Program / Course</p>
-                <input
-                  className="readonly-field"
-                  type="text"
-                  value={selectedStudent.program}
-                  readOnly
-                />
+                <input className="readonly-field" type="text" value={selectedStudent.program} readOnly />
               </div>
               <div>
                 <p className="label">Year Level</p>
-                <input
-                  className="readonly-field"
-                  type="text"
-                  value={selectedStudent.yearLevel}
-                  readOnly
-                />
+                <input className="readonly-field" type="text" value={selectedStudent.yearLevel} readOnly />
               </div>
               <div>
                 <p className="label">Section</p>
-                <input
-                  className="readonly-field"
-                  type="text"
-                  value={selectedStudent.section}
-                  readOnly
-                />
+                <input className="readonly-field" type="text" value={selectedStudent.section} readOnly />
               </div>
               <div>
                 <p className="label">Enrollment Status</p>
-                <input
-                  className="readonly-field"
-                  type="text"
-                  value={selectedStudent.status}
-                  readOnly
-                />
+                <input className="readonly-field" type="text" value={selectedStudent.status} readOnly />
               </div>
               <div>
                 <p className="label">Scholarship</p>
-                <input
-                  className="readonly-field"
-                  type="text"
-                  value={selectedStudent.scholarship}
-                  readOnly
-                />
+                <input className="readonly-field" type="text" value={selectedStudent.scholarship} readOnly />
               </div>
               <div>
                 <p className="label">Date Enrolled</p>
-                <input
-                  className="readonly-field"
-                  type="text"
-                  value={selectedStudent.dateEnrolled}
-                  readOnly
-                />
+                <input className="readonly-field" type="text" value={selectedStudent.dateEnrolled} readOnly />
               </div>
               <div>
                 <p className="label">Date of Birth</p>
-                <input
-                  className="readonly-field"
-                  type="text"
-                  value={selectedStudent.dob}
-                  readOnly
-                />
+                <input className="readonly-field" type="text" value={selectedStudent.dob} readOnly />
               </div>
               <div>
                 <p className="label">Gender</p>
-                <input
-                  className="readonly-field"
-                  type="text"
-                  value={selectedStudent.gender}
-                  readOnly
-                />
+                <input className="readonly-field" type="text" value={selectedStudent.gender} readOnly />
               </div>
               <div>
                 <p className="label">Contact Number</p>
-                <input
-                  className="readonly-field"
-                  type="text"
-                  value={selectedStudent.contact}
-                  readOnly
-                />
+                <input className="readonly-field" type="text" value={selectedStudent.contact} readOnly />
               </div>
               <div>
                 <p className="label">Email Address</p>
-                <input
-                  className="readonly-field"
-                  type="text"
-                  value={selectedStudent.email}
-                  readOnly
-                />
+                <input className="readonly-field" type="text" value={selectedStudent.email} readOnly />
               </div>
               <div>
                 <p className="label">Guardian</p>
-                <input
-                  className="readonly-field"
-                  type="text"
-                  value={selectedStudent.guardian}
-                  readOnly
-                />
+                <input className="readonly-field" type="text" value={selectedStudent.guardian} readOnly />
               </div>
               <div>
                 <p className="label">Guardian Contact Info</p>
-                <input
-                  className="readonly-field"
-                  type="text"
-                  value={selectedStudent.guardianContact}
-                  readOnly
-                />
+                <input className="readonly-field" type="text" value={selectedStudent.guardianContact} readOnly />
               </div>
               <div>
                 <p className="label">Violation</p>
-                <input
-                  className="readonly-field"
-                  type="text"
-                  value={selectedStudent.violation}
-                  readOnly
-                />
+                <input className="readonly-field" type="text" value={selectedStudent.violation} readOnly />
               </div>
               <div style={{ gridColumn: "1 / -1" }}>
                 <p className="label">Skills</p>
@@ -1151,28 +1157,29 @@ const StudentInformation = () => {
           onClose={() => setIsStudentFormOpen(false)}
           onCreated={(createdStudent) => {
             setStudents((prev) => [createdStudent, ...prev]);
-            setQuery("");
+            setQuery('');
             setSelectedStudent(createdStudent);
+            setSuccessMessage('Student profile created successfully.');
           }}
           onUpdated={(updatedStudent) => {
             setStudents((prev) =>
-              prev.map((s) =>
-                s._id && updatedStudent._id && s._id === updatedStudent._id
-                  ? updatedStudent
-                  : s,
-              ),
+              prev.map((s) => (s._id && updatedStudent._id && s._id === updatedStudent._id ? updatedStudent : s)),
             );
             setSelectedStudent(updatedStudent);
+            setSuccessMessage('Student profile updated successfully.');
           }}
         />
       ) : null}
-
       {isDeleteModalOpen && deleteTarget ? (
         <DeleteConfirmationModal
           studentName={`${deleteTarget.firstName} ${deleteTarget.lastName}`}
           studentId={deleteTarget.id}
           onConfirm={handleDeleteConfirm}
-          onCancel={handleDeleteCancel}
+          onCancel={() => {
+            setIsDeleteModalOpen(false);
+            setDeleteTarget(null);
+            setDeleteError('');
+          }}
           isDeleting={isDeleting}
           error={deleteError}
         />

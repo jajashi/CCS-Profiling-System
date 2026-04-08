@@ -1,8 +1,8 @@
 import React from 'react';
-import { auth } from '../auth';
+import { useAuth } from '../context/AuthContext';
 
 const TopBar = () => {
-  const user = auth.getUser();
+  const { user } = useAuth();
   const getInitials = (name) => {
     if (!name) return 'U';
     return name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase();

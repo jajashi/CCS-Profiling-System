@@ -5,12 +5,73 @@
   gap: 1.5rem;
 }
 
+.directory-hero {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-radius: 16px;
+  padding: 1.2rem 1.35rem;
+  border: 1px solid #f4d6b3;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.student-hero {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 48%, #fee2e2 100%);
+}
+
+.faculty-hero {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 48%, #fee2e2 100%);
+}
+
+.directory-hero-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #ff6a00;
+  border: 1px solid #ffd1a8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.55rem;
+  flex-shrink: 0;
+}
+
+.directory-hero-title {
+  margin: 0;
+  color: #7c2d12;
+  font-weight: 800;
+  font-size: 1.22rem;
+}
+
+.directory-hero-subtitle {
+  margin: 0.3rem 0 0;
+  color: #9a3412;
+  display: flex;
+  gap: 0.45rem;
+  align-items: flex-start;
+  font-size: 1rem;
+}
+
 .table-card {
   background: #ffffff;
   border: 1px solid #e5edf5;
   border-radius: 12px;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
   overflow: hidden;
+}
+
+.page-success-alert {
+  margin-top: 0.75rem;
+  border: 1px solid #86efac;
+  border-left: 4px solid #16a34a;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  color: #166534;
+  border-radius: 10px;
+  padding: 0.75rem 0.95rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  box-shadow: 0 8px 18px rgba(22, 163, 74, 0.12);
 }
 
 /* ===== Top Toolbar ===== */

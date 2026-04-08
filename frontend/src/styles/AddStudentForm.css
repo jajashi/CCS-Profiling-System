@@ -252,6 +252,36 @@
   grid-column: 1 / -1;
 }
 
+.avatar-input-mode {
+  display: flex;
+  gap: 0.9rem;
+  margin-top: 0.35rem;
+}
+
+.avatar-input-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.avatar-preview-wrap {
+  margin-top: 0.7rem;
+  display: flex;
+  align-items: center;
+}
+
+.avatar-preview-img {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid #ffede0;
+  object-fit: cover;
+  background: #fff7ed;
+}
+
 .skills-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
