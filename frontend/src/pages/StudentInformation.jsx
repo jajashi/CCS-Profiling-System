@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FiFilter, FiInfo, FiMail, FiPhone, FiPlus, FiRotateCcw, FiSearch, FiEdit2, FiTrash2, FiUser, FiUsers, FiX } from 'react-icons/fi';
+import { useNavigate, useParams } from 'react-router-dom';
 import femaleImage from '../assets/images/female.jpg';
 import maleImage from '../assets/images/male.jpg';
 import AddStudentForm from '../components/AddStudentForm';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 import FilterDropdown from '../components/FilterDropdown';
+import { useAuth } from '../context/AuthContext';
 import '../styles/StudentInformation.css';
 
 const mockStudents = [
@@ -201,6 +203,9 @@ const mockStudents = [
 ];
 
 const StudentInformation = () => {
+  const navigate = useNavigate();
+  const { id: selectedStudentId } = useParams();
+  const { isAdmin } = useAuth();
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -391,8 +396,17 @@ const StudentInformation = () => {
   }, [students]);
 
   const handleRowClick = (student) => {
-    setSelectedStudent(student);
+    navigate(`/dashboard/student-info/${encodeURIComponent(student.id)}`);
   };
+
+  useEffect(() => {
+    if (!selectedStudentId) {
+      setSelectedStudent(null);
+      return;
+    }
+    const match = students.find((student) => String(student.id) === String(selectedStudentId));
+    setSelectedStudent(match || null);
+  }, [selectedStudentId, students]);
 
   const handleDeleteClick = (student) => {
     setDeleteTarget(student);
@@ -463,22 +477,24 @@ const StudentInformation = () => {
               <FiFilter />
               <span>Filters</span>
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedStudent(null);
-                setStudentFormMode('create');
-                setStudentFormTarget(null);
-                setIsStudentFormOpen(true);
-              }}
-              className="inline-flex min-h-[44px] min-w-[160px] items-center justify-center whitespace-nowrap rounded-xl bg-[#ff7f00] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#e67300] focus:outline-none focus:ring-2 focus:ring-[#fff3e6]"
-              aria-label="Add a new student"
-              disabled={loadingStudents || isFetching}
-              title={loadingStudents || isFetching ? 'Loading students...' : 'Add Student'}
-            >
-              <FiPlus />
-              <span>Add Student</span>
-            </button>
+            {isAdmin ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedStudent(null);
+                  setStudentFormMode('create');
+                  setStudentFormTarget(null);
+                  setIsStudentFormOpen(true);
+                }}
+                className="inline-flex min-h-[44px] min-w-[160px] items-center justify-center whitespace-nowrap rounded-xl bg-[#ff7f00] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#e67300] focus:outline-none focus:ring-2 focus:ring-[#fff3e6]"
+                aria-label="Add a new student"
+                disabled={loadingStudents || isFetching}
+                title={loadingStudents || isFetching ? 'Loading students...' : 'Add Student'}
+              >
+                <FiPlus />
+                <span>Add Student</span>
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -581,31 +597,35 @@ const StudentInformation = () => {
                   <td>{student.violation}</td>
                   <td>
                     <div className="action-buttons" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        className="action-btn edit"
-                        type="button"
-                        disabled={!student._id}
-                        aria-label="Edit student"
-                        title={student._id ? 'Edit student' : 'Editing unavailable for sample data'}
-                        onClick={() => {
-                          setStudentFormMode('edit');
-                          setStudentFormTarget(student);
-                          setIsStudentFormOpen(true);
-                          setSelectedStudent(null);
-                        }}
-                      >
-                        <FiEdit2 />
-                      </button>
-                      <button
-                        className="action-btn delete"
-                        type="button"
-                        disabled={!student._id}
-                        aria-label="Delete student"
-                        title={student._id ? 'Delete student' : 'Deleting unavailable for sample data'}
-                        onClick={() => handleDeleteClick(student)}
-                      >
-                        <FiTrash2 />
-                      </button>
+                      {isAdmin ? (
+                        <>
+                          <button
+                            className="action-btn edit"
+                            type="button"
+                            disabled={!student._id}
+                            aria-label="Edit student"
+                            title={student._id ? 'Edit student' : 'Editing unavailable for sample data'}
+                            onClick={() => {
+                              setStudentFormMode('edit');
+                              setStudentFormTarget(student);
+                              setIsStudentFormOpen(true);
+                              setSelectedStudent(null);
+                            }}
+                          >
+                            <FiEdit2 />
+                          </button>
+                          <button
+                            className="action-btn delete"
+                            type="button"
+                            disabled={!student._id}
+                            aria-label="Delete student"
+                            title={student._id ? 'Delete student' : 'Deleting unavailable for sample data'}
+                            onClick={() => handleDeleteClick(student)}
+                          >
+                            <FiTrash2 />
+                          </button>
+                        </>
+                      ) : null}
                     </div>
                   </td>
                 </tr>
@@ -623,10 +643,10 @@ const StudentInformation = () => {
       </div>
 
       {selectedStudent && (
-        <div className="student-modal-backdrop" onClick={() => setSelectedStudent(null)}>
+        <div className="student-modal-backdrop" onClick={() => navigate('/dashboard/student-info')}>
           <div className="student-modal" onClick={(e) => e.stopPropagation()}>
             <div className="breadcrumb-bar">
-              <button className="breadcrumb-link" type="button" onClick={() => setSelectedStudent(null)}>
+              <button className="breadcrumb-link" type="button" onClick={() => navigate('/dashboard/student-info')}>
                 Students
               </button>
               <span className="breadcrumb-separator">/</span>
@@ -650,24 +670,26 @@ const StudentInformation = () => {
                 </div>
               </div>
               <div className="flex items-start gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStudentFormMode('edit');
-                    setStudentFormTarget(selectedStudent);
-                    setIsStudentFormOpen(true);
-                    setSelectedStudent(null);
-                  }}
-                  disabled={!selectedStudent?._id}
-                  className="modal-edit-btn"
-                  title={selectedStudent?._id ? 'Edit student' : 'Editing unavailable for sample data'}
-                >
-                  <FiEdit2 />
-                  <span>Edit</span>
-                </button>
+                {isAdmin ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStudentFormMode('edit');
+                      setStudentFormTarget(selectedStudent);
+                      setIsStudentFormOpen(true);
+                      setSelectedStudent(null);
+                    }}
+                    disabled={!selectedStudent?._id}
+                    className="modal-edit-btn"
+                    title={selectedStudent?._id ? 'Edit student' : 'Editing unavailable for sample data'}
+                  >
+                    <FiEdit2 />
+                    <span>Edit</span>
+                  </button>
+                ) : null}
                 <button
                   className="modal-close"
-                  onClick={() => setSelectedStudent(null)}
+                  onClick={() => navigate('/dashboard/student-info')}
                   aria-label="Close dialog"
                   type="button"
                 >

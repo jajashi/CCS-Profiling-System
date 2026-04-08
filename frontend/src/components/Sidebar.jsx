@@ -1,14 +1,15 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { FiHome, FiUsers, FiBriefcase, FiBookOpen, FiCalendar, FiStar, FiLogOut } from 'react-icons/fi';
-import { auth } from '../auth';
+import { FiHome, FiUsers, FiBriefcase, FiBookOpen, FiCalendar, FiStar, FiLogOut, FiBarChart2 } from 'react-icons/fi';
+import { useAuth } from '../context/AuthContext';
 import logoSrc from '../assets/images/ccs-logo.jpg';
 
 const Sidebar = () => {
   const navigate = useNavigate();
+  const { logout, isAdmin } = useAuth();
 
   const handleLogout = () => {
-    auth.logout();
+    logout();
     navigate('/');
   };
 
@@ -70,6 +71,14 @@ const Sidebar = () => {
               <span className="nav-text">Events</span>
             </NavLink>
           </li>
+          {isAdmin ? (
+            <li className="nav-item">
+              <NavLink to="/dashboard/reports" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                <span className="nav-icon"><FiBarChart2 /></span>
+                <span className="nav-text">Reports</span>
+              </NavLink>
+            </li>
+          ) : null}
         </ul>
       </nav>
 

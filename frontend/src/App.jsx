@@ -5,12 +5,24 @@ import DashboardHome from './pages/DashboardHome';
 import PlaceholderPage from './pages/PlaceholderPage';
 import StudentInformation from './pages/StudentInformation';
 import FacultyInformation from './pages/FacultyInformation';
-import { auth } from './auth';
+import { useAuth } from './context/AuthContext';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
-  if (!auth.isAuthenticated()) {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) {
     return <Navigate to="/" replace />;
+  }
+  return children;
+};
+
+const AdminRoute = ({ children }) => {
+  const { isAuthenticated, isAdmin } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  if (!isAdmin) {
+    return <Navigate to="/dashboard" replace />;
   }
   return children;
 };
@@ -29,7 +41,17 @@ function App() {
       >
         <Route index element={<DashboardHome />} />
         <Route path="student-info" element={<StudentInformation />} />
+        <Route path="student-info/:id" element={<StudentInformation />} />
         <Route path="faculty-info" element={<FacultyInformation />} />
+        <Route path="faculty-info/:employeeId" element={<FacultyInformation />} />
+        <Route
+          path="reports"
+          element={(
+            <AdminRoute>
+              <PlaceholderPage title="Reports" />
+            </AdminRoute>
+          )}
+        />
         <Route path="instruction" element={<PlaceholderPage title="Instruction" />} />
         <Route path="scheduling" element={<PlaceholderPage title="Scheduling" />} />
         <Route path="events" element={<PlaceholderPage title="Events" />} />
