@@ -14,12 +14,15 @@ import {
   FiX,
   FiRotateCcw,
   FiFilter,
+  FiAward,
+  FiUsers,
 } from "react-icons/fi";
 import femaleImage from "../assets/images/female.jpg";
 import maleImage from "../assets/images/male.jpg";
 import AddStudentForm from "../components/AddStudentForm";
 import DeleteConfirmationModal from "../components/DeleteConfirmationModal";
 import FilterDropdown from "../components/FilterDropdown";
+import SkillsFilter from "../components/SkillsFilter";
 import "../styles/StudentInformation.css";
 
 const mockStudents = [
@@ -41,6 +44,7 @@ const mockStudents = [
     guardian: "Maria Santos",
     guardianContact: "+63 917 777 8800",
     violation: "None",
+    skills: ["Programming", "Web Development", "Problem Solving"],
   },
   {
     id: "2023-002",
@@ -60,6 +64,7 @@ const mockStudents = [
     guardian: "Leo Reyes",
     guardianContact: "+63 917 555 9988",
     violation: "None",
+    skills: ["Database Management", "Data Analysis", "Communication"],
   },
   {
     id: "2023-003",
@@ -79,6 +84,7 @@ const mockStudents = [
     guardian: "Diana Valdez",
     guardianContact: "+63 917 555 8833",
     violation: "None",
+    skills: ["Programming", "UI/UX Design"],
   },
   {
     id: "2023-004",
@@ -98,6 +104,7 @@ const mockStudents = [
     guardian: "Rosa Lopez",
     guardianContact: "+63 917 555 4411",
     violation: "None",
+    skills: ["Leadership", "Communication", "Problem Solving"],
   },
   {
     id: "2023-005",
@@ -117,6 +124,7 @@ const mockStudents = [
     guardian: "Carlos Tan",
     guardianContact: "+63 917 555 2288",
     violation: "Warning (late)",
+    skills: ["Web Development", "Database Management", "Programming"],
   },
   {
     id: "2023-006",
@@ -136,6 +144,7 @@ const mockStudents = [
     guardian: "Norma Garcia",
     guardianContact: "+63 917 555 6699",
     violation: "Academic probation",
+    skills: ["Programming", "Data Analysis"],
   },
   {
     id: "2023-007",
@@ -155,6 +164,7 @@ const mockStudents = [
     guardian: "Patricia Chua",
     guardianContact: "+63 917 555 4477",
     violation: "None",
+    skills: ["UI/UX Design", "Communication", "Leadership"],
   },
   {
     id: "2023-008",
@@ -174,6 +184,7 @@ const mockStudents = [
     guardian: "Erica Uy",
     guardianContact: "+63 917 555 6622",
     violation: "None",
+    skills: ["Web Development", "Programming", "Database Management"],
   },
   {
     id: "2023-009",
@@ -193,6 +204,7 @@ const mockStudents = [
     guardian: "Vicente Cruz",
     guardianContact: "+63 917 555 5577",
     violation: "None",
+    skills: ["Data Analysis", "Communication"],
   },
   {
     id: "2023-010",
@@ -212,6 +224,7 @@ const mockStudents = [
     guardian: "Sara Delos Reyes",
     guardianContact: "+63 917 555 3344",
     violation: "None",
+    skills: ["Programming", "Leadership", "Problem Solving", "Web Development"],
   },
 ];
 
@@ -230,7 +243,7 @@ const StudentInformation = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [programFilter, setProgramFilter] = useState("");
-  const [skillFilter, setSkillFilter] = useState("");
+  const [skillFilter, setSkillFilter] = useState([]);
   const [yearLevelFilter, setYearLevelFilter] = useState("");
   const [sectionFilter, setSectionFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -307,7 +320,9 @@ const StudentInformation = () => {
 
       if (filters.search) params.set("search", filters.search);
       if (filters.program) params.set("program", filters.program);
-      if (filters.skill) params.set("skill", filters.skill);
+      if (filters.skill && filters.skill.length > 0) {
+        params.set("skill", filters.skill.join(","));
+      }
       if (filters.yearLevel) params.set("yearLevel", filters.yearLevel);
       if (filters.section) params.set("section", filters.section);
       if (filters.status) params.set("status", filters.status);
@@ -335,7 +350,7 @@ const StudentInformation = () => {
       if (
         !filters.search &&
         !filters.program &&
-        !filters.skill &&
+        (!filters.skill || filters.skill.length === 0) &&
         !filters.yearLevel &&
         !filters.section &&
         !filters.status &&
@@ -394,13 +409,144 @@ const StudentInformation = () => {
     setQuery("");
     setDebouncedQuery("");
     setProgramFilter("");
-    setSkillFilter("");
+    setSkillFilter([]);
     setYearLevelFilter("");
     setSectionFilter("");
     setStatusFilter("");
     setScholarshipFilter("");
     setGenderFilter("");
     setViolationFilter("");
+  };
+
+  // Count active filters
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (programFilter) count++;
+    if (skillFilter.length > 0) count += skillFilter.length;
+    if (yearLevelFilter) count++;
+    if (sectionFilter) count++;
+    if (statusFilter) count++;
+    if (scholarshipFilter) count++;
+    if (genderFilter) count++;
+    if (violationFilter) count++;
+    return count;
+  }, [
+    programFilter,
+    skillFilter,
+    yearLevelFilter,
+    sectionFilter,
+    statusFilter,
+    scholarshipFilter,
+    genderFilter,
+    violationFilter,
+  ]);
+
+  // Build active filters list for display
+  const activeFilters = useMemo(() => {
+    const filters = [];
+    if (programFilter) {
+      const opt = PROGRAM_OPTIONS.find((o) => o.value === programFilter);
+      filters.push({
+        label: opt ? opt.label : programFilter,
+        value: programFilter,
+        type: "program",
+      });
+    }
+    skillFilter.forEach((skill) => {
+      const opt = SKILL_OPTIONS.find((o) => o.value === skill);
+      filters.push({
+        label: opt ? opt.label : skill,
+        value: skill,
+        type: "skill",
+      });
+    });
+    if (yearLevelFilter) {
+      const opt = YEAR_LEVEL_OPTIONS.find((o) => o.value === yearLevelFilter);
+      filters.push({
+        label: opt ? opt.label : yearLevelFilter,
+        value: yearLevelFilter,
+        type: "yearLevel",
+      });
+    }
+    if (sectionFilter)
+      filters.push({
+        label: sectionFilter,
+        value: sectionFilter,
+        type: "section",
+      });
+    if (statusFilter)
+      filters.push({
+        label: statusFilter,
+        value: statusFilter,
+        type: "status",
+      });
+    if (scholarshipFilter) {
+      const opt = SCHOLARSHIP_OPTIONS.find(
+        (o) => o.value === scholarshipFilter,
+      );
+      filters.push({
+        label: opt ? opt.label : scholarshipFilter,
+        value: scholarshipFilter,
+        type: "scholarship",
+      });
+    }
+    if (genderFilter) {
+      const opt = GENDER_OPTIONS.find((o) => o.value === genderFilter);
+      filters.push({
+        label: opt ? opt.label : genderFilter,
+        value: genderFilter,
+        type: "gender",
+      });
+    }
+    if (violationFilter) {
+      const opt = VIOLATION_OPTIONS.find((o) => o.value === violationFilter);
+      filters.push({
+        label: opt ? opt.label : violationFilter,
+        value: violationFilter,
+        type: "violation",
+      });
+    }
+    return filters;
+  }, [
+    programFilter,
+    skillFilter,
+    yearLevelFilter,
+    sectionFilter,
+    statusFilter,
+    scholarshipFilter,
+    genderFilter,
+    violationFilter,
+  ]);
+
+  const removeActiveFilter = (filter) => {
+    switch (filter.type) {
+      case "program":
+        setProgramFilter("");
+        break;
+      case "skill":
+        setSkillFilter((prev) => prev.filter((s) => s !== filter.value));
+        break;
+      case "yearLevel":
+        setYearLevelFilter("");
+        break;
+      case "section":
+        setSectionFilter("");
+        break;
+      case "status":
+        setStatusFilter("");
+        break;
+      case "scholarship":
+        setScholarshipFilter("");
+        break;
+      case "gender":
+        setGenderFilter("");
+        break;
+      case "violation":
+        setViolationFilter("");
+        break;
+      default:
+        break;
+    }
   };
 
   const nextStudentId = useMemo(() => {
@@ -478,6 +624,7 @@ const StudentInformation = () => {
       </div>
 
       <div className="table-card">
+        {/* ===== Top Toolbar ===== */}
         <div className="table-toolbar">
           <div className="search-box">
             <FiSearch />
@@ -489,137 +636,159 @@ const StudentInformation = () => {
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
-          <div className="toolbar-meta flex items-center justify-between gap-4">
-            <span className="meta-chip">{students.length} students</span>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className={`filter-toggle-btn ${showFilters ? "active" : ""}`}
-                onClick={() => setShowFilters(!showFilters)}
-                title="Toggle advanced filters">
-                <FiFilter />
-                <span>Filters</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedStudent(null);
-                  setStudentFormMode("create");
-                  setStudentFormTarget(null);
-                  setIsStudentFormOpen(true);
-                }}
-                className="inline-flex min-h-[44px] min-w-[160px] items-center justify-center whitespace-nowrap rounded-xl bg-[#ff7f00] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#e67300] focus:outline-none focus:ring-2 focus:ring-[#fff3e6]"
-                aria-label="Add a new student"
-                disabled={loadingStudents || isFetching}
-                title={
-                  loadingStudents || isFetching
-                    ? "Loading students..."
-                    : "Add Student"
-                }>
-                <FiPlus />
-                <span>Add Student</span>
-              </button>
-            </div>
+          <div className="student-count-badge">
+            <FiUsers />
+            <span>{students.length} students</span>
           </div>
+          <button
+            type="button"
+            className={`filter-toggle-btn ${showFilters ? "active" : ""}`}
+            onClick={() => setShowFilters(!showFilters)}
+            title="Toggle advanced filters">
+            <FiFilter />
+            <span>Filters</span>
+            {activeFilterCount > 0 && (
+              <span className="filter-badge">{activeFilterCount}</span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedStudent(null);
+              setStudentFormMode("create");
+              setStudentFormTarget(null);
+              setIsStudentFormOpen(true);
+            }}
+            className="add-student-btn"
+            aria-label="Add a new student"
+            disabled={loadingStudents || isFetching}
+            title={
+              loadingStudents || isFetching
+                ? "Loading students..."
+                : "Add Student"
+            }>
+            <FiPlus />
+            <span>Add student</span>
+          </button>
         </div>
 
+        {/* ===== Filter Panel ===== */}
         {showFilters && (
-          <div className="filter-toolbar">
-            <div className="filter-group">
-              <FilterDropdown
-                label="Program"
-                value={programFilter}
-                options={PROGRAM_OPTIONS}
-                onChange={setProgramFilter}
-                onClear={() => setProgramFilter("")}
-                placeholder="All Programs"
-                disabled={isFetching}
-              />
-              <FilterDropdown
-                label="Year Level"
-                value={yearLevelFilter}
-                options={YEAR_LEVEL_OPTIONS}
-                onChange={setYearLevelFilter}
-                onClear={() => setYearLevelFilter("")}
-                placeholder="All Years"
-                disabled={isFetching}
-              />
-              <FilterDropdown
-                label="Section"
-                value={sectionFilter}
-                options={[]}
-                onChange={setSectionFilter}
-                onClear={() => setSectionFilter("")}
-                placeholder="All Sections"
-                disabled={isFetching}
-                customInput={true}
-              />
-              <FilterDropdown
-                label="Status"
-                value={statusFilter}
-                options={STATUS_OPTIONS}
-                onChange={setStatusFilter}
-                onClear={() => setStatusFilter("")}
-                placeholder="All Statuses"
-                disabled={isFetching}
-              />
-              <FilterDropdown
-                label="Scholarship"
-                value={scholarshipFilter}
-                options={SCHOLARSHIP_OPTIONS}
-                onChange={setScholarshipFilter}
-                onClear={() => setScholarshipFilter("")}
-                placeholder="All Scholarships"
-                disabled={isFetching}
-              />
-              <FilterDropdown
-                label="Gender"
-                value={genderFilter}
-                options={GENDER_OPTIONS}
-                onChange={setGenderFilter}
-                onClear={() => setGenderFilter("")}
-                placeholder="All Genders"
-                disabled={isFetching}
-              />
-              <FilterDropdown
-                label="Skills"
-                value={skillFilter}
-                options={SKILL_OPTIONS}
-                onChange={setSkillFilter}
-                onClear={() => setSkillFilter("")}
-                placeholder="All Skills"
-                disabled={isFetching}
-              />
-              <FilterDropdown
-                label="Violation"
-                value={violationFilter}
-                options={VIOLATION_OPTIONS}
-                onChange={setViolationFilter}
-                onClear={() => setViolationFilter("")}
-                placeholder="All Violations"
-                disabled={isFetching}
-              />
+          <>
+            <div className="filter-panel">
+              <div className="filter-grid">
+                <FilterDropdown
+                  label="Program"
+                  value={programFilter}
+                  options={PROGRAM_OPTIONS}
+                  onChange={setProgramFilter}
+                  onClear={() => setProgramFilter("")}
+                  placeholder="All programs"
+                  disabled={isFetching}
+                />
+                <FilterDropdown
+                  label="Year Level"
+                  value={yearLevelFilter}
+                  options={YEAR_LEVEL_OPTIONS}
+                  onChange={setYearLevelFilter}
+                  onClear={() => setYearLevelFilter("")}
+                  placeholder="All years"
+                  disabled={isFetching}
+                />
+                <FilterDropdown
+                  label="Section"
+                  value={sectionFilter}
+                  options={[]}
+                  onChange={setSectionFilter}
+                  onClear={() => setSectionFilter("")}
+                  placeholder="All sections"
+                  disabled={isFetching}
+                  customInput={true}
+                />
+                <FilterDropdown
+                  label="Status"
+                  value={statusFilter}
+                  options={STATUS_OPTIONS}
+                  onChange={setStatusFilter}
+                  onClear={() => setStatusFilter("")}
+                  placeholder="Active"
+                  disabled={isFetching}
+                />
+                <FilterDropdown
+                  label="Scholarship"
+                  value={scholarshipFilter}
+                  options={SCHOLARSHIP_OPTIONS}
+                  onChange={setScholarshipFilter}
+                  onClear={() => setScholarshipFilter("")}
+                  placeholder="All scholarships"
+                  disabled={isFetching}
+                />
+                <FilterDropdown
+                  label="Gender"
+                  value={genderFilter}
+                  options={GENDER_OPTIONS}
+                  onChange={setGenderFilter}
+                  onClear={() => setGenderFilter("")}
+                  placeholder="All genders"
+                  disabled={isFetching}
+                />
+                <FilterDropdown
+                  label="Violation"
+                  value={violationFilter}
+                  options={VIOLATION_OPTIONS}
+                  onChange={setViolationFilter}
+                  onClear={() => setViolationFilter("")}
+                  placeholder="All violations"
+                  disabled={isFetching}
+                />
+                <SkillsFilter
+                  label="Skills"
+                  value={skillFilter}
+                  options={SKILL_OPTIONS}
+                  onChange={setSkillFilter}
+                  disabled={isFetching}
+                />
+              </div>
             </div>
-            {(programFilter ||
-              skillFilter ||
-              yearLevelFilter ||
-              sectionFilter ||
-              statusFilter ||
-              scholarshipFilter ||
-              genderFilter ||
-              violationFilter ||
-              query) && (
-              <button
-                type="button"
-                className="clear-filters-btn"
-                onClick={handleClearFilters}
-                disabled={isFetching}>
-                <FiRotateCcw />
-                Clear Filters
-              </button>
+
+            {/* ===== Active Filters Strip ===== */}
+            {activeFilters.length > 0 && (
+              <div className="active-filters-strip">
+                <span className="active-filters-label">Active filters:</span>
+                <div className="active-filters-list">
+                  {activeFilters.map((filter) => (
+                    <span
+                      key={`${filter.type}-${filter.value}`}
+                      className="active-filter-chip">
+                      {filter.label}
+                      <button
+                        type="button"
+                        className="active-filter-chip-remove"
+                        onClick={() => removeActiveFilter(filter)}
+                        aria-label={`Remove ${filter.label} filter`}>
+                        <FiX />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="clear-all-btn"
+                  onClick={handleClearFilters}
+                  disabled={isFetching}>
+                  Clear all
+                </button>
+              </div>
             )}
-          </div>
+          </>
         )}
+
+        {/* ===== Results Count ===== */}
+        <div className="results-count">
+          Showing <strong>{students.length}</strong> student
+          {students.length !== 1 ? "s" : ""}
+          {activeFilterCount > 0 ? ` of ${students.length} filtered` : ""}
+        </div>
 
         {studentLoadError ? (
           <div className="mt-3 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 border border-red-200">
@@ -648,6 +817,7 @@ const StudentInformation = () => {
                 <th>Guardian</th>
                 <th>Guardian Contact Information</th>
                 <th>Violation</th>
+                <th>Skills</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -678,6 +848,19 @@ const StudentInformation = () => {
                   <td>{student.guardian}</td>
                   <td>{student.guardianContact}</td>
                   <td>{student.violation}</td>
+                  <td className="skills-cell">
+                    {student.skills && student.skills.length > 0 ? (
+                      <div className="skills-list">
+                        {student.skills.map((skill, idx) => (
+                          <span key={idx} className="skill-tag">
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="skills-empty">No skills listed</span>
+                    )}
+                  </td>
                   <td>
                     <div
                       className="action-buttons"
@@ -719,12 +902,12 @@ const StudentInformation = () => {
               ))}
               {!students.length && (
                 <tr>
-                  <td colSpan="18" className="empty-row">
+                  <td colSpan="19" className="empty-row">
                     {isFetching
                       ? "Loading students..."
                       : query ||
                           programFilter ||
-                          skillFilter ||
+                          (skillFilter && skillFilter.length > 0) ||
                           yearLevelFilter ||
                           sectionFilter ||
                           statusFilter ||
@@ -936,6 +1119,23 @@ const StudentInformation = () => {
                   value={selectedStudent.violation}
                   readOnly
                 />
+              </div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <p className="label">Skills</p>
+                {selectedStudent.skills && selectedStudent.skills.length > 0 ? (
+                  <div className="skills-grid">
+                    {selectedStudent.skills.map((skill, idx) => (
+                      <span key={idx} className="skill-badge">
+                        <FiAward />
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="skills-empty" style={{ marginTop: "0.5rem" }}>
+                    No skills listed
+                  </p>
+                )}
               </div>
             </div>
           </div>

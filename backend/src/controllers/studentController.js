@@ -52,7 +52,11 @@ async function getStudents(req, res, next) {
     }
 
     if (skill && skill.trim() !== "") {
-      filter.skills = { $in: [skill.trim()] };
+      // Support multiple skills (comma-separated or array)
+      const skills = Array.isArray(skill)
+        ? skill
+        : skill.split(",").map((s) => s.trim());
+      filter.skills = { $all: skills };
     }
 
     if (yearLevel && yearLevel.trim() !== "") {
@@ -243,6 +247,13 @@ async function updateStudent(req, res, next) {
 
     for (const key of stringKeys) {
       normalized[key] = String(payload[key] ?? "").trim();
+    }
+
+    // Handle skills array separately
+    if (Array.isArray(payload.skills)) {
+      normalized.skills = payload.skills;
+    } else if (payload.skills === undefined || payload.skills === null) {
+      normalized.skills = [];
     }
 
     const updated = await Student.findByIdAndUpdate(mongoId, normalized, {
