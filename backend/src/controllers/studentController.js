@@ -86,6 +86,13 @@ async function getStudents(req, res, next) {
         { lastName: searchRegex },
         { id: searchRegex },
         { email: searchRegex },
+        { program: searchRegex },
+        { section: searchRegex },
+        { status: searchRegex },
+        { scholarship: searchRegex },
+        { gender: searchRegex },
+        { violation: searchRegex },
+        { guardian: searchRegex },
       ];
     }
 

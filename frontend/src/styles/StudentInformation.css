@@ -586,6 +586,24 @@
   height: 15px;
 }
 
+.modal-delete-btn {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.22);
+}
+
+.modal-delete-btn:hover {
+  filter: brightness(1.03);
+  box-shadow: 0 10px 20px rgba(220, 38, 38, 0.26);
+  transform: translateY(-1px);
+}
+
+.modal-delete-btn:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgba(220, 38, 38, 0.25),
+    0 8px 18px rgba(220, 38, 38, 0.2);
+}
+
 .modal-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useRef,
 } from "react";
+import toast from "react-hot-toast";
 import {
   FiPlus,
   FiSearch,
@@ -86,9 +87,9 @@ const mockStudents = [
     lastName: "Lopez",
     gender: "Male",
     dob: "2003-03-30",
-    program: "BSEMC",
+    program: "BSIT",
     yearLevel: "4",
-    section: "EM4A",
+    section: "IT4A",
     status: "On Leave",
     scholarship: "Athletic Grant",
     email: "dylan.lopez@ccs.edu",
@@ -143,9 +144,9 @@ const mockStudents = [
     lastName: "Chua",
     gender: "Female",
     dob: "2005-04-27",
-    program: "BSIS",
+    program: "BSCS",
     yearLevel: "2",
-    section: "IS2A",
+    section: "CS2B",
     status: "Enrolled",
     scholarship: "Academic Scholar",
     email: "giselle.chua@ccs.edu",
@@ -181,9 +182,9 @@ const mockStudents = [
     lastName: "Cruz",
     gender: "Female",
     dob: "2005-12-10",
-    program: "BSIS",
+    program: "BSIT",
     yearLevel: "2",
-    section: "IS2B",
+    section: "IT2B",
     status: "Enrolled",
     scholarship: "None",
     email: "isabel.cruz@ccs.edu",
@@ -200,9 +201,9 @@ const mockStudents = [
     lastName: "Delos Reyes",
     gender: "Male",
     dob: "2003-10-19",
-    program: "BSEMC",
+    program: "BSCS",
     yearLevel: "4",
-    section: "EM4B",
+    section: "CS4A",
     status: "Graduating",
     scholarship: "None",
     email: "javier.delosreyes@ccs.edu",
@@ -244,8 +245,6 @@ const StudentInformation = () => {
   const PROGRAM_OPTIONS = [
     { value: "BSCS", label: "BS Computer Science" },
     { value: "BSIT", label: "BS Information Technology" },
-    { value: "BSIS", label: "BS Information Systems" },
-    { value: "BSEMC", label: "BS Entrepreneurship & Management" },
   ];
 
   const SKILL_OPTIONS = [
@@ -440,6 +439,7 @@ const StudentInformation = () => {
 
       if (res.status === 200 || res.status === 204) {
         setStudents((prev) => prev.filter((s) => s._id !== deleteTarget._id));
+        toast.success("Student record successfully deleted!");
         setIsDeleteModalOpen(false);
         setDeleteTarget(null);
       } else if (res.status === 404) {
@@ -792,6 +792,22 @@ const StudentInformation = () => {
                   }>
                   <FiEdit2 />
                   <span>Edit</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleDeleteClick(selectedStudent);
+                    setSelectedStudent(null);
+                  }}
+                  disabled={!selectedStudent?._id}
+                  className="modal-edit-btn modal-delete-btn"
+                  title={
+                    selectedStudent?._id
+                      ? "Delete student"
+                      : "Deleting unavailable for sample data"
+                  }>
+                  <FiTrash2 />
+                  <span>Delete</span>
                 </button>
                 <button
                   className="modal-close"
