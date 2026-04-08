@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import '../styles/AddStudentForm.css';
+import React, { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
+import "../styles/AddStudentForm.css";
 
 const SKILL_OPTIONS = [
   { value: 'Programming', label: 'Programming' },
@@ -231,6 +232,7 @@ export default function AddStudentForm({
 
   const submitToServer = async () => {
     setSubmitting(true);
+    setSubmitError("");
     try {
       if (isEditMode && !targetMongoId) {
         setSubmitError('Missing student identifier for editing.');
@@ -246,6 +248,11 @@ export default function AddStudentForm({
       const data = await res.json().catch(() => null);
 
       if ((isEditMode ? 200 : 201) === res.status && data) {
+        toast.success(
+          isEditMode
+            ? "Student details successfully updated!"
+            : "Student successfully added!",
+        );
         if (isEditMode) onUpdated?.(data);
         else onCreated?.(data);
         setFormData(emptyForm);
@@ -423,25 +430,23 @@ export default function AddStudentForm({
               />
             </div>
 
-            <div>
-              <label htmlFor="program" className={labelClass}>
-                Program / Course <span className="text-red-600">*</span>
-              </label>
-              <select
-                id="program"
-                name="program"
-                value={formData.program}
-                onChange={handleChange}
-                className={controlClass}
-                aria-invalid={Boolean(errors.program)}
-              >
-                <option value="">Select program</option>
-                <option value="BSCS">BSCS</option>
-                <option value="BSIT">BSIT</option>
-                <option value="BSIS">BSIS</option>
-              </select>
-              <FieldError name="program" />
-            </div>
+                <div>
+                  <label htmlFor="program" className={labelClass}>
+                    Program / Course <span className="text-red-600">*</span>
+                  </label>
+                  <select
+                    id="program"
+                    name="program"
+                    value={formData.program}
+                    onChange={handleChange}
+                    className={controlClass}
+                    aria-invalid={Boolean(errors.program)}>
+                    <option value="">Select program</option>
+                    <option value="BSCS">BSCS</option>
+                    <option value="BSIT">BSIT</option>
+                  </select>
+                  <FieldError name="program" />
+                </div>
 
             <div>
               <label htmlFor="yearLevel" className={labelClass}>
