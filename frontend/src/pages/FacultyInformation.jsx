@@ -49,6 +49,15 @@ const FacultyInformation = () => {
   
   const [showFilters, setShowFilters] = useState(false);
   const [specializationOptions, setSpecializationOptions] = useState([]);
+  
+  const [faculty, setFaculty] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [selectedFaculty, setSelectedFaculty] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formMode, setFormMode] = useState('create');
+  const [formTarget, setFormTarget] = useState(null);
 
   useEffect(() => {
     const fetchSpecs = async () => {
