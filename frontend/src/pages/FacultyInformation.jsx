@@ -665,9 +665,11 @@ const FacultyInformation = () => {
           onClose={() => setIsFormOpen(false)}
           onCreated={(createdFaculty) => {
             setQuery('');
+            setDebouncedQuery('');
             clearFilters();
             setSuccessMessage('Faculty profile created successfully.');
-            // loadFaculty automatically called since clearFilters resets state to default
+            // explicitly calling loadFaculty with default query params 
+            loadFaculty(new URLSearchParams({ page: 1, limit: limit }).toString());
           }}
           onUpdated={(updatedFaculty) => {
             setSelectedFaculty(updatedFaculty);
