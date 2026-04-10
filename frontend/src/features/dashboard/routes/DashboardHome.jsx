@@ -3,9 +3,9 @@ import {
   FiUsers, FiBriefcase, FiBookOpen, FiActivity,
   FiAlertCircle, FiCheckCircle, FiDownload, FiEdit2, FiMessageCircle 
 } from 'react-icons/fi';
-import { useAuth } from '../context/AuthContext';
-import { apiFetch } from '../api';
-import '../styles/DashboardHome.css';
+import { useAuth } from '../../../providers/AuthContext';
+import { apiFetch } from '../../../lib/api';
+import './DashboardHome.css';
 
 const DashboardHome = () => {
   const { isStudent } = useAuth();

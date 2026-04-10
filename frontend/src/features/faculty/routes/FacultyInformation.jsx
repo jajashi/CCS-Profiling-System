@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FiBriefcase, FiEdit2, FiInfo, FiMail, FiPhone, FiPlus, FiSearch, FiTrash2, FiUserCheck, FiX, FiPower, FiChevronLeft, FiChevronRight, FiFilter, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import FilterDropdown from '../components/FilterDropdown';
+import FilterDropdown from '../../../components/Elements/FilterDropdown';
 import AddFacultyForm from '../components/AddFacultyForm';
-import femaleImage from '../assets/images/female.jpg';
-import { useAuth } from '../context/AuthContext';
-import { apiFetch } from '../api';
-import '../styles/StudentInformation.css';
+import femaleImage from '../../../assets/images/female.jpg';
+import { useAuth } from '../../../providers/AuthContext';
+import { apiFetch } from '../../../lib/api';
+import '../../students/routes/StudentInformation.css';
 
 const CollapsibleSection = ({ title, children, defaultOpen = true }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);

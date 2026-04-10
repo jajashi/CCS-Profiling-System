@@ -1,11 +1,11 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import LoginPage from './pages/LoginPage';
-import DashboardLayout from './pages/DashboardLayout';
-import DashboardHome from './pages/DashboardHome';
-import PlaceholderPage from './pages/PlaceholderPage';
-import StudentInformation from './pages/StudentInformation';
-import FacultyInformation from './pages/FacultyInformation';
-import { useAuth } from './context/AuthContext';
+import LoginPage from './features/auth/routes/LoginPage';
+import DashboardLayout from './components/Layout/DashboardLayout';
+import DashboardHome from './features/dashboard/routes/DashboardHome';
+import PlaceholderPage from './features/misc/routes/PlaceholderPage';
+import StudentInformation from './features/students/routes/StudentInformation';
+import FacultyInformation from './features/faculty/routes/FacultyInformation';
+import { useAuth } from './providers/AuthContext';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {

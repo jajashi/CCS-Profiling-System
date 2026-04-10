@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useMemo, useState, useEffect } from 'react';
-import { auth } from '../auth';
+import { auth } from '../lib/auth';
 
 const AuthContext = createContext(null);
 

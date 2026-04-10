@@ -22,15 +22,15 @@ import {
   FiUsers,
 } from "react-icons/fi";
 import { useNavigate, useParams } from 'react-router-dom';
-import femaleImage from "../assets/images/female.jpg";
-import maleImage from "../assets/images/male.jpg";
+import femaleImage from "../../../assets/images/female.jpg";
+import maleImage from "../../../assets/images/male.jpg";
 import AddStudentForm from "../components/AddStudentForm";
-import DeleteConfirmationModal from "../components/DeleteConfirmationModal";
-import FilterDropdown from "../components/FilterDropdown";
-import SkillsFilter from "../components/SkillsFilter";
-import { useAuth } from '../context/AuthContext';
-import { apiFetch } from "../api";
-import "../styles/StudentInformation.css";
+import DeleteConfirmationModal from "../../../components/Elements/DeleteConfirmationModal";
+import FilterDropdown from "../../../components/Elements/FilterDropdown";
+import SkillsFilter from "../../../components/Elements/SkillsFilter";
+import { useAuth } from '../../../providers/AuthContext';
+import { apiFetch } from "../../../lib/api";
+import "./StudentInformation.css";
 
 const mockStudents = [
   {

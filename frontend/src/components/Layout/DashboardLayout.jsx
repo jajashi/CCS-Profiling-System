@@ -1,9 +1,9 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import TopBar from '../components/TopBar';
-import Sidebar from '../components/Sidebar';
-import '../styles/DashboardLayout.css';
+import { useAuth } from '../../providers/AuthContext';
+import TopBar from './TopBar';
+import Sidebar from './Sidebar';
+import './DashboardLayout.css';
 
 const DashboardLayout = () => {
   const { isStudent } = useAuth();
