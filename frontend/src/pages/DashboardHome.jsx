@@ -4,6 +4,7 @@ import {
   FiAlertCircle, FiCheckCircle, FiDownload, FiEdit2, FiMessageCircle 
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
+import { apiFetch } from '../api';
 import '../styles/DashboardHome.css';
 
 const DashboardHome = () => {
@@ -17,8 +18,8 @@ const DashboardHome = () => {
     (async () => {
       try {
         const [studentRes, facultyRes] = await Promise.all([
-          fetch('/api/students'),
-          fetch('/api/faculty'),
+          apiFetch('/api/students'),
+          apiFetch('/api/faculty'),
         ]);
 
         if (!studentRes.ok) throw new Error(`Students request failed: ${studentRes.status}`);
