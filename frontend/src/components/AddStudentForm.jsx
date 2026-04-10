@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import { apiFetch } from "../api";
 import "../styles/AddStudentForm.css";
 
 const SKILL_OPTIONS = [
@@ -239,7 +240,7 @@ export default function AddStudentForm({
         return;
       }
 
-      const res = await fetch(isEditMode ? `/api/students/${targetMongoId}` : '/api/students', {
+      const res = await apiFetch(isEditMode ? `/api/students/${targetMongoId}` : '/api/students', {
         method: isEditMode ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -810,4 +811,3 @@ export default function AddStudentForm({
     </div>
   );
 }
-
