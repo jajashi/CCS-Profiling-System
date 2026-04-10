@@ -117,3 +117,21 @@ npm run dev        # Start development server
 npm run build      # Build for production
 npm run preview    # Preview production build
 ```
+
+### for deployment version
+Edit `backend/.env`:
+```env
+PORT=5000
+
+MONGODB_URI=mongodb+srv://YOUR_DB_USER:YOUR_DB_PASSWORD@YOUR_CLUSTER.mongodb.net/YOUR_DB_NAME?retryWrites=true&w=majority
+JWT_SECRET=61f0332a3f0d7ba9eece0da536a14e342525fcc9e0cb657dc736513feb1e9b1cf7e6b6cee1c763edd73331819dee3e5058e6cb93fcf2b3e84fe5581037c87b71
+```
+
+Edit `frontend/.env`:
+```env
+# env local
+VITE_API_URL=http://localhost:5000
+
+# env production
+VITE_API_URL=https://testing-lang-lgsz.onrender.com
+```
