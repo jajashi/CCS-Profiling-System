@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { apiFetch } from '../api';
 import '../styles/AddFacultyForm.css';
 
 const emptyForm = {
@@ -277,7 +278,7 @@ export default function AddFacultyForm({
         payload.updatedAt = originalUpdatedAt;
       }
 
-      const res = await fetch(isEditMode ? `/api/faculty/${targetEmployeeId}` : '/api/faculty', {
+      const res = await apiFetch(isEditMode ? `/api/faculty/${targetEmployeeId}` : '/api/faculty', {
         method: isEditMode ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
