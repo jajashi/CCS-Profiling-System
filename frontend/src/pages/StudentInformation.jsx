@@ -29,7 +29,6 @@ import DeleteConfirmationModal from "../components/DeleteConfirmationModal";
 import FilterDropdown from "../components/FilterDropdown";
 import SkillsFilter from "../components/SkillsFilter";
 import { useAuth } from '../context/AuthContext';
-import { apiFetch } from "../api";
 import "../styles/StudentInformation.css";
 
 const mockStudents = [
@@ -358,7 +357,7 @@ const StudentInformation = () => {
 
       console.log("[fetchStudents] Fetching:", url);
 
-      const res = await apiFetch(url);
+      const res = await fetch(url);
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
       const data = await res.json();
       setStudents(Array.isArray(data) ? data : []);
@@ -611,7 +610,7 @@ const StudentInformation = () => {
     setIsDeleting(true);
     setDeleteError('');
     try {
-      const res = await apiFetch(`/api/students/${deleteTarget._id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/students/${deleteTarget._id}`, { method: 'DELETE' });
       if (res.status === 200 || res.status === 204) {
         setStudents((prev) => prev.filter((s) => s._id !== deleteTarget._id));
         toast.success("Student record successfully deleted!");
@@ -716,6 +715,26 @@ const StudentInformation = () => {
           </div>
         </div>
 
+        {showFilters ? (
+          <div className="filter-toolbar">
+            <div className="filter-group">
+              <FilterDropdown label="Program" value={programFilter} options={PROGRAM_OPTIONS} onChange={setProgramFilter} onClear={() => setProgramFilter('')} placeholder="All Programs" disabled={isFetching} />
+              <FilterDropdown label="Year Level" value={yearLevelFilter} options={YEAR_LEVEL_OPTIONS} onChange={setYearLevelFilter} onClear={() => setYearLevelFilter('')} placeholder="All Years" disabled={isFetching} />
+              <FilterDropdown label="Section" value={sectionFilter} options={SECTION_OPTIONS} onChange={setSectionFilter} onClear={() => setSectionFilter('')} placeholder="All Sections" disabled={isFetching} />
+              <FilterDropdown label="Status" value={statusFilter} options={STATUS_OPTIONS} onChange={setStatusFilter} onClear={() => setStatusFilter('')} placeholder="All Statuses" disabled={isFetching} />
+              <FilterDropdown label="Scholarship" value={scholarshipFilter} options={SCHOLARSHIP_OPTIONS} onChange={setScholarshipFilter} onClear={() => setScholarshipFilter('')} placeholder="All Scholarships" disabled={isFetching} />
+              <FilterDropdown label="Gender" value={genderFilter} options={GENDER_OPTIONS} onChange={setGenderFilter} onClear={() => setGenderFilter('')} placeholder="All Genders" disabled={isFetching} />
+              <FilterDropdown label="Skills" value={skillFilter} options={SKILL_OPTIONS} onChange={setSkillFilter} onClear={() => setSkillFilter('')} placeholder="All Skills" disabled={isFetching} />
+              <FilterDropdown label="Violation" value={violationFilter} options={VIOLATION_OPTIONS} onChange={setViolationFilter} onClear={() => setViolationFilter('')} placeholder="All Violations" disabled={isFetching} />
+            </div>
+            {(query || programFilter || skillFilter || yearLevelFilter || sectionFilter || statusFilter || scholarshipFilter || genderFilter || violationFilter) ? (
+              <button type="button" className="clear-filters-btn" onClick={handleClearFilters} disabled={isFetching}>
+                <FiRotateCcw />
+                Clear Filters
+              </button>
+            ) : null}
+          </div>
+        ) : null}
         {/* ===== Filter Panel ===== */}
         {showFilters && (
           <>
@@ -742,7 +761,7 @@ const StudentInformation = () => {
                 <FilterDropdown
                   label="Section"
                   value={sectionFilter}
-                  options={SECTION_OPTIONS}
+                  options={[]}
                   onChange={setSectionFilter}
                   onClear={() => setSectionFilter("")}
                   placeholder="All sections"
