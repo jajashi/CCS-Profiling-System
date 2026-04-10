@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiBriefcase, FiEdit2, FiInfo, FiMail, FiPhone, FiPlus, FiSearch, FiTrash2, FiUserCheck, FiX, FiPower, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
-import { useNavigate, useParams } from 'react-router-dom';
+import { FiBriefcase, FiEdit2, FiInfo, FiMail, FiPhone, FiPlus, FiSearch, FiTrash2, FiUserCheck, FiX, FiPower, FiChevronLeft, FiChevronRight, FiFilter } from 'react-icons/fi';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import FilterDropdown from '../components/FilterDropdown';
 import AddFacultyForm from '../components/AddFacultyForm';
 import femaleImage from '../assets/images/female.jpg';
 import { useAuth } from '../context/AuthContext';
@@ -11,25 +12,65 @@ const FacultyInformation = () => {
   const navigate = useNavigate();
   const { employeeId: selectedEmployeeId } = useParams();
   const { isAdmin } = useAuth();
-  const [faculty, setFaculty] = useState([]);
-  const [query, setQuery] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formMode, setFormMode] = useState('create');
-  const [formTarget, setFormTarget] = useState(null);
-  const [selectedFaculty, setSelectedFaculty] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [page, setPage] = useState(1);
+  const [query, setQuery] = useState(searchParams.get('search') || '');
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
+  const [departmentFilter, setDepartmentFilter] = useState(searchParams.get('department') || '');
+  const [employmentTypeFilter, setEmploymentTypeFilter] = useState(searchParams.get('employmentType') || '');
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '');
+  const [specializationFilter, setSpecializationFilter] = useState(searchParams.get('specialization') || '');
+  
+  const [page, setPage] = useState(parseInt(searchParams.get('page') || '1', 10));
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const limit = 10;
+  
+  const [showFilters, setShowFilters] = useState(false);
+  const [specializationOptions, setSpecializationOptions] = useState([]);
 
-  const loadFaculty = async () => {
+  useEffect(() => {
+    const fetchSpecs = async () => {
+      try {
+        const res = await apiFetch('/api/specializations');
+        if (res.ok) {
+          const data = await res.json();
+          setSpecializationOptions(data.map(d => ({ label: d.name, value: d.name })));
+        }
+      } catch (err) {
+        // ignore error
+      }
+    };
+    fetchSpecs();
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query);
+      setPage(1); // reset to page 1 on search
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // When filters change, sync to URL and load data
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (debouncedQuery) params.set('search', debouncedQuery);
+    if (departmentFilter) params.set('department', departmentFilter);
+    if (employmentTypeFilter) params.set('employmentType', employmentTypeFilter);
+    if (statusFilter) params.set('status', statusFilter);
+    if (specializationFilter) params.set('specialization', specializationFilter);
+    params.set('page', page);
+    params.set('limit', limit);
+    setSearchParams(params, { replace: true });
+    
+    loadFaculty(params.toString());
+  }, [debouncedQuery, departmentFilter, employmentTypeFilter, statusFilter, specializationFilter, page, limit, setSearchParams]);
+
+  const loadFaculty = async (queryString) => {
     try {
       setLoading(true);
-      const res = await apiFetch(`/api/faculty?page=${page}&limit=${limit}`);
+      const res = await apiFetch(`/api/faculty?${queryString}`);
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
       const data = await res.json();
       
@@ -52,10 +93,6 @@ const FacultyInformation = () => {
   };
 
   useEffect(() => {
-    loadFaculty();
-  }, [page]);
-
-  useEffect(() => {
     if (!selectedEmployeeId) {
       setSelectedFaculty(null);
       return;
@@ -70,25 +107,17 @@ const FacultyInformation = () => {
     return () => clearTimeout(timer);
   }, [successMessage]);
 
-  const filteredFaculty = useMemo(() => {
-    const term = query.toLowerCase().trim();
-    if (!term) return faculty;
-    return faculty.filter((member) =>
-      [
-        member.employeeId,
-        member.firstName,
-        member.middleName,
-        member.lastName,
-        member.department,
-        member.position,
-        member.employmentType,
-        member.institutionalEmail,
-      ]
-        .join(' ')
-        .toLowerCase()
-        .includes(term),
-    );
-  }, [faculty, query]);
+  const clearFilters = () => {
+    setQuery("");
+    setDebouncedQuery("");
+    setDepartmentFilter("");
+    setEmploymentTypeFilter("");
+    setStatusFilter("");
+    setSpecializationFilter("");
+    setPage(1);
+  };
+  
+  const activeFilterCount = (departmentFilter ? 1 : 0) + (employmentTypeFilter ? 1 : 0) + (statusFilter ? 1 : 0) + (specializationFilter ? 1 : 0);
 
   const nextEmployeeId = useMemo(() => {
     const year = new Date().getUTCFullYear();
@@ -139,7 +168,8 @@ const FacultyInformation = () => {
       });
       if (!res.ok) throw new Error('Failed to update status');
       setSuccessMessage(`Faculty status changed to ${newStatus}.`);
-      loadFaculty();
+      // It will reload based on URL params due to the dependency not triggering exactly, but we can call loadFaculty with current searchParams
+      loadFaculty(searchParams.toString());
     } catch (err) {
       setLoadError('Could not update faculty status.');
     }
@@ -175,6 +205,18 @@ const FacultyInformation = () => {
             <span className="meta-chip">
               Showing {faculty.length} faculty (Total: {totalRecords})
             </span>
+            <button
+              type="button"
+              className={`filter-toggle-btn ${showFilters ? "active" : ""}`}
+              onClick={() => setShowFilters((prev) => !prev)}
+              title="Toggle advanced filters"
+            >
+              <FiFilter />
+              <span>Filters</span>
+              {activeFilterCount > 0 && (
+                <span className="filter-badge">{activeFilterCount}</span>
+              )}
+            </button>
             {isAdmin ? (
               <button
                 type="button"
@@ -189,6 +231,65 @@ const FacultyInformation = () => {
             ) : null}
           </div>
         </div>
+
+        {showFilters && (
+          <div className="filter-panel">
+            <div className="filter-grid">
+              <FilterDropdown
+                label="Department"
+                value={departmentFilter}
+                options={[
+                  { value: 'IT', label: 'IT' },
+                  { value: 'CS', label: 'CS' }
+                ]}
+                onChange={(val) => { setDepartmentFilter(val); setPage(1); }}
+                onClear={() => { setDepartmentFilter(''); setPage(1); }}
+                placeholder="All Departments"
+                disabled={loading}
+              />
+              <FilterDropdown
+                label="Employment Type"
+                value={employmentTypeFilter}
+                options={[
+                  { value: 'Full-time', label: 'Full-time' },
+                  { value: 'Part-time', label: 'Part-time' }
+                ]}
+                onChange={(val) => { setEmploymentTypeFilter(val); setPage(1); }}
+                onClear={() => { setEmploymentTypeFilter(''); setPage(1); }}
+                placeholder="All Types"
+                disabled={loading}
+              />
+              <FilterDropdown
+                label="Status"
+                value={statusFilter}
+                options={[
+                  { value: 'Active', label: 'Active' },
+                  { value: 'Inactive', label: 'Inactive' }
+                ]}
+                onChange={(val) => { setStatusFilter(val); setPage(1); }}
+                onClear={() => { setStatusFilter(''); setPage(1); }}
+                placeholder="All Status"
+                disabled={loading}
+              />
+              <FilterDropdown
+                label="Specialization"
+                value={specializationFilter}
+                options={specializationOptions}
+                onChange={(val) => { setSpecializationFilter(val); setPage(1); }}
+                onClear={() => { setSpecializationFilter(''); setPage(1); }}
+                placeholder="All Specializations"
+                disabled={loading}
+              />
+            </div>
+            {activeFilterCount > 0 && (
+              <div className="active-filters-strip" style={{ marginTop: '12px' }}>
+                <button type="button" onClick={clearFilters} className="text-sm font-medium text-red-600 hover:text-red-800 underline">
+                  Clear Filters
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {successMessage ? (
           <div className="page-success-alert">
@@ -217,7 +318,7 @@ const FacultyInformation = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredFaculty.map((member) => (
+              {faculty.map((member) => (
                 <tr key={member.employeeId || member._id} onClick={() => navigate(`/dashboard/faculty/directory/${encodeURIComponent(member.employeeId)}`)} className={member.status === 'Inactive' ? 'grayscale opacity-60' : ''}>
                   <td className="id-cell">
                     <span className="id-badge">{member.employeeId || '-'}</span>
@@ -278,7 +379,7 @@ const FacultyInformation = () => {
                   </td>
                 </tr>
               ))}
-              {!filteredFaculty.length && (
+              {!faculty.length && (
                 <tr>
                   <td colSpan="8" className="empty-row text-center py-8">
                     No faculty records found. <br />
@@ -450,20 +551,15 @@ const FacultyInformation = () => {
           nextEmployeeId={nextEmployeeId}
           onClose={() => setIsFormOpen(false)}
           onCreated={(createdFaculty) => {
-            setFaculty((prev) => [createdFaculty, ...prev]);
             setQuery('');
+            clearFilters();
             setSuccessMessage('Faculty profile created successfully.');
-            loadFaculty();
+            // loadFaculty automatically called since clearFilters resets state to default
           }}
           onUpdated={(updatedFaculty) => {
-            setFaculty((prev) =>
-              prev.map((item) =>
-                item.employeeId === updatedFaculty.employeeId ? updatedFaculty : item,
-              ),
-            );
             setSelectedFaculty(updatedFaculty);
             setSuccessMessage('Faculty profile updated successfully.');
-            loadFaculty();
+            loadFaculty(searchParams.toString());
           }}
         />
       ) : null}
