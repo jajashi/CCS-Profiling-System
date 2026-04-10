@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiBriefcase, FiEdit2, FiInfo, FiMail, FiPhone, FiPlus, FiSearch, FiTrash2, FiUserCheck, FiX, FiPower, FiChevronLeft, FiChevronRight, FiFilter } from 'react-icons/fi';
+import { FiBriefcase, FiEdit2, FiInfo, FiMail, FiPhone, FiPlus, FiSearch, FiTrash2, FiUserCheck, FiX, FiPower, FiChevronLeft, FiChevronRight, FiFilter, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import FilterDropdown from '../components/FilterDropdown';
 import AddFacultyForm from '../components/AddFacultyForm';
@@ -7,6 +7,27 @@ import femaleImage from '../assets/images/female.jpg';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api';
 import '../styles/StudentInformation.css';
+
+const CollapsibleSection = ({ title, children, defaultOpen = true }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  return (
+    <div className="profile-section" style={{ marginBottom: '1rem', border: '1px solid #e5edf5', borderRadius: '12px', background: '#fff', overflow: 'hidden', padding: 0 }}>
+      <button 
+        type="button" 
+        onClick={() => setIsOpen(!isOpen)} 
+        style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', background: '#f9fbfd', border: 'none', cursor: 'pointer', textAlign: 'left', outline: 'none' }}
+      >
+        <span style={{ fontSize: '1rem', fontWeight: 700, color: '#ff5f00' }}>{title}</span>
+        {isOpen ? <FiChevronUp color="#5f6368" /> : <FiChevronDown color="#5f6368" />}
+      </button>
+      {isOpen && (
+        <div style={{ padding: '1.25rem', borderTop: '1px solid #e5edf5' }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const FacultyInformation = () => {
   const navigate = useNavigate();
@@ -98,7 +119,25 @@ const FacultyInformation = () => {
       return;
     }
     const match = faculty.find((member) => String(member.employeeId) === String(selectedEmployeeId));
-    setSelectedFaculty(match || null);
+    if (match) {
+      setSelectedFaculty(match);
+      return;
+    }
+
+    const fetchIndividual = async () => {
+      try {
+        const res = await apiFetch(`/api/faculty/${selectedEmployeeId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSelectedFaculty(data);
+        } else {
+          setSelectedFaculty(null);
+        }
+      } catch (err) {
+        setSelectedFaculty(null);
+      }
+    };
+    fetchIndividual();
   }, [selectedEmployeeId, faculty]);
 
   useEffect(() => {
@@ -468,76 +507,141 @@ const FacultyInformation = () => {
               </div>
             </div>
 
-            <div className="modal-grid">
-              <div>
-                <p className="label">Department</p>
-                <input className="readonly-field" type="text" value={selectedFaculty.department || '-'} readOnly />
+            {selectedFaculty.status === 'Inactive' && (
+              <div style={{ background: '#fef2f2', borderLeft: '4px solid #ef4444', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', color: '#991b1b', fontWeight: '500' }}>
+                This faculty member is Inactive — Reason: {selectedFaculty.inactiveReason || 'No reason provided'}
               </div>
-              <div>
-                <p className="label">Position</p>
-                <input className="readonly-field" type="text" value={selectedFaculty.position || '-'} readOnly />
-              </div>
-              <div>
-                <p className="label">Employment Type</p>
-                <input className="readonly-field" type="text" value={selectedFaculty.employmentType || '-'} readOnly />
-              </div>
-              <div>
-                <p className="label">Contract Type</p>
-                <input className="readonly-field" type="text" value={selectedFaculty.contractType || '-'} readOnly />
-              </div>
-              <div>
-                <p className="label">Status</p>
-                <input className="readonly-field" type="text" value={selectedFaculty.status || 'Active'} readOnly />
-              </div>
-              <div>
-                <p className="label">Date Hired</p>
-                <input className="readonly-field" type="text" value={selectedFaculty.dateHired || '-'} readOnly />
-              </div>
-              <div>
-                <p className="label">Years of Service</p>
-                <input className="readonly-field" type="text" value={String(selectedFaculty.yearsOfService ?? 0)} readOnly />
-              </div>
-              <div>
-                <p className="label">Date of Birth</p>
-                <input className="readonly-field" type="text" value={selectedFaculty.dob || '-'} readOnly />
-              </div>
-              <div>
-                <p className="label">Institutional Email</p>
-                <input className="readonly-field" type="text" value={selectedFaculty.institutionalEmail || '-'} readOnly />
-              </div>
-              <div>
-                <p className="label">Personal Email</p>
-                <input className="readonly-field" type="text" value={selectedFaculty.personalEmail || '-'} readOnly />
-              </div>
-              <div>
-                <p className="label">Mobile Number</p>
-                <input className="readonly-field" type="text" value={selectedFaculty.mobileNumber || '-'} readOnly />
-              </div>
-              <div>
-                <p className="label">Emergency Contact</p>
-                <input
-                  className="readonly-field"
-                  type="text"
-                  value={
-                    selectedFaculty.emergencyContactName
-                      ? `${selectedFaculty.emergencyContactName} (${selectedFaculty.emergencyContactNumber || '-'})`
-                      : '-'
-                  }
-                  readOnly
+            )}
+
+            <div className="profile-details-container" style={{ gap: '0' }}>
+              <CollapsibleSection title="Personal Information">
+                <div className="modal-grid">
+                  <div>
+                    <p className="label">Employee ID</p>
+                    <input className="readonly-field" type="text" value={selectedFaculty.employeeId || '-'} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">First Name</p>
+                    <input className="readonly-field" type="text" value={selectedFaculty.firstName || '-'} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Middle Name</p>
+                    <input className="readonly-field" type="text" value={selectedFaculty.middleName || '-'} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Last Name</p>
+                    <input className="readonly-field" type="text" value={selectedFaculty.lastName || '-'} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Date of Birth</p>
+                    <input className="readonly-field" type="text" value={selectedFaculty.dob || '-'} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Department</p>
+                    <input className="readonly-field" type="text" value={selectedFaculty.department || '-'} readOnly />
+                  </div>
+                </div>
+              </CollapsibleSection>
+
+              <CollapsibleSection title="Contact Information">
+                <div className="modal-grid">
+                  <div>
+                    <p className="label">Institutional Email</p>
+                    <input className="readonly-field" type="text" value={selectedFaculty.institutionalEmail || '-'} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Personal Email</p>
+                    <input className="readonly-field" type="text" value={selectedFaculty.personalEmail || '-'} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Mobile Number</p>
+                    <input className="readonly-field" type="text" value={selectedFaculty.mobileNumber || '-'} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Emergency Contact Name</p>
+                    <input className="readonly-field" type="text" value={selectedFaculty.emergencyContactName || '-'} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Emergency Contact Number</p>
+                    <input className="readonly-field" type="text" value={selectedFaculty.emergencyContactNumber || '-'} readOnly />
+                  </div>
+                </div>
+              </CollapsibleSection>
+
+              <CollapsibleSection title="Employment Details">
+                <div className="modal-grid">
+                  <div>
+                    <p className="label">Position</p>
+                    <input className="readonly-field" type="text" value={selectedFaculty.position || '-'} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Employment Type</p>
+                    <input className="readonly-field" type="text" value={selectedFaculty.employmentType || '-'} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Contract Type</p>
+                    <input className="readonly-field" type="text" value={selectedFaculty.contractType || '-'} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Date Hired</p>
+                    <input className="readonly-field" type="text" value={selectedFaculty.dateHired || '-'} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Years of Service</p>
+                    <input className="readonly-field" type="text" value={String(selectedFaculty.yearsOfService ?? 0)} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Status</p>
+                    <input className="readonly-field" type="text" value={selectedFaculty.status || 'Active'} readOnly />
+                  </div>
+                </div>
+              </CollapsibleSection>
+
+              <CollapsibleSection title="Academic Qualifications">
+                <div className="modal-grid">
+                  <div>
+                    <p className="label">Highest Education</p>
+                    <input className="readonly-field" type="text" value={selectedFaculty.highestEducation || '-'} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Field of Study</p>
+                    <input className="readonly-field" type="text" value={selectedFaculty.fieldOfStudy || '-'} readOnly />
+                  </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <p className="label">Certifications / Licenses</p>
+                    <input className="readonly-field" type="text" value={selectedFaculty.certifications || '-'} readOnly />
+                  </div>
+                </div>
+              </CollapsibleSection>
+
+              <CollapsibleSection title="Specializations">
+                {selectedFaculty.specializations?.length > 0 ? (
+                  <div className="skills-grid">
+                    {selectedFaculty.specializations.map((spec, i) => (
+                      <span key={i} className="skill-badge">
+                        {spec.name || spec}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="skills-empty">No specializations assigned.</p>
+                )}
+              </CollapsibleSection>
+
+              <CollapsibleSection title="Internal Notes">
+                <textarea 
+                  className="readonly-field" 
+                  value={selectedFaculty.internalNotes || 'No internal notes available.'} 
+                  readOnly 
+                  style={{ width: '100%', minHeight: '80px', resize: 'vertical' }}
                 />
-              </div>
-              <div>
-                <p className="label">Highest Education</p>
-                <input className="readonly-field" type="text" value={selectedFaculty.highestEducation || '-'} readOnly />
-              </div>
-              <div>
-                <p className="label">Field of Study</p>
-                <input className="readonly-field" type="text" value={selectedFaculty.fieldOfStudy || '-'} readOnly />
-              </div>
-              <div>
-                <p className="label">Certifications / Licenses</p>
-                <input className="readonly-field" type="text" value={selectedFaculty.certifications || '-'} readOnly />
-              </div>
+              </CollapsibleSection>
+
+              <CollapsibleSection title="Teaching Load Summary">
+                <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '8px', color: '#64748b', textAlign: 'center', fontStyle: 'italic' }}>
+                  Teaching load data will be available once the Scheduling module is integrated.
+                </div>
+              </CollapsibleSection>
             </div>
           </div>
         </div>
