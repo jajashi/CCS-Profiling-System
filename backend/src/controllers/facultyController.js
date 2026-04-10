@@ -112,7 +112,7 @@ function mapFacultyResponse(doc) {
 
 async function getFaculty(req, res, next) {
   try {
-    const { search, department, employmentType, status, specialization } = req.query;
+    const { search, department, employmentType, status, specialization, page, limit } = req.query;
     const query = {};
 
     if (search) {
@@ -152,7 +152,28 @@ async function getFaculty(req, res, next) {
       }
     }
 
-    const faculty = await Faculty.find(query).populate('specializations', 'name');
+    let facultyQuery = Faculty.find(query).populate('specializations', 'name');
+
+    if (page && limit) {
+      const pageNum = parseInt(page, 10);
+      const limitNum = parseInt(limit, 10);
+      if (!isNaN(pageNum) && !isNaN(limitNum) && pageNum > 0 && limitNum > 0) {
+        const skip = (pageNum - 1) * limitNum;
+        facultyQuery = facultyQuery.skip(skip).limit(limitNum);
+        const total = await Faculty.countDocuments(query);
+        const totalPages = Math.ceil(total / limitNum);
+        res.set('X-Total-Count', total);
+        res.set('X-Current-Page', pageNum);
+        res.set('X-Total-Pages', totalPages);
+      }
+    } else {
+        const total = await Faculty.countDocuments(query);
+        res.set('X-Total-Count', total);
+        res.set('X-Current-Page', 1);
+        res.set('X-Total-Pages', 1);
+    }
+
+    const faculty = await facultyQuery;
     return res.status(200).json(faculty.map(mapFacultyResponse));
   } catch (err) {
     return next(err);

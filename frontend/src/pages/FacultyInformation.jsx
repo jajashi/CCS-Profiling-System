@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiBriefcase, FiEdit2, FiInfo, FiMail, FiPhone, FiPlus, FiSearch, FiTrash2, FiUserCheck, FiX } from 'react-icons/fi';
+import { FiBriefcase, FiEdit2, FiInfo, FiMail, FiPhone, FiPlus, FiSearch, FiTrash2, FiUserCheck, FiX, FiPower, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
 import AddFacultyForm from '../components/AddFacultyForm';
 import femaleImage from '../assets/images/female.jpg';
@@ -21,11 +21,23 @@ const FacultyInformation = () => {
   const [formTarget, setFormTarget] = useState(null);
   const [selectedFaculty, setSelectedFaculty] = useState(null);
 
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const limit = 10;
+
   const loadFaculty = async () => {
     try {
-      const res = await apiFetch(`/api/faculty`);
+      setLoading(true);
+      const res = await apiFetch(`/api/faculty?page=${page}&limit=${limit}`);
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
       const data = await res.json();
+      
+      const totalPagesHeader = res.headers.get('X-Total-Pages');
+      const totalCountHeader = res.headers.get('X-Total-Count');
+      if (totalPagesHeader) setTotalPages(parseInt(totalPagesHeader, 10));
+      if (totalCountHeader) setTotalRecords(parseInt(totalCountHeader, 10));
+
       if (Array.isArray(data)) {
         setFaculty(data);
       } else {
@@ -41,7 +53,7 @@ const FacultyInformation = () => {
 
   useEffect(() => {
     loadFaculty();
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     if (!selectedEmployeeId) {
@@ -109,6 +121,30 @@ const FacultyInformation = () => {
     }
   };
 
+  const toggleStatus = async (member) => {
+    const newStatus = member.status === 'Inactive' ? 'Active' : 'Inactive';
+    let payload = { status: newStatus };
+    if (newStatus === 'Inactive') {
+      const reason = window.prompt("Please provide a reason for deactivating this faculty member:");
+      if (!reason) return; // cancelled
+      payload.inactiveReason = reason;
+    } else {
+      payload.inactiveReason = '';
+    }
+
+    try {
+      const res = await apiFetch(`/api/faculty/${member.employeeId}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Failed to update status');
+      setSuccessMessage(`Faculty status changed to ${newStatus}.`);
+      loadFaculty();
+    } catch (err) {
+      setLoadError('Could not update faculty status.');
+    }
+  };
+
   return (
     <div className="student-directory">
       <div className="directory-hero faculty-hero">
@@ -137,7 +173,7 @@ const FacultyInformation = () => {
           </div>
           <div className="toolbar-meta flex items-center justify-between gap-4">
             <span className="meta-chip">
-              {filteredFaculty.length} of {faculty.length} faculty
+              Showing {faculty.length} faculty (Total: {totalRecords})
             </span>
             {isAdmin ? (
               <button
@@ -175,16 +211,14 @@ const FacultyInformation = () => {
                 <th>Department</th>
                 <th>Position</th>
                 <th>Employment Type</th>
+                <th>Specializations</th>
                 <th>Status</th>
-                <th>Years of Service</th>
-                <th>Institutional Email</th>
-                <th>Mobile Number</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredFaculty.map((member) => (
-                <tr key={member.employeeId || member._id} onClick={() => navigate(`/dashboard/faculty-info/${encodeURIComponent(member.employeeId)}`)}>
+                <tr key={member.employeeId || member._id} onClick={() => navigate(`/dashboard/faculty/directory/${encodeURIComponent(member.employeeId)}`)} className={member.status === 'Inactive' ? 'grayscale opacity-60' : ''}>
                   <td className="id-cell">
                     <span className="id-badge">{member.employeeId || '-'}</span>
                   </td>
@@ -198,25 +232,26 @@ const FacultyInformation = () => {
                   <td>{member.position || '-'}</td>
                   <td>{member.employmentType || '-'}</td>
                   <td>
+                    {member.specializations?.length 
+                      ? member.specializations.map(s => s.name || s).join(', ') 
+                      : '-'}
+                  </td>
+                  <td>
                     <span className={`status-badge status-${String(member.status || 'active').toLowerCase()}`}>
                       {member.status || 'Active'}
                     </span>
                   </td>
-                  <td>{member.yearsOfService ?? 0}</td>
                   <td>
-                    <div className="flex items-center gap-2">
-                      <FiMail />
-                      <span>{member.institutionalEmail || '-'}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <FiPhone />
-                      <span>{member.mobileNumber || '-'}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="action-buttons" onClick={(e) => e.stopPropagation()}>
+                    <div className="action-buttons flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        className="action-btn view"
+                        type="button"
+                        aria-label="View faculty"
+                        title="View faculty"
+                        onClick={() => navigate(`/dashboard/faculty/directory/${encodeURIComponent(member.employeeId)}`)}
+                      >
+                        <FiInfo />
+                      </button>
                       {isAdmin ? (
                         <>
                           <button
@@ -231,11 +266,11 @@ const FacultyInformation = () => {
                           <button
                             className="action-btn delete"
                             type="button"
-                            disabled
-                            aria-label="Delete faculty (not available)"
-                            title="Delete is disabled (no faculty delete endpoint)"
+                            aria-label="Toggle status"
+                            title="Toggle Status"
+                            onClick={() => toggleStatus(member)}
                           >
-                            <FiTrash2 />
+                            <FiPower />
                           </button>
                         </>
                       ) : null}
@@ -245,8 +280,13 @@ const FacultyInformation = () => {
               ))}
               {!filteredFaculty.length && (
                 <tr>
-                  <td colSpan="10" className="empty-row">
-                    No faculty records found for "{query}".
+                  <td colSpan="8" className="empty-row text-center py-8">
+                    No faculty records found. <br />
+                    {isAdmin && (
+                      <button onClick={openCreateForm} className="text-[#ff7f00] underline mt-2 hover:text-[#e67300]">
+                        Click here to add a new faculty member.
+                      </button>
+                    )}
                   </td>
                 </tr>
               )}
@@ -255,16 +295,36 @@ const FacultyInformation = () => {
         </div>
       </div>
 
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-4 mt-6">
+          <button
+            onClick={() => setPage(page - 1)}
+            disabled={page === 1}
+            className="p-2 rounded-lg bg-white border border-gray-200 text-gray-600 disabled:opacity-50 hover:bg-gray-50 flex items-center"
+          >
+            <FiChevronLeft size={20} />
+          </button>
+          <span className="text-sm font-medium text-gray-700">Page {page} of {totalPages}</span>
+          <button
+            onClick={() => setPage(page + 1)}
+            disabled={page === totalPages}
+            className="p-2 rounded-lg bg-white border border-gray-200 text-gray-600 disabled:opacity-50 hover:bg-gray-50 flex items-center"
+          >
+            <FiChevronRight size={20} />
+          </button>
+        </div>
+      )}
+
       {selectedFaculty ? (
-        <div className="student-modal-backdrop" onClick={() => navigate('/dashboard/faculty-info')}>
+        <div className="student-modal-backdrop" onClick={() => navigate('/dashboard/faculty/directory')}>
           <div className="student-modal" onClick={(e) => e.stopPropagation()}>
             <div className="breadcrumb-bar">
-              <button className="breadcrumb-link" type="button" onClick={() => navigate('/dashboard/faculty-info')}>
-                Faculty
+              <button className="breadcrumb-link" type="button" onClick={() => navigate('/dashboard/faculty/directory')}>
+                Directory
               </button>
               <span className="breadcrumb-separator">/</span>
               <span className="breadcrumb-current">
-                {selectedFaculty.firstName} {selectedFaculty.lastName}
+                Profile
               </span>
             </div>
             <div className="modal-header">
@@ -298,7 +358,7 @@ const FacultyInformation = () => {
                 ) : null}
                 <button
                   className="modal-close"
-                  onClick={() => navigate('/dashboard/faculty-info')}
+                  onClick={() => navigate('/dashboard/faculty/directory')}
                   aria-label="Close dialog"
                   type="button"
                 >

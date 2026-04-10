@@ -54,8 +54,8 @@ function App() {
         <Route path="student-info" element={<StudentInformation />} />
         <Route path="student-info/:id" element={<StudentInformation />} />
         
-        <Route path="faculty-info" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />
-        <Route path="faculty-info/:employeeId" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />
+        <Route path="faculty/directory" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />
+        <Route path="faculty/directory/:employeeId" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />
         
         <Route
           path="reports"
