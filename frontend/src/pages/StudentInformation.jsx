@@ -390,10 +390,6 @@ const StudentInformation = () => {
   }, []);
 
   useEffect(() => {
-    fetchStudents({});
-  }, [fetchStudents]);
-
-  useEffect(() => {
     if (!successMessage) return undefined;
     const timer = setTimeout(() => setSuccessMessage(''), 3500);
     return () => clearTimeout(timer);
