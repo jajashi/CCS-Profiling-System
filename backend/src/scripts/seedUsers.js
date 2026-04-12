@@ -1,40 +1,57 @@
 /**
- * - 1 admin, 1 faculty, 2 students 
+ * Seeds 1 admin, 1 faculty, 2 students.
+ * Set passwords via .env file
  */
 require('dotenv').config();
-const mongoose = require('mongoose');
 const { connectDB } = require('../config/database');
 const User = require('../models/User');
 
 const year = new Date().getUTCFullYear();
 const FACULTY_LOGIN_ID = `FAC-${year}-001`;
 
-const SEED_USERS = [
-  { username: 'admin', password: '__USE_SEED_ADMIN_PASSWORD_IN_ENV__', name: 'System Admin', role: 'admin' },
-  {
-    username: FACULTY_LOGIN_ID,
-    password: '__USE_SEED_FACULTY_PASSWORD_IN_ENV__',
-    name: 'Luvim M. Eusebio',
-    role: 'faculty',
-  },
-  {
-    username: '2201001',
-    password: '__USE_SEED_STUDENT_PASSWORD_IN_ENV__',
-    name: 'Jan Earl Eclarinal Olivar',
-    role: 'student',
-    studentId: '2201001',
-  },
-  {
-    username: '2201002',
-    password: '__USE_SEED_STUDENT_PASSWORD_IN_ENV__',
-    name: 'Eden Santos Nataya',
-    role: 'student',
-    studentId: '2201002',
-  },
-];
+function requireEnv(name) {
+  const v = process.env[name];
+  if (v == null || String(v).trim() === '') {
+    throw new Error(
+      `Missing ${name}. Set it in backend/.env before running this script. See backend/.env.example.`
+    );
+  }
+  return String(v);
+}
+
+function buildSeedUsers() {
+  const adminPassword = requireEnv('SEED_ADMIN_PASSWORD');
+  const facultyPassword = requireEnv('SEED_FACULTY_PASSWORD');
+  const studentPassword = requireEnv('SEED_STUDENT_PASSWORD');
+
+  return [
+    { username: 'admin', password: adminPassword, name: 'System Admin', role: 'admin' },
+    {
+      username: FACULTY_LOGIN_ID,
+      password: facultyPassword,
+      name: 'Luvim M. Eusebio',
+      role: 'faculty',
+    },
+    {
+      username: '2201001',
+      password: studentPassword,
+      name: 'Jan Earl Eclarinal Olivar',
+      role: 'student',
+      studentId: '2201001',
+    },
+    {
+      username: '2201002',
+      password: studentPassword,
+      name: 'Eden Santos Nataya',
+      role: 'student',
+      studentId: '2201002',
+    },
+  ];
+}
 
 async function seed() {
   try {
+    const SEED_USERS = buildSeedUsers();
     await connectDB();
 
     console.log('Clearing existing users...');
