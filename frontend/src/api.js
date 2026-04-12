@@ -8,4 +8,23 @@ export const apiUrl = (path = "") => {
   return `${normalizedBaseUrl}${normalizedPath}`;
 };
 
-export const apiFetch = (path, options) => fetch(apiUrl(path), options);
+function getAuthHeaders() {
+  try {
+    const raw = localStorage.getItem('ccs_user');
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    const token = parsed?.token;
+    if (!token) return {};
+    return { Authorization: `Bearer ${token}` };
+  } catch {
+    return {};
+  }
+}
+
+export const apiFetch = (path, options = {}) => {
+  const headers = {
+    ...(options.headers || {}),
+    ...getAuthHeaders(),
+  };
+  return fetch(apiUrl(path), { ...options, headers });
+};

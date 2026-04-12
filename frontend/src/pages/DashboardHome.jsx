@@ -13,6 +13,8 @@ const DashboardHome = () => {
   const [facultyCount, setFacultyCount] = useState(null);
 
   useEffect(() => {
+    if (isStudent) return undefined;
+
     let isMounted = true;
 
     (async () => {
@@ -45,7 +47,7 @@ const DashboardHome = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isStudent]);
 
   if (isStudent) {
     return (
