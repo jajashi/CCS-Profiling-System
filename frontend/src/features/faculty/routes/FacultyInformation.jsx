@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiBriefcase, FiEdit2, FiInfo, FiMail, FiPhone, FiPlus, FiSearch, FiTrash2, FiUserCheck, FiUsers, FiX, FiPower, FiChevronLeft, FiChevronRight, FiFilter, FiChevronDown, FiChevronUp, FiLoader, FiAlertTriangle } from 'react-icons/fi';
+import { FiBriefcase, FiEdit2, FiEye, FiInfo, FiPlus, FiSearch, FiUserCheck, FiUsers, FiX, FiPower, FiChevronLeft, FiChevronRight, FiFilter, FiChevronDown, FiChevronUp, FiLoader } from 'react-icons/fi';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import FilterDropdown from '../../../components/Elements/FilterDropdown';
 import AddFacultyForm from '../components/AddFacultyForm';
@@ -640,7 +640,6 @@ const FacultyInformation = () => {
                   </td>
                   <td>
                     <div className="flex items-center gap-2">
-                      <FiBriefcase />
                       <span
                         className={member.status === 'Inactive' ? 'faculty-directory-name-inactive' : undefined}
                       >
@@ -670,7 +669,7 @@ const FacultyInformation = () => {
                         title="View faculty"
                         onClick={() => navigate(facultyProfilePath(member.employeeId))}
                       >
-                        <FiInfo />
+                        <FiEye />
                       </button>
                       {isAdmin ? (
                         <>
