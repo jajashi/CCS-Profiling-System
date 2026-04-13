@@ -3,9 +3,9 @@ import {
   FiUsers, FiBriefcase, FiBookOpen, FiActivity,
   FiAlertCircle, FiCheckCircle, FiDownload, FiEdit2, FiMessageCircle 
 } from 'react-icons/fi';
-import { useAuth } from '../context/AuthContext';
-import { apiFetch } from '../api';
-import '../styles/DashboardHome.css';
+import { useAuth } from '../../../providers/AuthContext';
+import { apiFetch } from '../../../lib/api';
+import './DashboardHome.css';
 
 const DashboardHome = () => {
   const { isStudent } = useAuth();
@@ -13,6 +13,8 @@ const DashboardHome = () => {
   const [facultyCount, setFacultyCount] = useState(null);
 
   useEffect(() => {
+    if (isStudent) return undefined;
+
     let isMounted = true;
 
     (async () => {
@@ -32,7 +34,13 @@ const DashboardHome = () => {
 
         if (isMounted) {
           setStudentCount(Array.isArray(studentData) ? studentData.length : null);
-          setFacultyCount(Array.isArray(facultyData) ? facultyData.length : null);
+          if (Array.isArray(facultyData)) {
+            setFacultyCount(facultyData.length);
+          } else if (facultyData && typeof facultyData.total === 'number') {
+            setFacultyCount(facultyData.total);
+          } else {
+            setFacultyCount(null);
+          }
         }
       } catch {
         if (isMounted) {
@@ -45,7 +53,7 @@ const DashboardHome = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isStudent]);
 
   if (isStudent) {
     return (
@@ -150,7 +158,7 @@ const DashboardHome = () => {
           </div>
           <div className="stat-details">
             <p className="stat-label">Active Courses</p>
-            <h3 className="stat-value">142</h3>
+            <h3 className="stat-value">142</h3> {/* TODO: Replace with actual number of active courses */}
           </div>
         </div>
 
@@ -160,7 +168,7 @@ const DashboardHome = () => {
           </div>
           <div className="stat-details">
             <p className="stat-label">Upcoming Events</p>
-            <h3 className="stat-value">5</h3>
+            <h3 className="stat-value">5</h3> {/* TODO: Replace with actual number of upcoming events */}
           </div>
         </div>
       </div>

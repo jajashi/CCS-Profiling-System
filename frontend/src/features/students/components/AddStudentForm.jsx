@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { apiFetch } from "../api";
-import "../styles/AddStudentForm.css";
+import { apiFetch } from "../../../lib/api";
+import "./AddStudentForm.css";
 
 const SKILL_OPTIONS = [
   { value: 'Programming', label: 'Programming' },

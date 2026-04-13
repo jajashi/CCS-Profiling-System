@@ -24,71 +24,77 @@ async function generateNextStudentId() {
 
 async function getStudents(req, res, next) {
   try {
-    const {
-      program,
-      skill,
-      yearLevel,
-      section,
-      status,
-      scholarship,
-      gender,
-      violation,
-      search,
-    } = req.query;
-
     const filter = {};
 
-    if (program && program.trim() !== "") {
-      filter.program = program.trim();
-    }
+    if (req.user?.role === 'student') {
+      if (!req.user.studentId) {
+        return res.status(403).json({ message: 'Student profile is not linked to a student ID.' });
+      }
+      filter.id = req.user.studentId;
+    } else {
+      const {
+        program,
+        skill,
+        yearLevel,
+        section,
+        status,
+        scholarship,
+        gender,
+        violation,
+        search,
+      } = req.query;
 
-    if (skill && skill.trim() !== "") {
-      // Support multiple skills (comma-separated or array)
-      const skills = Array.isArray(skill)
-        ? skill
-        : skill.split(",").map((s) => s.trim());
-      filter.skills = { $all: skills };
-    }
+      if (program && program.trim() !== "") {
+        filter.program = program.trim();
+      }
 
-    if (yearLevel && yearLevel.trim() !== "") {
-      filter.yearLevel = yearLevel.trim();
-    }
+      if (skill && skill.trim() !== "") {
+        const skills = Array.isArray(skill)
+          ? skill
+          : skill.split(",").map((s) => s.trim());
+        filter.skills = { $all: skills };
+      }
 
-    if (section && section.trim() !== "") {
-      filter.section = section.trim();
-    }
+      if (yearLevel && yearLevel.trim() !== "") {
+        filter.yearLevel = yearLevel.trim();
+      }
 
-    if (status && status.trim() !== "") {
-      filter.status = status.trim();
-    }
+      if (section && section.trim() !== "") {
+        filter.section = section.trim();
+      }
 
-    if (scholarship && scholarship.trim() !== "") {
-      filter.scholarship = scholarship.trim();
-    }
+      if (status && status.trim() !== "") {
+        filter.status = status.trim();
+      }
 
-    if (gender && gender.trim() !== "") {
-      filter.gender = gender.trim();
-    }
+      if (scholarship && scholarship.trim() !== "") {
+        filter.scholarship = scholarship.trim();
+      }
 
-    if (violation && violation.trim() !== "") {
-      filter.violation = violation.trim();
-    }
+      if (gender && gender.trim() !== "") {
+        filter.gender = gender.trim();
+      }
 
-    if (search && search.trim() !== "") {
-      const searchRegex = new RegExp(search.trim(), "i");
-      filter.$or = [
-        { firstName: searchRegex },
-        { lastName: searchRegex },
-        { id: searchRegex },
-        { email: searchRegex },
-        { program: searchRegex },
-        { section: searchRegex },
-        { status: searchRegex },
-        { scholarship: searchRegex },
-        { gender: searchRegex },
-        { violation: searchRegex },
-        { guardian: searchRegex },
-      ];
+      if (violation && violation.trim() !== "") {
+        filter.violation = violation.trim();
+      }
+
+      if (search && search.trim() !== "") {
+        const searchRegex = new RegExp(search.trim(), "i");
+        filter.$or = [
+          { firstName: searchRegex },
+          { lastName: searchRegex },
+          { id: searchRegex },
+          { email: searchRegex },
+          { program: searchRegex },
+          { section: searchRegex },
+          { status: searchRegex },
+          { scholarship: searchRegex },
+          { gender: searchRegex },
+          { violation: searchRegex },
+          { guardian: searchRegex },
+        ];
+      }
     }
 
     const students = await Student.find(filter);

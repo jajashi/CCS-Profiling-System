@@ -317,8 +317,10 @@ const MOCK_STUDENTS = [
   },
 ];
 
-// Deterministic seed IDs so re-running seed updates the same records.
-const SEEDED_STUDENTS = MOCK_STUDENTS.map((student, index) => ({
+const SEED_STUDENT_COUNT = 10;
+
+// Deterministic seed IDs so re-running seed updates the same records (2201001 …).
+const SEEDED_STUDENTS = MOCK_STUDENTS.slice(0, SEED_STUDENT_COUNT).map((student, index) => ({
   ...student,
   id: `${SEED_ID_PREFIX}${String(SEED_ID_START + index).padStart(3, "0")}`,
 }));
@@ -350,20 +352,13 @@ async function run() {
   );
   console.log(`Seeded ${SEEDED_STUDENTS.length} students.`);
 
-  // Display summary of seeded data
-  const summary = await Student.aggregate([
-    { $match: { id: { $regex: /^22019[0-9]{2}$/ } } },
-    {
-      $group: {
-        _id: "$program",
-        count: { $sum: 1 },
-        skills: { $addToSet: "$skills" },
-      },
-    },
+  const byProgram = await Student.aggregate([
+    { $match: { id: { $regex: /^2201\d{3}$/ } } },
+    { $group: { _id: "$program", count: { $sum: 1 } } },
   ]);
-  console.log("\nSeeded data summary:");
-  summary.forEach((s) => {
-    console.log(`  ${s._id}: ${s.count} students`);
+  console.log("\nStudents by program (2201xxx IDs):");
+  byProgram.forEach((s) => {
+    console.log(`  ${s._id}: ${s.count}`);
   });
 
   await mongoose.disconnect();

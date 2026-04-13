@@ -1,4 +1,4 @@
-@import './AddStudentForm.css';
+@import '../../students/components/AddStudentForm.css';
 
 .faculty-section {
   grid-column: 1 / -1;

@@ -1,8 +1,8 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { FiHome, FiUsers, FiBriefcase, FiBookOpen, FiCalendar, FiStar, FiLogOut, FiBarChart2 } from 'react-icons/fi';
-import { useAuth } from '../context/AuthContext';
-import logoSrc from '../assets/images/ccs-logo.jpg';
+import { useAuth } from '../../providers/AuthContext';
+import logoSrc from '../../assets/images/ccs-logo.jpg';
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -56,9 +56,9 @@ const Sidebar = () => {
               </li>
 
               <li className="nav-item">
-                <NavLink to="/dashboard/faculty-info" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                <NavLink to="/dashboard/faculty/directory" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
                   <span className="nav-icon"><FiBriefcase /></span>
-                  <span className="nav-text">Faculty Information</span>
+                  <span className="nav-text">Faculty Directory</span>
                 </NavLink>
               </li>
 

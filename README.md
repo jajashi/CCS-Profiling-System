@@ -118,20 +118,24 @@ npm run build      # Build for production
 npm run preview    # Preview production build
 ```
 
-### for deployment version
-Edit `backend/.env`:
+### Deployment notes
+
+Do not commit real connection strings, JWT signing keys, or seed passwords. Set them only in the environment for each deployment (for example Render/Heroku env vars or a private `.env` that is gitignored).
+
+Edit `backend/.env` (example values — replace with your own secrets):
+
 ```env
 PORT=5000
-
-### ask developer for values
-MONGODB_URI=
-JWT_SECRET=
+MONGODB_URI=mongodb+srv://YOUR_DB_USER:YOUR_DB_PASSWORD@YOUR_CLUSTER.mongodb.net/YOUR_DB_NAME?retryWrites=true&w=majority
+JWT_SECRET=generate-a-long-random-string-and-store-it-only-in-secrets
+```
 
 Edit `frontend/.env`:
+
 ```env
-# env local
+# Local development
 VITE_API_URL=http://localhost:5000
 
-# env production
-VITE_API_URL=<serverlink>
+# Production — use your deployed API base URL
+VITE_API_URL=https://your-api.example.com
 ```

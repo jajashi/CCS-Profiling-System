@@ -9,6 +9,11 @@ function normalizeString(value) {
   return String(value ?? '').trim();
 }
 
+/** Escape user input so it is matched literally in RegExp (story 3.3: case-insensitive substring search). */
+function escapeRegex(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 async function generateNextEmployeeId() {
   const year = new Date().getUTCFullYear();
   const prefix = `FAC-${year}-`;
@@ -112,17 +117,25 @@ function mapFacultyResponse(doc) {
 
 async function getFaculty(req, res, next) {
   try {
-    const { search, department, employmentType, status, specialization } = req.query;
+    const { search, department, employmentType, status, specialization, page: pageParam, limit: limitParam } =
+      req.query;
     const query = {};
+    const usePagination = pageParam != null || limitParam != null;
+    const limit = Math.min(Math.max(parseInt(limitParam, 10) || 50, 1), 100);
+    const currentPage = Math.max(parseInt(pageParam, 10) || 1, 1);
 
     if (search) {
-      const pattern = new RegExp(String(search).trim(), 'i');
-      query.$or = [
-        { employeeId: pattern },
-        { firstName: pattern },
-        { lastName: pattern },
-        { institutionalEmail: pattern },
-      ];
+      const trimmed = String(search).trim();
+      if (trimmed) {
+        const pattern = new RegExp(escapeRegex(trimmed), 'i');
+        query.$or = [
+          { employeeId: pattern },
+          { firstName: pattern },
+          { middleName: pattern },
+          { lastName: pattern },
+          { institutionalEmail: pattern },
+        ];
+      }
     }
 
     if (department) query.department = String(department).trim();
@@ -147,13 +160,50 @@ async function getFaculty(req, res, next) {
 
       if (specializationIds.length > 0) {
         query.specializations = { $in: specializationIds };
+      } else if (usePagination) {
+        return res.status(200).json({
+          faculty: [],
+          total: 0,
+          currentPage: 1,
+          totalPages: 1,
+          limit,
+        });
       } else {
         return res.status(200).json([]);
       }
     }
 
+    if (usePagination) {
+      const total = await Faculty.countDocuments(query);
+      const totalPages = Math.max(Math.ceil(total / limit), 1);
+      const safePage = Math.min(currentPage, totalPages);
+      const skip = (safePage - 1) * limit;
+
+      const faculty = await Faculty.find(query)
+        .populate('specializations', 'name')
+        .skip(skip)
+        .limit(limit);
+
+      return res.status(200).json({
+        faculty: faculty.map(mapFacultyResponse),
+        total,
+        currentPage: safePage,
+        totalPages,
+        limit,
+      });
+    }
+
     const faculty = await Faculty.find(query).populate('specializations', 'name');
     return res.status(200).json(faculty.map(mapFacultyResponse));
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function getNextFacultyIdPreview(req, res, next) {
+  try {
+    const employeeId = await generateNextEmployeeId();
+    return res.status(200).json({ employeeId });
   } catch (err) {
     return next(err);
   }
@@ -368,6 +418,7 @@ async function getFacultyAnalytics(_req, res, next) {
 module.exports = {
   getFaculty,
   getFacultyById,
+  getNextFacultyIdPreview,
   createFaculty,
   updateFaculty,
   getFacultyAnalytics,
