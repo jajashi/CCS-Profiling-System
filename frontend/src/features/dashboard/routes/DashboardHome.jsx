@@ -10,7 +10,8 @@ import './DashboardHome.css';
 const DashboardHome = () => {
   const { isStudent } = useAuth();
   const [studentCount, setStudentCount] = useState(null);
-  const [facultyCount, setFacultyCount] = useState(null);
+  const [totalFacultyCount, setTotalFacultyCount] = useState(null);
+  const [activeFacultyCount, setActiveFacultyCount] = useState(null);
 
   useEffect(() => {
     if (isStudent) return undefined;
@@ -19,33 +20,36 @@ const DashboardHome = () => {
 
     (async () => {
       try {
-        const [studentRes, facultyRes] = await Promise.all([
+        const [studentRes, facultyAnalyticsRes] = await Promise.all([
           apiFetch('/api/students'),
-          apiFetch('/api/faculty'),
+          apiFetch('/api/faculty/analytics'),
         ]);
 
         if (!studentRes.ok) throw new Error(`Students request failed: ${studentRes.status}`);
-        if (!facultyRes.ok) throw new Error(`Faculty request failed: ${facultyRes.status}`);
+        if (!facultyAnalyticsRes.ok) throw new Error(`Faculty analytics request failed: ${facultyAnalyticsRes.status}`);
 
-        const [studentData, facultyData] = await Promise.all([
+        const [studentData, facultyAnalytics] = await Promise.all([
           studentRes.json(),
-          facultyRes.json(),
+          facultyAnalyticsRes.json(),
         ]);
 
         if (isMounted) {
           setStudentCount(Array.isArray(studentData) ? studentData.length : null);
-          if (Array.isArray(facultyData)) {
-            setFacultyCount(facultyData.length);
-          } else if (facultyData && typeof facultyData.total === 'number') {
-            setFacultyCount(facultyData.total);
+          if (facultyAnalytics && typeof facultyAnalytics.totalFaculty === 'number') {
+            setTotalFacultyCount(facultyAnalytics.totalFaculty);
+            setActiveFacultyCount(
+              typeof facultyAnalytics.activeFaculty === 'number' ? facultyAnalytics.activeFaculty : null,
+            );
           } else {
-            setFacultyCount(null);
+            setTotalFacultyCount(null);
+            setActiveFacultyCount(null);
           }
         }
       } catch {
         if (isMounted) {
           setStudentCount(null);
-          setFacultyCount(null);
+          setTotalFacultyCount(null);
+          setActiveFacultyCount(null);
         }
       }
     })();
@@ -147,8 +151,14 @@ const DashboardHome = () => {
             <FiBriefcase />
           </div>
           <div className="stat-details">
-            <p className="stat-label">Total Faculty</p>
-            <h3 className="stat-value">{facultyCount === null ? '--' : facultyCount.toLocaleString()}</h3>
+            <p className="stat-label">Active Faculty</p>
+            <h3 className="stat-value">
+              {activeFacultyCount === null ? '--' : activeFacultyCount.toLocaleString()}
+            </h3>
+            {/* <p className="stat-sublabel" style={{ marginTop: '0.35rem', fontSize: '0.85rem', color: '#64748b' }}>
+              Total faculty:&nbsp;
+              {totalFacultyCount === null ? '—' : totalFacultyCount.toLocaleString()}
+            </p> */}
           </div>
         </div>
 

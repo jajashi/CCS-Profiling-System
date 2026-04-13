@@ -18,10 +18,35 @@ const emptyForm = {
   employmentType: '',
   contractType: '',
   dateHired: '',
+  status: 'Active',
+  inactiveReasonCategory: '',
+  inactiveReasonOther: '',
   highestEducation: '',
   fieldOfStudy: '',
   certifications: '',
 };
+
+const INACTIVE_REASON_PRESETS = ['Resigned', 'Retired', 'On Leave', 'Terminated', 'Other'];
+
+function parseInactiveFieldsFromReason(reason) {
+  const r = String(reason || '').trim();
+  if (!r) return { inactiveReasonCategory: '', inactiveReasonOther: '' };
+  const fixed = INACTIVE_REASON_PRESETS.filter((x) => x !== 'Other');
+  if (fixed.includes(r)) return { inactiveReasonCategory: r, inactiveReasonOther: '' };
+  const otherMatch = r.match(/^Other:\s*(.*)$/i);
+  if (otherMatch) {
+    return { inactiveReasonCategory: 'Other', inactiveReasonOther: otherMatch[1].trim() };
+  }
+  return { inactiveReasonCategory: 'Other', inactiveReasonOther: r };
+}
+
+function buildStoredInactiveReason(category, otherDetail) {
+  if (category === 'Other') {
+    const d = String(otherDetail || '').trim();
+    return d ? `Other: ${d}` : '';
+  }
+  return String(category || '').trim();
+}
 
 const PH_MOBILE_REGEX = /^09\d{9}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -92,6 +117,10 @@ export default function AddFacultyForm({
 
   useEffect(() => {
     if (isEditMode && initialData) {
+      const inactiveFields =
+        String(initialData.status || 'Active') === 'Inactive'
+          ? parseInactiveFieldsFromReason(initialData.inactiveReason)
+          : { inactiveReasonCategory: '', inactiveReasonOther: '' };
       setFormData({
         firstName: String(initialData.firstName || ''),
         middleName: String(initialData.middleName || ''),
@@ -108,6 +137,9 @@ export default function AddFacultyForm({
         employmentType: String(initialData.employmentType || ''),
         contractType: String(initialData.contractType || ''),
         dateHired: String(initialData.dateHired || ''),
+        status: String(initialData.status || 'Active') === 'Inactive' ? 'Inactive' : 'Active',
+        inactiveReasonCategory: inactiveFields.inactiveReasonCategory,
+        inactiveReasonOther: inactiveFields.inactiveReasonOther,
         highestEducation: String(initialData.highestEducation || ''),
         fieldOfStudy: String(initialData.fieldOfStudy || ''),
         certifications: String(initialData.certifications || ''),
@@ -200,6 +232,17 @@ export default function AddFacultyForm({
       next.employmentType = 'Employment Type must be Full-time or Part-time.';
     }
 
+    if (formData.status === 'Inactive') {
+      if (!isNonEmpty(formData.inactiveReasonCategory)) {
+        next.inactiveReasonCategory = 'Select a reason for inactivation.';
+      } else if (
+        formData.inactiveReasonCategory === 'Other' &&
+        !isNonEmpty(formData.inactiveReasonOther)
+      ) {
+        next.inactiveReasonOther = 'Please describe the reason when selecting Other.';
+      }
+    }
+
     return next;
   };
 
@@ -210,7 +253,12 @@ export default function AddFacultyForm({
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      if (name === 'status' && value === 'Active') {
+        return { ...prev, status: value, inactiveReasonCategory: '', inactiveReasonOther: '' };
+      }
+      return { ...prev, [name]: value };
+    });
   };
 
   const handleAddCertificationSuggestion = (suggestion) => {
@@ -269,6 +317,11 @@ export default function AddFacultyForm({
         employmentType: formData.employmentType,
         contractType: formData.contractType.trim(),
         dateHired: formData.dateHired.trim(),
+        status: formData.status,
+        inactiveReason:
+          formData.status === 'Inactive'
+            ? buildStoredInactiveReason(formData.inactiveReasonCategory, formData.inactiveReasonOther)
+            : '',
         highestEducation: formData.highestEducation,
         fieldOfStudy: formData.fieldOfStudy.trim(),
         certifications: formData.certifications.trim(),
@@ -559,6 +612,52 @@ export default function AddFacultyForm({
                       <label htmlFor="yearsOfServicePreview" className={labelClass}>Years of Service</label>
                       <input id="yearsOfServicePreview" value={String(yearsOfService)} readOnly className={controlClass} />
                     </div>
+                    <div>
+                      <label htmlFor="status" className={labelClass}>Status <span className="text-red-600">*</span></label>
+                      <select id="status" name="status" value={formData.status} onChange={handleChange} className={controlClass}>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                      </select>
+                    </div>
+                    {formData.status === 'Inactive' ? (
+                      <>
+                        <div>
+                          <label htmlFor="inactiveReasonCategory" className={labelClass}>
+                            Reason for Inactivation <span className="text-red-600">*</span>
+                          </label>
+                          <select
+                            id="inactiveReasonCategory"
+                            name="inactiveReasonCategory"
+                            value={formData.inactiveReasonCategory}
+                            onChange={handleChange}
+                            className={controlClass}
+                          >
+                            <option value="">Select reason</option>
+                            {INACTIVE_REASON_PRESETS.map((opt) => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                          <FieldError name="inactiveReasonCategory" />
+                        </div>
+                        {formData.inactiveReasonCategory === 'Other' ? (
+                          <div className="md:col-span-2">
+                            <label htmlFor="inactiveReasonOther" className={labelClass}>
+                              Describe reason <span className="text-red-600">*</span>
+                            </label>
+                            <textarea
+                              id="inactiveReasonOther"
+                              name="inactiveReasonOther"
+                              rows={2}
+                              value={formData.inactiveReasonOther}
+                              onChange={handleChange}
+                              className={controlClass}
+                              placeholder="Required when reason is Other"
+                            />
+                            <FieldError name="inactiveReasonOther" />
+                          </div>
+                        ) : null}
+                      </>
+                    ) : null}
                   </div>
                 </section>
 
@@ -627,6 +726,15 @@ export default function AddFacultyForm({
                   <div className="preview-item"><span className="preview-label">Contract Type</span><span className="preview-value">{formData.contractType || '-'}</span></div>
                   <div className="preview-item"><span className="preview-label">Date Hired</span><span className="preview-value">{formData.dateHired || '-'}</span></div>
                   <div className="preview-item"><span className="preview-label">Years of Service</span><span className="preview-value">{yearsOfService}</span></div>
+                  <div className="preview-item"><span className="preview-label">Status</span><span className="preview-value">{formData.status || 'Active'}</span></div>
+                  {formData.status === 'Inactive' ? (
+                    <div className="preview-item preview-item-full">
+                      <span className="preview-label">Reason for Inactivation</span>
+                      <span className="preview-value">
+                        {buildStoredInactiveReason(formData.inactiveReasonCategory, formData.inactiveReasonOther) || '-'}
+                      </span>
+                    </div>
+                  ) : null}
                   <div className="preview-item"><span className="preview-label">Highest Education</span><span className="preview-value">{formData.highestEducation || '-'}</span></div>
                   <div className="preview-item"><span className="preview-label">Field of Study</span><span className="preview-value">{formData.fieldOfStudy || '-'}</span></div>
                   <div className="preview-item preview-item-full"><span className="preview-label">Certifications / Licenses</span><span className="preview-value">{formData.certifications || '-'}</span></div>

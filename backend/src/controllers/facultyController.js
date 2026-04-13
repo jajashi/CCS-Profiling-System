@@ -72,7 +72,7 @@ function validatePayload(payload, isCreate) {
     return 'emergencyContactNumber must start with 09 and contain exactly 11 digits.';
   }
 
-  const status = normalizeString(payload.status || 'Active');
+  const status = normalizeString(payload.status || 'Active') || 'Active';
   if (status === 'Inactive' && !normalizeString(payload.inactiveReason)) {
     return 'inactiveReason is required when status is Inactive.';
   }
@@ -234,6 +234,10 @@ async function createFaculty(req, res, next) {
 
     const specializations = await resolveSpecializationIds(payload.specializations);
 
+    const status = normalizeString(payload.status || 'Active') || 'Active';
+    const inactiveReason =
+      status === 'Active' ? '' : normalizeString(payload.inactiveReason);
+
     const data = {
       employeeId: await generateNextEmployeeId(),
       firstName: normalizeString(payload.firstName),
@@ -251,8 +255,8 @@ async function createFaculty(req, res, next) {
       employmentType: normalizeString(payload.employmentType),
       contractType: normalizeString(payload.contractType),
       dateHired: normalizeString(payload.dateHired),
-      status: normalizeString(payload.status || 'Active') || 'Active',
-      inactiveReason: normalizeString(payload.inactiveReason),
+      status,
+      inactiveReason,
       highestEducation: normalizeString(payload.highestEducation),
       fieldOfStudy: normalizeString(payload.fieldOfStudy),
       certifications: normalizeString(payload.certifications),
@@ -313,6 +317,10 @@ async function updateFaculty(req, res, next) {
 
     const specializations = await resolveSpecializationIds(payload.specializations);
 
+    const status = normalizeString(payload.status || 'Active') || 'Active';
+    const inactiveReason =
+      status === 'Active' ? '' : normalizeString(payload.inactiveReason);
+
     const data = {
       firstName: normalizeString(payload.firstName),
       middleName: normalizeString(payload.middleName),
@@ -329,8 +337,8 @@ async function updateFaculty(req, res, next) {
       employmentType: normalizeString(payload.employmentType),
       contractType: normalizeString(payload.contractType),
       dateHired: normalizeString(payload.dateHired),
-      status: normalizeString(payload.status || 'Active') || 'Active',
-      inactiveReason: normalizeString(payload.inactiveReason),
+      status,
+      inactiveReason,
       highestEducation: normalizeString(payload.highestEducation),
       fieldOfStudy: normalizeString(payload.fieldOfStudy),
       certifications: normalizeString(payload.certifications),
