@@ -93,7 +93,9 @@ async function run() {
     })),
   );
   console.log(`Seeded ${SEEDED_FACULTY.length} faculty (${ID_PREFIX}001 …).`);
-  console.log(`Faculty login (seed:users) uses: ${SEEDED_FACULTY[0].employeeId} / (from SEED_FACULTY_PASSWORD in backend/.env)`);
+  console.log(
+    `Faculty login (seed:users) uses: ${SEEDED_FACULTY[0].employeeId} / (password from SEED_FACULTY_PASSWORD in backend/.env)`,
+  );
 
   await mongoose.disconnect();
   process.exit(0);
