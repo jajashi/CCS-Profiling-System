@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../providers/AuthContext';
 
 const TopBar = () => {
   const { user, isStudent } = useAuth();

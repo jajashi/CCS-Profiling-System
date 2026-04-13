@@ -1,11 +1,11 @@
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
-import LoginPage from './pages/LoginPage';
-import DashboardLayout from './pages/DashboardLayout';
-import DashboardHome from './pages/DashboardHome';
-import PlaceholderPage from './pages/PlaceholderPage';
-import StudentInformation from './pages/StudentInformation';
-import FacultyInformation from './pages/FacultyInformation';
-import { useAuth } from './context/AuthContext';
+import LoginPage from './features/auth/routes/LoginPage';
+import DashboardLayout from './components/Layout/DashboardLayout';
+import DashboardHome from './features/dashboard/routes/DashboardHome';
+import PlaceholderPage from './features/misc/routes/PlaceholderPage';
+import StudentInformation from './features/students/routes/StudentInformation';
+import FacultyInformation from './features/faculty/routes/FacultyInformation';
+import { useAuth } from './providers/AuthContext';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
@@ -82,6 +82,8 @@ function App() {
         <Route path="faculty" element={<Navigate to="/dashboard/faculty/directory" replace />} />
         <Route path="faculty/directory" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />
         <Route path="faculty/directory/:employeeId" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />
+        <Route path="faculty/profile" element={<Navigate to="/dashboard/faculty/directory" replace />} />
+        <Route path="faculty/profile/:employeeId" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />
         <Route path="faculty-info" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />
         <Route path="faculty-info/:employeeId" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />
         

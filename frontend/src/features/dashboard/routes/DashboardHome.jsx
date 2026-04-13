@@ -3,9 +3,9 @@ import {
   FiUsers, FiBriefcase, FiBookOpen, FiActivity,
   FiAlertCircle, FiCheckCircle, FiDownload, FiEdit2, FiMessageCircle 
 } from 'react-icons/fi';
-import { useAuth } from '../context/AuthContext';
-import { apiFetch } from '../api';
-import '../styles/DashboardHome.css';
+import { useAuth } from '../../../providers/AuthContext';
+import { apiFetch } from '../../../lib/api';
+import './DashboardHome.css';
 
 const DashboardHome = () => {
   const { isStudent } = useAuth();
@@ -158,7 +158,7 @@ const DashboardHome = () => {
           </div>
           <div className="stat-details">
             <p className="stat-label">Active Courses</p>
-            <h3 className="stat-value">142</h3>
+            <h3 className="stat-value">142</h3> {/* TODO: Replace with actual number of active courses */}
           </div>
         </div>
 
@@ -168,7 +168,7 @@ const DashboardHome = () => {
           </div>
           <div className="stat-details">
             <p className="stat-label">Upcoming Events</p>
-            <h3 className="stat-value">5</h3>
+            <h3 className="stat-value">5</h3> {/* TODO: Replace with actual number of upcoming events */}
           </div>
         </div>
       </div>

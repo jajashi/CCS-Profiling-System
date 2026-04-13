@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { apiFetch } from '../api';
-import '../styles/AddFacultyForm.css';
+import { apiFetch } from '../../../lib/api';
+import './AddFacultyForm.css';
 
 const emptyForm = {
   firstName: '',

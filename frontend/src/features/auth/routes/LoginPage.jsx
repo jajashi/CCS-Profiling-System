@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import '../styles/LoginPage.css';
-import logoSrc from '../assets/images/ccs-logo.jpg';
+import { useAuth } from '../../../providers/AuthContext';
+import './LoginPage.css';
+import logoSrc from '../../../assets/images/ccs-logo.jpg';
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
