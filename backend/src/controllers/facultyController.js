@@ -392,6 +392,26 @@ async function getFacultyAnalytics(_req, res, next) {
                     $cond: [{ $eq: ['$status', 'Inactive'] }, 1, 0],
                   },
                 },
+                fullTime: {
+                  $sum: {
+                    $cond: [{ $eq: ['$employmentType', 'Full-time'] }, 1, 0],
+                  },
+                },
+                partTime: {
+                  $sum: {
+                    $cond: [{ $eq: ['$employmentType', 'Part-time'] }, 1, 0],
+                  },
+                },
+                itDept: {
+                  $sum: {
+                    $cond: [{ $eq: ['$department', 'IT'] }, 1, 0],
+                  },
+                },
+                csDept: {
+                  $sum: {
+                    $cond: [{ $eq: ['$department', 'CS'] }, 1, 0],
+                  },
+                },
               },
             },
           ],
@@ -409,12 +429,24 @@ async function getFacultyAnalytics(_req, res, next) {
       },
     ]);
 
-    const totals = summary?.totals?.[0] || { total: 0, active: 0, inactive: 0 };
+    const totals = summary?.totals?.[0] || {
+      total: 0,
+      active: 0,
+      inactive: 0,
+      fullTime: 0,
+      partTime: 0,
+      itDept: 0,
+      csDept: 0,
+    };
 
     return res.status(200).json({
       totalFaculty: totals.total || 0,
       activeFaculty: totals.active || 0,
       inactiveFaculty: totals.inactive || 0,
+      fullTimeFaculty: totals.fullTime || 0,
+      partTimeFaculty: totals.partTime || 0,
+      itDepartmentCount: totals.itDept || 0,
+      csDepartmentCount: totals.csDept || 0,
       departmentDistribution: summary?.departmentDistribution || [],
       employmentTypeDistribution: summary?.employmentTypeDistribution || [],
     });

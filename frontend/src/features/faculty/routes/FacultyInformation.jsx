@@ -141,6 +141,18 @@ const FacultyInformation = () => {
     return () => clearTimeout(timer);
   }, [query]);
 
+  /** Open add-faculty modal when linked from Faculty Dashboard empty state (?add=1). Runs before URL sync below. */
+  useEffect(() => {
+    if (!isAdmin || searchParams.get('add') !== '1') return undefined;
+    setIsFormOpen(true);
+    setFormMode('create');
+    setFormTarget(null);
+    const next = new URLSearchParams(searchParams);
+    next.delete('add');
+    setSearchParams(next, { replace: true });
+    return undefined;
+  }, [isAdmin, searchParams, setSearchParams]);
+
   // When filters change, sync to URL and load data
   useEffect(() => {
     const params = new URLSearchParams();

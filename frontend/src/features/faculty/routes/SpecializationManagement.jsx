@@ -159,7 +159,7 @@ export default function SpecializationManagement() {
           <div className="spec-toolbar-meta">
             <h2 className="spec-toolbar-title">Specialization catalog</h2>
             <p className="spec-toolbar-sub">
-              {loading ? 'Loading…' : 'Names must be unique. Deletion is blocked while a specialization is still assigned.'}
+              {loading ? 'Loading…' : 'Deletion is blocked while a specialization is still assigned.'}
             </p>
             {!loading ? (
               <span className="spec-count-pill">

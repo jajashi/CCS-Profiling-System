@@ -99,6 +99,18 @@ const Sidebar = () => {
                 </button>
                 {facultyNavOpen ? (
                   <ul className="nav-sublist" id="sidebar-faculty-subnav" role="list">
+                    {isAdmin ? (
+                      <li className="nav-subitem">
+                        <NavLink
+                          to="/dashboard/faculty"
+                          end
+                          className={({ isActive }) => (isActive ? 'nav-link nav-sublink active' : 'nav-link nav-sublink')}
+                        >
+                          <span className="nav-icon nav-sublink-icon"><FiBarChart2 /></span>
+                          <span className="nav-text">Faculty overview</span>
+                        </NavLink>
+                      </li>
+                    ) : null}
                     <li className="nav-subitem">
                       <NavLink
                         to="/dashboard/faculty/directory"

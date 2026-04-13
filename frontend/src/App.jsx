@@ -6,6 +6,7 @@ import PlaceholderPage from './features/misc/routes/PlaceholderPage';
 import StudentInformation from './features/students/routes/StudentInformation';
 import FacultyInformation from './features/faculty/routes/FacultyInformation';
 import SpecializationManagement from './features/faculty/routes/SpecializationManagement';
+import FacultyDashboard from './features/faculty/routes/FacultyDashboard';
 import { useAuth } from './providers/AuthContext';
 
 // Protected Route Wrapper
@@ -80,7 +81,14 @@ function App() {
         <Route path="student-info" element={<StudentDirectoryRoute><StudentInformation /></StudentDirectoryRoute>} />
         <Route path="student-info/:id" element={<StudentProfileRoute><StudentInformation /></StudentProfileRoute>} />
         
-        <Route path="faculty" element={<Navigate to="/dashboard/faculty/directory" replace />} />
+        <Route
+          path="faculty"
+          element={(
+            <AdminRoute>
+              <FacultyDashboard />
+            </AdminRoute>
+          )}
+        />
         <Route path="faculty/directory" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />
         <Route path="faculty/directory/:employeeId" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />
         <Route
