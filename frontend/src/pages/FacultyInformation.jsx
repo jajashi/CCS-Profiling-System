@@ -1,5 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { FiBriefcase, FiEdit2, FiInfo, FiMail, FiPhone, FiPlus, FiSearch, FiTrash2, FiUserCheck, FiX } from 'react-icons/fi';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  FiBriefcase,
+  FiEdit2,
+  FiEye,
+  FiInfo,
+  FiPlus,
+  FiPower,
+  FiUserCheck,
+  FiX,
+} from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
 import AddFacultyForm from '../components/AddFacultyForm';
 import femaleImage from '../assets/images/female.jpg';
@@ -7,41 +16,103 @@ import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api';
 import '../styles/StudentInformation.css';
 
+const PAGE_SIZE = 50;
+const DIRECTORY_BASE = '/dashboard/faculty/directory';
+
+function formatSpecializations(member) {
+  const list = member?.specializations;
+  if (!Array.isArray(list) || list.length === 0) return '—';
+  return list
+    .map((item) => (item && typeof item === 'object' && item.name ? item.name : String(item)))
+    .filter(Boolean)
+    .join(', ');
+}
+
+function buildFacultyPutPayload(faculty) {
+  const specIds = Array.isArray(faculty.specializations)
+    ? faculty.specializations.map((s) => (s && typeof s === 'object' && s._id ? s._id : s))
+    : [];
+  return {
+    firstName: faculty.firstName,
+    middleName: faculty.middleName || '',
+    lastName: faculty.lastName,
+    dob: faculty.dob,
+    department: faculty.department,
+    profileAvatar: faculty.profileAvatar || '',
+    institutionalEmail: faculty.institutionalEmail,
+    personalEmail: faculty.personalEmail || '',
+    mobileNumber: faculty.mobileNumber,
+    emergencyContactName: faculty.emergencyContactName || '',
+    emergencyContactNumber: faculty.emergencyContactNumber || '',
+    position: faculty.position,
+    employmentType: faculty.employmentType,
+    contractType: faculty.contractType || '',
+    dateHired: faculty.dateHired,
+    status: faculty.status,
+    inactiveReason: faculty.inactiveReason || '',
+    highestEducation: faculty.highestEducation,
+    fieldOfStudy: faculty.fieldOfStudy,
+    certifications: faculty.certifications || '',
+    specializations: specIds,
+    internalNotes: faculty.internalNotes || '',
+    updatedAt: faculty.updatedAt,
+  };
+}
+
 const FacultyInformation = () => {
   const navigate = useNavigate();
   const { employeeId: selectedEmployeeId } = useParams();
   const { isAdmin } = useAuth();
   const [faculty, setFaculty] = useState([]);
-  const [query, setQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formMode, setFormMode] = useState('create');
   const [formTarget, setFormTarget] = useState(null);
+  const [nextEmployeeIdPreview, setNextEmployeeIdPreview] = useState('');
   const [selectedFaculty, setSelectedFaculty] = useState(null);
+  const [togglingEmployeeId, setTogglingEmployeeId] = useState('');
+  const [statusModal, setStatusModal] = useState(null);
 
-  const loadFaculty = async () => {
+  const loadFaculty = useCallback(async (pageNum = 1) => {
+    setLoading(true);
     try {
-      const res = await apiFetch(`/api/faculty`);
+      const res = await apiFetch(`/api/faculty?page=${pageNum}&limit=${PAGE_SIZE}`);
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setFaculty(data);
+      const json = await res.json();
+      if (json && Array.isArray(json.faculty)) {
+        setFaculty(json.faculty);
+        setTotalCount(json.total ?? json.faculty.length);
+        setCurrentPage(json.currentPage ?? pageNum);
+        setTotalPages(json.totalPages ?? 1);
+      } else if (Array.isArray(json)) {
+        setFaculty(json);
+        setTotalCount(json.length);
+        setCurrentPage(1);
+        setTotalPages(1);
       } else {
         setFaculty([]);
+        setTotalCount(0);
+        setCurrentPage(1);
+        setTotalPages(1);
       }
       setLoadError('');
     } catch {
       setLoadError('Could not load faculty records. Please try again.');
+      setFaculty([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    loadFaculty();
-  }, []);
+    loadFaculty(1);
+  }, [loadFaculty]);
 
   useEffect(() => {
     if (!selectedEmployeeId) {
@@ -49,7 +120,24 @@ const FacultyInformation = () => {
       return;
     }
     const match = faculty.find((member) => String(member.employeeId) === String(selectedEmployeeId));
-    setSelectedFaculty(match || null);
+    if (match) {
+      setSelectedFaculty(match);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch(`/api/faculty/${encodeURIComponent(selectedEmployeeId)}`);
+        if (!res.ok) throw new Error('not found');
+        const data = await res.json();
+        if (!cancelled) setSelectedFaculty(data);
+      } catch {
+        if (!cancelled) setSelectedFaculty(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [selectedEmployeeId, faculty]);
 
   useEffect(() => {
@@ -58,47 +146,25 @@ const FacultyInformation = () => {
     return () => clearTimeout(timer);
   }, [successMessage]);
 
-  const filteredFaculty = useMemo(() => {
-    const term = query.toLowerCase().trim();
-    if (!term) return faculty;
-    return faculty.filter((member) =>
-      [
-        member.employeeId,
-        member.firstName,
-        member.middleName,
-        member.lastName,
-        member.department,
-        member.position,
-        member.employmentType,
-        member.institutionalEmail,
-      ]
-        .join(' ')
-        .toLowerCase()
-        .includes(term),
-    );
-  }, [faculty, query]);
-
-  const nextEmployeeId = useMemo(() => {
-    const year = new Date().getUTCFullYear();
-    const prefix = `FAC-${year}-`;
-    const maxSuffix = faculty
-      .map((member) => String(member.employeeId || ''))
-      .filter((id) => id.startsWith(prefix))
-      .map((id) => Number.parseInt(id.slice(prefix.length), 10))
-      .filter((value) => Number.isInteger(value))
-      .reduce((max, current) => (current > max ? current : max), 0);
-    return `${prefix}${String(maxSuffix + 1).padStart(3, '0')}`;
-  }, [faculty]);
-
-  const openCreateForm = () => {
+  const openCreateForm = async () => {
     setFormMode('create');
     setFormTarget(null);
+    setNextEmployeeIdPreview('');
+    try {
+      const res = await apiFetch('/api/faculty/next-id');
+      if (res.ok) {
+        const data = await res.json();
+        setNextEmployeeIdPreview(data.employeeId || '');
+      }
+    } catch {
+      setNextEmployeeIdPreview('');
+    }
     setIsFormOpen(true);
   };
 
   const openEditForm = async (employeeId) => {
     try {
-      const res = await apiFetch(`/api/faculty/${employeeId}`);
+      const res = await apiFetch(`/api/faculty/${encodeURIComponent(employeeId)}`);
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
       const data = await res.json();
       setFormMode('edit');
@@ -109,6 +175,58 @@ const FacultyInformation = () => {
     }
   };
 
+  const goToProfile = (member) => {
+    navigate(`${DIRECTORY_BASE}/${encodeURIComponent(member.employeeId)}`);
+  };
+
+  const applyStatusChange = async (member, nextStatus, inactiveReason) => {
+    setTogglingEmployeeId(member.employeeId);
+    setLoadError('');
+    try {
+      const res = await apiFetch(`/api/faculty/${encodeURIComponent(member.employeeId)}`);
+      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+      const data = await res.json();
+      const payload = buildFacultyPutPayload(data);
+      payload.status = nextStatus;
+      payload.inactiveReason = nextStatus === 'Inactive' ? inactiveReason : '';
+
+      const putRes = await apiFetch(`/api/faculty/${encodeURIComponent(member.employeeId)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const updated = await putRes.json().catch(() => null);
+      if (!putRes.ok) {
+        setLoadError(updated?.message || 'Could not update status. Please try again.');
+        return;
+      }
+      setFaculty((prev) => prev.map((row) => (row.employeeId === updated.employeeId ? updated : row)));
+      setSelectedFaculty((prev) => (prev && prev.employeeId === updated.employeeId ? updated : prev));
+      setSuccessMessage(
+        nextStatus === 'Active' ? 'Faculty member activated.' : 'Faculty member deactivated.',
+      );
+      await loadFaculty(currentPage);
+      setStatusModal(null);
+    } catch {
+      setLoadError('Could not update status. Please try again.');
+    } finally {
+      setTogglingEmployeeId('');
+    }
+  };
+
+  const handleToggleClick = (member, e) => {
+    e.stopPropagation();
+    if (togglingEmployeeId) return;
+    if (member.status === 'Inactive') {
+      setStatusModal({ member, nextStatus: 'Active', needsReason: false });
+    } else {
+      setStatusModal({ member, nextStatus: 'Inactive', needsReason: true, reason: '' });
+    }
+  };
+
+  const rangeStart = totalCount === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(currentPage * PAGE_SIZE, totalCount);
+
   return (
     <div className="student-directory">
       <div className="directory-hero faculty-hero">
@@ -116,34 +234,25 @@ const FacultyInformation = () => {
           <FiUserCheck />
         </div>
         <div>
-          <p className="directory-hero-title">Faculty Information</p>
+          <p className="directory-hero-title">Faculty Directory</p>
           <p className="directory-hero-subtitle">
             <FiInfo />
-            <span>Manage faculty records and review profile details from one directory.</span>
+            <span>Browse the full roster and open profiles or quick actions from one table.</span>
           </p>
         </div>
       </div>
 
       <div className="table-card">
-        <div className="table-toolbar">
-          <div className="search-box">
-            <FiSearch />
-            <input
-              type="text"
-              placeholder="Search by employee ID, name, department, or position"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-          <div className="toolbar-meta flex items-center justify-between gap-4">
+        <div className="table-toolbar faculty-directory-toolbar">
+          <div className="toolbar-meta flex w-full items-center justify-between gap-4">
             <span className="meta-chip">
-              {filteredFaculty.length} of {faculty.length} faculty
+              {loading ? 'Loading…' : `${rangeStart}–${rangeEnd} of ${totalCount} faculty`}
             </span>
             {isAdmin ? (
               <button
                 type="button"
                 onClick={openCreateForm}
-                className="inline-flex min-h-[44px] min-w-[180px] items-center justify-center whitespace-nowrap rounded-xl bg-[#ff7f00] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#e67300] focus:outline-none focus:ring-2 focus:ring-[#fff3e6]"
+                className="add-student-btn"
                 aria-label="Add new faculty"
                 disabled={loading}
               >
@@ -154,14 +263,10 @@ const FacultyInformation = () => {
           </div>
         </div>
 
-        {successMessage ? (
-          <div className="page-success-alert">
-            {successMessage}
-          </div>
-        ) : null}
+        {successMessage ? <div className="page-success-alert">{successMessage}</div> : null}
 
         {loadError ? (
-          <div className="mt-3 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 border border-red-200">
+          <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {loadError}
           </div>
         ) : null}
@@ -175,92 +280,141 @@ const FacultyInformation = () => {
                 <th>Department</th>
                 <th>Position</th>
                 <th>Employment Type</th>
+                <th>Specializations</th>
                 <th>Status</th>
-                <th>Years of Service</th>
-                <th>Institutional Email</th>
-                <th>Mobile Number</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredFaculty.map((member) => (
-                <tr key={member.employeeId || member._id} onClick={() => navigate(`/dashboard/faculty-info/${encodeURIComponent(member.employeeId)}`)}>
-                  <td className="id-cell">
-                    <span className="id-badge">{member.employeeId || '-'}</span>
-                  </td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <FiBriefcase />
-                      <span>{[member.firstName, member.middleName, member.lastName].filter(Boolean).join(' ') || '-'}</span>
-                    </div>
-                  </td>
-                  <td>{member.department || '-'}</td>
-                  <td>{member.position || '-'}</td>
-                  <td>{member.employmentType || '-'}</td>
-                  <td>
-                    <span className={`status-badge status-${String(member.status || 'active').toLowerCase()}`}>
-                      {member.status || 'Active'}
-                    </span>
-                  </td>
-                  <td>{member.yearsOfService ?? 0}</td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <FiMail />
-                      <span>{member.institutionalEmail || '-'}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <FiPhone />
-                      <span>{member.mobileNumber || '-'}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="action-buttons" onClick={(e) => e.stopPropagation()}>
-                      {isAdmin ? (
-                        <>
-                          <button
-                            className="action-btn edit"
-                            type="button"
-                            aria-label="Edit faculty"
-                            title="Edit faculty"
-                            onClick={() => openEditForm(member.employeeId)}
+              {loading
+                ? Array.from({ length: 6 }).map((_, i) => (
+                    <tr key={`sk-${i}`} className="skeleton-row">
+                      <td colSpan="8">
+                        <span className="skeleton-block" />
+                      </td>
+                    </tr>
+                  ))
+                : faculty.map((member) => {
+                    const isInactive = String(member.status || '').toLowerCase() === 'inactive';
+                    return (
+                      <tr
+                        key={member.employeeId || member._id}
+                        className={isInactive ? 'row-inactive' : ''}
+                        onClick={() => goToProfile(member)}
+                      >
+                        <td className="id-cell">
+                          <span className="id-badge">{member.employeeId || '-'}</span>
+                        </td>
+                        <td>
+                          <div className="flex items-center gap-2">
+                            <FiBriefcase />
+                            <span>
+                              {[member.firstName, member.middleName, member.lastName].filter(Boolean).join(' ') ||
+                                '—'}
+                            </span>
+                          </div>
+                        </td>
+                        <td>{member.department || '—'}</td>
+                        <td>{member.position || '—'}</td>
+                        <td>{member.employmentType || '—'}</td>
+                        <td className="specializations-cell">{formatSpecializations(member)}</td>
+                        <td>
+                          <span
+                            className={`status-badge status-${String(member.status || 'active').toLowerCase()}`}
                           >
-                            <FiEdit2 />
-                          </button>
-                          <button
-                            className="action-btn delete"
-                            type="button"
-                            disabled
-                            aria-label="Delete faculty (not available)"
-                            title="Delete is disabled (no faculty delete endpoint)"
-                          >
-                            <FiTrash2 />
-                          </button>
-                        </>
-                      ) : null}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {!filteredFaculty.length && (
+                            {member.status || 'Active'}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="action-buttons" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              className="action-btn view"
+                              type="button"
+                              aria-label="View profile"
+                              title="View profile"
+                              onClick={() => goToProfile(member)}
+                            >
+                              <FiEye />
+                            </button>
+                            {isAdmin ? (
+                              <>
+                                <button
+                                  className="action-btn edit"
+                                  type="button"
+                                  aria-label="Edit faculty"
+                                  title="Edit faculty"
+                                  onClick={() => openEditForm(member.employeeId)}
+                                >
+                                  <FiEdit2 />
+                                </button>
+                                <button
+                                  className={`action-btn toggle ${isInactive ? 'toggle-on' : ''}`}
+                                  type="button"
+                                  aria-label={isInactive ? 'Activate faculty' : 'Deactivate faculty'}
+                                  title={isInactive ? 'Activate' : 'Deactivate'}
+                                  disabled={togglingEmployeeId === member.employeeId}
+                                  onClick={(e) => handleToggleClick(member, e)}
+                                >
+                                  <FiPower />
+                                </button>
+                              </>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+              {!loading && !faculty.length ? (
                 <tr>
-                  <td colSpan="10" className="empty-row">
-                    No faculty records found for "{query}".
+                  <td colSpan="8" className="empty-row">
+                    <div className="faculty-empty-state">
+                      <p className="faculty-empty-title">No faculty records found</p>
+                      {isAdmin ? (
+                        <button type="button" className="faculty-empty-link" onClick={openCreateForm}>
+                          Add a new faculty member
+                        </button>
+                      ) : (
+                        <p className="faculty-empty-sub">Check back after administrators add records.</p>
+                      )}
+                    </div>
                   </td>
                 </tr>
-              )}
+              ) : null}
             </tbody>
           </table>
         </div>
+
+        {!loading && totalPages > 1 ? (
+          <div className="table-pagination">
+            <button
+              type="button"
+              className="pagination-btn"
+              disabled={currentPage <= 1}
+              onClick={() => loadFaculty(currentPage - 1)}
+            >
+              Previous
+            </button>
+            <span className="pagination-meta">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              type="button"
+              className="pagination-btn"
+              disabled={currentPage >= totalPages}
+              onClick={() => loadFaculty(currentPage + 1)}
+            >
+              Next
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {selectedFaculty ? (
-        <div className="student-modal-backdrop" onClick={() => navigate('/dashboard/faculty-info')}>
+        <div className="student-modal-backdrop" onClick={() => navigate(DIRECTORY_BASE)}>
           <div className="student-modal" onClick={(e) => e.stopPropagation()}>
             <div className="breadcrumb-bar">
-              <button className="breadcrumb-link" type="button" onClick={() => navigate('/dashboard/faculty-info')}>
-                Faculty
+              <button className="breadcrumb-link" type="button" onClick={() => navigate(DIRECTORY_BASE)}>
+                Directory
               </button>
               <span className="breadcrumb-separator">/</span>
               <span className="breadcrumb-current">
@@ -287,7 +441,7 @@ const FacultyInformation = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setSelectedFaculty(null);
+                      navigate(DIRECTORY_BASE);
                       openEditForm(selectedFaculty.employeeId);
                     }}
                     className="modal-edit-btn"
@@ -298,7 +452,7 @@ const FacultyInformation = () => {
                 ) : null}
                 <button
                   className="modal-close"
-                  onClick={() => navigate('/dashboard/faculty-info')}
+                  onClick={() => navigate(DIRECTORY_BASE)}
                   aria-label="Close dialog"
                   type="button"
                 >
@@ -321,6 +475,15 @@ const FacultyInformation = () => {
                 <input className="readonly-field" type="text" value={selectedFaculty.employmentType || '-'} readOnly />
               </div>
               <div>
+                <p className="label">Specializations</p>
+                <input
+                  className="readonly-field"
+                  type="text"
+                  value={formatSpecializations(selectedFaculty)}
+                  readOnly
+                />
+              </div>
+              <div>
                 <p className="label">Contract Type</p>
                 <input className="readonly-field" type="text" value={selectedFaculty.contractType || '-'} readOnly />
               </div>
@@ -334,7 +497,12 @@ const FacultyInformation = () => {
               </div>
               <div>
                 <p className="label">Years of Service</p>
-                <input className="readonly-field" type="text" value={String(selectedFaculty.yearsOfService ?? 0)} readOnly />
+                <input
+                  className="readonly-field"
+                  type="text"
+                  value={String(selectedFaculty.yearsOfService ?? 0)}
+                  readOnly
+                />
               </div>
               <div>
                 <p className="label">Date of Birth</p>
@@ -342,7 +510,12 @@ const FacultyInformation = () => {
               </div>
               <div>
                 <p className="label">Institutional Email</p>
-                <input className="readonly-field" type="text" value={selectedFaculty.institutionalEmail || '-'} readOnly />
+                <input
+                  className="readonly-field"
+                  type="text"
+                  value={selectedFaculty.institutionalEmail || '-'}
+                  readOnly
+                />
               </div>
               <div>
                 <p className="label">Personal Email</p>
@@ -382,28 +555,84 @@ const FacultyInformation = () => {
         </div>
       ) : null}
 
+      {statusModal ? (
+        <div className="student-modal-backdrop status-reason-backdrop" onClick={() => setStatusModal(null)}>
+          <div className="student-modal status-reason-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <p className="modal-eyebrow">Update status</p>
+                <h3>{statusModal.nextStatus === 'Inactive' ? 'Deactivate faculty' : 'Activate faculty'}</h3>
+                <p className="modal-subtitle">
+                  {statusModal.member.firstName} {statusModal.member.lastName} ({statusModal.member.employeeId})
+                </p>
+              </div>
+              <button className="modal-close" type="button" aria-label="Close" onClick={() => setStatusModal(null)}>
+                <FiX />
+              </button>
+            </div>
+            {statusModal.needsReason ? (
+              <>
+                <label className="status-reason-label" htmlFor="inactive-reason">
+                  Reason for deactivation (required)
+                </label>
+                <textarea
+                  id="inactive-reason"
+                  className="status-reason-input"
+                  rows={4}
+                  value={statusModal.reason}
+                  onChange={(e) => setStatusModal((prev) => ({ ...prev, reason: e.target.value }))}
+                  placeholder="Brief reason for HR records…"
+                />
+              </>
+            ) : (
+              <p className="status-reason-hint">This will restore the faculty member to Active status.</p>
+            )}
+            <div className="status-reason-actions">
+              <button type="button" className="pagination-btn" onClick={() => setStatusModal(null)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="add-student-btn"
+                disabled={
+                  togglingEmployeeId ||
+                  (statusModal.needsReason && !String(statusModal.reason || '').trim())
+                }
+                onClick={() => {
+                  if (statusModal.needsReason) {
+                    const reason = String(statusModal.reason || '').trim();
+                    if (!reason) return;
+                    applyStatusChange(statusModal.member, 'Inactive', reason);
+                  } else {
+                    applyStatusChange(statusModal.member, 'Active', '');
+                  }
+                }}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {isFormOpen ? (
         <AddFacultyForm
           mode={formMode}
           initialData={formTarget}
           targetEmployeeId={formTarget?.employeeId}
-          nextEmployeeId={nextEmployeeId}
+          nextEmployeeId={nextEmployeeIdPreview}
           onClose={() => setIsFormOpen(false)}
-          onCreated={(createdFaculty) => {
-            setFaculty((prev) => [createdFaculty, ...prev]);
-            setQuery('');
+          onCreated={() => {
             setSuccessMessage('Faculty profile created successfully.');
-            loadFaculty();
+            loadFaculty(1);
           }}
           onUpdated={(updatedFaculty) => {
             setFaculty((prev) =>
-              prev.map((item) =>
-                item.employeeId === updatedFaculty.employeeId ? updatedFaculty : item,
-              ),
+              prev.map((item) => (item.employeeId === updatedFaculty.employeeId ? updatedFaculty : item)),
             );
             setSelectedFaculty(updatedFaculty);
             setSuccessMessage('Faculty profile updated successfully.');
-            loadFaculty();
+            loadFaculty(currentPage);
           }}
         />
       ) : null}

@@ -34,7 +34,13 @@ const DashboardHome = () => {
 
         if (isMounted) {
           setStudentCount(Array.isArray(studentData) ? studentData.length : null);
-          setFacultyCount(Array.isArray(facultyData) ? facultyData.length : null);
+          if (Array.isArray(facultyData)) {
+            setFacultyCount(facultyData.length);
+          } else if (facultyData && typeof facultyData.total === 'number') {
+            setFacultyCount(facultyData.total);
+          } else {
+            setFacultyCount(null);
+          }
         }
       } catch {
         if (isMounted) {

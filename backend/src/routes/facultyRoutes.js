@@ -2,6 +2,7 @@ const express = require('express');
 const {
   getFaculty,
   getFacultyById,
+  getNextFacultyIdPreview,
   createFaculty,
   updateFaculty,
   getFacultyAnalytics,

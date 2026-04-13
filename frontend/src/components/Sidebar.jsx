@@ -56,7 +56,7 @@ const Sidebar = () => {
               </li>
 
               <li className="nav-item">
-                <NavLink to="/dashboard/faculty-info" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                <NavLink to="/dashboard/faculty/directory" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
                   <span className="nav-icon"><FiBriefcase /></span>
                   <span className="nav-text">Faculty Information</span>
                 </NavLink>

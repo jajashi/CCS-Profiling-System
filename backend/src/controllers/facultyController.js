@@ -113,6 +113,10 @@ function mapFacultyResponse(doc) {
 async function getFaculty(req, res, next) {
   try {
     const { search, department, employmentType, status, specialization } = req.query;
+    const pageParam = req.query.page;
+    const limitParam = req.query.limit;
+    const usePagination = pageParam !== undefined || limitParam !== undefined;
+
     const query = {};
 
     if (search) {
@@ -147,13 +151,54 @@ async function getFaculty(req, res, next) {
 
       if (specializationIds.length > 0) {
         query.specializations = { $in: specializationIds };
+      } else if (usePagination) {
+        const limit = Math.min(Math.max(parseInt(limitParam, 10) || 50, 1), 100);
+        return res.status(200).json({
+          faculty: [],
+          total: 0,
+          currentPage: 1,
+          totalPages: 1,
+          limit,
+        });
       } else {
         return res.status(200).json([]);
       }
     }
 
-    const faculty = await Faculty.find(query).populate('specializations', 'name');
+    const sort = { employeeId: 1 };
+
+    if (usePagination) {
+      const page = Math.max(1, parseInt(pageParam, 10) || 1);
+      const limit = Math.min(Math.max(parseInt(limitParam, 10) || 50, 1), 100);
+      const skip = (page - 1) * limit;
+
+      const [faculty, total] = await Promise.all([
+        Faculty.find(query).populate('specializations', 'name').sort(sort).skip(skip).limit(limit),
+        Faculty.countDocuments(query),
+      ]);
+
+      const totalPages = Math.max(1, Math.ceil(total / limit));
+
+      return res.status(200).json({
+        faculty: faculty.map(mapFacultyResponse),
+        total,
+        currentPage: page,
+        totalPages,
+        limit,
+      });
+    }
+
+    const faculty = await Faculty.find(query).populate('specializations', 'name').sort(sort);
     return res.status(200).json(faculty.map(mapFacultyResponse));
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function getNextFacultyIdPreview(req, res, next) {
+  try {
+    const employeeId = await generateNextEmployeeId();
+    return res.status(200).json({ employeeId });
   } catch (err) {
     return next(err);
   }
@@ -368,6 +413,7 @@ async function getFacultyAnalytics(_req, res, next) {
 module.exports = {
   getFaculty,
   getFacultyById,
+  getNextFacultyIdPreview,
   createFaculty,
   updateFaculty,
   getFacultyAnalytics,
