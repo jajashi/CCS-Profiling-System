@@ -8,6 +8,12 @@ const specializationSchema = new mongoose.Schema(
       unique: true,
       trim: true,
     },
+    description: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: 500,
+    },
   },
   {
     timestamps: true,

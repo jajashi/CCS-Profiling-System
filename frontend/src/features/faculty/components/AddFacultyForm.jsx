@@ -24,6 +24,7 @@ const emptyForm = {
   highestEducation: '',
   fieldOfStudy: '',
   certifications: '',
+  specializations: [],
 };
 
 const INACTIVE_REASON_PRESETS = ['Resigned', 'Retired', 'On Leave', 'Terminated', 'Other'];
@@ -106,6 +107,7 @@ export default function AddFacultyForm({
   const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [avatarInputMode, setAvatarInputMode] = useState('url');
+  const [specializationOptions, setSpecializationOptions] = useState([]);
 
   const controlClass = 'add-student-control mt-1 block';
   const labelClass = 'add-student-label';
@@ -114,6 +116,26 @@ export default function AddFacultyForm({
     () => yearsOfServiceFromDateHired(formData.dateHired),
     [formData.dateHired],
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadSpecs = async () => {
+      try {
+        const res = await apiFetch('/api/specializations');
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (!cancelled && Array.isArray(data)) {
+          setSpecializationOptions(data);
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+    loadSpecs();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (isEditMode && initialData) {
@@ -143,6 +165,11 @@ export default function AddFacultyForm({
         highestEducation: String(initialData.highestEducation || ''),
         fieldOfStudy: String(initialData.fieldOfStudy || ''),
         certifications: String(initialData.certifications || ''),
+        specializations: Array.isArray(initialData.specializations)
+          ? initialData.specializations
+              .map((s) => (s && typeof s === 'object' ? String(s._id || '') : String(s || '')))
+              .filter(Boolean)
+          : [],
       });
       setOriginalUpdatedAt(String(initialData.updatedAt || ''));
     } else {
@@ -261,6 +288,18 @@ export default function AddFacultyForm({
     });
   };
 
+  const toggleSpecialization = (id) => {
+    const sid = String(id);
+    setFormData((prev) => {
+      const current = Array.isArray(prev.specializations) ? prev.specializations : [];
+      const has = current.includes(sid);
+      return {
+        ...prev,
+        specializations: has ? current.filter((x) => x !== sid) : [...current, sid],
+      };
+    });
+  };
+
   const handleAddCertificationSuggestion = (suggestion) => {
     setFormData((prev) => {
       const current = String(prev.certifications || '').trim();
@@ -325,6 +364,7 @@ export default function AddFacultyForm({
         highestEducation: formData.highestEducation,
         fieldOfStudy: formData.fieldOfStudy.trim(),
         certifications: formData.certifications.trim(),
+        specializations: Array.isArray(formData.specializations) ? formData.specializations : [],
       };
 
       if (isEditMode && originalUpdatedAt) {
@@ -689,6 +729,51 @@ export default function AddFacultyForm({
                       </select>
                       <FieldError name="fieldOfStudy" />
                     </div>
+                    <div className="faculty-spec-block">
+                      <div className="faculty-spec-head">
+                        <div className="faculty-spec-title-wrap">
+                          <p className="faculty-spec-title">SPECIALIZATIONS <span className="text-red-600">*</span></p>
+                        </div>
+                      </div>
+                      {specializationOptions.length === 0 ? (
+                        <p className="faculty-spec-empty">
+                          No specializations in the catalog yet. An administrator can add them under
+                          Specializations in the sidebar.
+                        </p>
+                      ) : (
+                        <div className="faculty-spec-grid">
+                          {specializationOptions.map((opt) => {
+                            const sid = String(opt._id || '');
+                            const inputId = `faculty-spec-${sid.replace(/\s/g, '')}`;
+                            const checked = (formData.specializations || []).includes(sid);
+                            return (
+                              <label
+                                key={sid || opt.name}
+                                htmlFor={inputId}
+                                className={`faculty-spec-chip ${checked ? 'is-selected' : ''}`}
+                              >
+                                <input
+                                  id={inputId}
+                                  type="checkbox"
+                                  className="faculty-spec-input"
+                                  checked={checked}
+                                  onChange={() => toggleSpecialization(sid)}
+                                />
+                                <span className="faculty-spec-check" aria-hidden>
+                                  <span className="faculty-spec-check-inner" />
+                                </span>
+                                <span className="faculty-spec-label-wrap">
+                                  <span className="faculty-spec-label">{opt.name}</span>
+                                  {String(opt.description || '').trim() ? (
+                                    <span className="faculty-spec-desc">{opt.description}</span>
+                                  ) : null}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                     <div className="md:col-span-2">
                       <label htmlFor="certifications" className={labelClass}>Certifications / Licenses</label>
                       <textarea id="certifications" name="certifications" rows="3" value={formData.certifications} onChange={handleChange} className={controlClass} />
@@ -737,6 +822,22 @@ export default function AddFacultyForm({
                   ) : null}
                   <div className="preview-item"><span className="preview-label">Highest Education</span><span className="preview-value">{formData.highestEducation || '-'}</span></div>
                   <div className="preview-item"><span className="preview-label">Field of Study</span><span className="preview-value">{formData.fieldOfStudy || '-'}</span></div>
+                  <div className="preview-item preview-item-full">
+                    <span className="preview-label">Specializations</span>
+                    <span className="preview-value">
+                      {(formData.specializations || []).length === 0
+                        ? '-'
+                        : (formData.specializations || [])
+                            .map((sid) => {
+                              const o = specializationOptions.find((x) => String(x._id) === String(sid));
+                              if (!o) return String(sid);
+                              const d = String(o.description || '').trim();
+                              return d ? `${o.name} (${d})` : o.name;
+                            })
+                            .filter(Boolean)
+                            .join('; ')}
+                    </span>
+                  </div>
                   <div className="preview-item preview-item-full"><span className="preview-label">Certifications / Licenses</span><span className="preview-value">{formData.certifications || '-'}</span></div>
                 </div>
               </div>

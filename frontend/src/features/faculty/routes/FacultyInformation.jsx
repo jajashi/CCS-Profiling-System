@@ -651,8 +651,17 @@ const FacultyInformation = () => {
                   <td>{member.position || '-'}</td>
                   <td>{member.employmentType || '-'}</td>
                   <td>
-                    {member.specializations?.length 
-                      ? member.specializations.map(s => s.name || s).join(', ') 
+                    {member.specializations?.length
+                      ? member.specializations
+                          .map((s) => {
+                            const name = typeof s === 'object' ? (s.name || '') : String(s);
+                            const desc =
+                              typeof s === 'object' && String(s.description || '').trim()
+                                ? ` (${s.description})`
+                                : '';
+                            return name + desc;
+                          })
+                          .join(', ')
                       : '-'}
                   </td>
                   <td>
@@ -907,11 +916,14 @@ const FacultyInformation = () => {
 
               <CollapsibleSection title="Specializations">
                 {selectedFaculty.specializations?.length > 0 ? (
-                  <div className="skills-grid">
+                  <div className="skills-grid faculty-spec-read-grid">
                     {selectedFaculty.specializations.map((spec, i) => (
-                      <span key={i} className="skill-badge">
-                        {spec.name || spec}
-                      </span>
+                      <div key={spec._id || i} className="faculty-spec-read-card">
+                        <span className="faculty-spec-read-name">{spec.name || spec}</span>
+                        {typeof spec === 'object' && String(spec.description || '').trim() ? (
+                          <span className="faculty-spec-read-desc">{spec.description}</span>
+                        ) : null}
+                      </div>
                     ))}
                   </div>
                 ) : (

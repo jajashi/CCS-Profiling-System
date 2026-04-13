@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const mongoose = require('mongoose');
 const Faculty = require('../models/Faculty');
+const Specialization = require('../models/Specialization');
 
 const year = new Date().getUTCFullYear();
 const ID_PREFIX = `FAC-${year}-`;
@@ -79,15 +80,32 @@ async function run() {
   await mongoose.connect(uri);
   console.log('Database connected');
 
+  let defaultSpec = await Specialization.findOne({
+    name: new RegExp('^Software Development$', 'i'),
+  });
+  if (!defaultSpec) {
+    defaultSpec = await Specialization.create({
+      name: 'Software Development',
+      description:
+        'Design, implementation, testing, and maintenance of software systems and related practices.',
+    });
+    console.log('Created default specialization: Software Development');
+  }
+
   const idPattern = new RegExp(`^FAC-${year}-`);
   const clearResult = await Faculty.deleteMany({ employeeId: idPattern });
   console.log(`Cleared ${clearResult.deletedCount} existing faculty with ids matching ${idPattern}.`);
 
   await Faculty.bulkWrite(
-    SEEDED_FACULTY.map((doc) => ({
+    SEEDED_FACULTY.map((doc, index) => ({
       updateOne: {
         filter: { employeeId: doc.employeeId },
-        update: { $set: doc },
+        update: {
+          $set: {
+            ...doc,
+            specializations: index === 0 ? [defaultSpec._id] : doc.specializations || [],
+          },
+        },
         upsert: true,
       },
     })),

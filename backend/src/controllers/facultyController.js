@@ -180,7 +180,7 @@ async function getFaculty(req, res, next) {
       const skip = (safePage - 1) * limit;
 
       const faculty = await Faculty.find(query)
-        .populate('specializations', 'name')
+        .populate('specializations', 'name description')
         .skip(skip)
         .limit(limit);
 
@@ -193,7 +193,7 @@ async function getFaculty(req, res, next) {
       });
     }
 
-    const faculty = await Faculty.find(query).populate('specializations', 'name');
+    const faculty = await Faculty.find(query).populate('specializations', 'name description');
     return res.status(200).json(faculty.map(mapFacultyResponse));
   } catch (err) {
     return next(err);
@@ -212,7 +212,7 @@ async function getNextFacultyIdPreview(req, res, next) {
 async function getFacultyById(req, res, next) {
   try {
     const { employeeId } = req.params;
-    const faculty = await Faculty.findOne({ employeeId }).populate('specializations', 'name');
+    const faculty = await Faculty.findOne({ employeeId }).populate('specializations', 'name description');
 
     if (!faculty) {
       return res.status(404).json({ message: 'Faculty record not found.' });
@@ -265,7 +265,7 @@ async function createFaculty(req, res, next) {
     };
 
     const created = await Faculty.create(data);
-    const populated = await Faculty.findById(created._id).populate('specializations', 'name');
+    const populated = await Faculty.findById(created._id).populate('specializations', 'name description');
     return res.status(201).json(mapFacultyResponse(populated));
   } catch (err) {
     if (err && err.code === 11000) {
@@ -349,7 +349,7 @@ async function updateFaculty(req, res, next) {
     const updated = await Faculty.findOneAndUpdate({ employeeId }, data, {
       new: true,
       runValidators: true,
-    }).populate('specializations', 'name');
+    }).populate('specializations', 'name description');
 
     return res.status(200).json(mapFacultyResponse(updated));
   } catch (err) {
