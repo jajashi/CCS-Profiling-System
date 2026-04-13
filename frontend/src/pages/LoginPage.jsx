@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth } from '../auth';
+import { useAuth } from '../context/AuthContext';
 import '../styles/LoginPage.css';
 import logoSrc from '../assets/images/ccs-logo.jpg';
 
@@ -9,12 +9,13 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
 
-    const result = auth.login(username, password);
+    const result = await login(username, password);
 
     if (result.success) {
       navigate('/dashboard');

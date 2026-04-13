@@ -13,19 +13,24 @@ const studentSchema = new mongoose.Schema(
     section: { type: String, default: '' },
     status: { type: String, default: '' },
     scholarship: { type: String, default: '' },
+    profileAvatar: { type: String, default: '' },
     email: { type: String, default: '' },
     contact: { type: String, default: '' },
     dateEnrolled: { type: String, default: '' },
     guardian: { type: String, default: '' },
     guardianContact: { type: String, default: '' },
     violation: { type: String, default: '' },
+    skills: { type: [String], default: [] },
   },
   {
     id: false,
     timestamps: false,
     toJSON: {
       transform(_doc, ret) {
-        delete ret._id;
+        // Keep MongoDB `_id` so the frontend can edit using the primary identifier.
+        if (ret._id && typeof ret._id.toString === 'function') {
+          ret._id = ret._id.toString();
+        }
         delete ret.__v;
         return ret;
       },

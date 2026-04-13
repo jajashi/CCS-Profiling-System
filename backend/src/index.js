@@ -1,20 +1,62 @@
 require('dotenv').config();
 
 const express = require('express');
+const cors = require("cors");
 const { connectDB } = require('./config/database');
 const studentRoutes = require('./routes/studentRoutes');
+const facultyRoutes = require('./routes/facultyRoutes');
+const specializationRoutes = require('./routes/specializationRoutes');
+const authRoutes = require('./routes/authRoutes');
 
 const app = express();
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5000;
 
-if (!PORT) {
-  console.error('PORT is not defined. Set it in your .env file (see .env.example).');
-  process.exit(1);
-}
+const configuredOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const allowAllOrigins = configuredOrigins.length === 0;
+const allowedOrigins = new Set(configuredOrigins);
 
-app.use(express.json());
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowAllOrigins || allowedOrigins.has(origin)) return callback(null, true);
+    return callback(new Error("Not allowed by CORS"));
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  optionsSuccessStatus: 200,
+};
 
-app.use('/api/students', studentRoutes);
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
+app.use(express.json({ limit: '8mb' }));
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use("/api/students", studentRoutes);
+app.use('/api/faculty', facultyRoutes);
+app.use('/api/specializations', specializationRoutes);
+
+// Error handler
+app.use((err, _req, res, _next) => {
+  const status = err.status || 500;
+  let message =
+    status === 500 ? 'Internal server error.' : err.message || 'Request failed.';
+
+  if (status === 413) {
+    message = 'Uploaded image is too large. Please use a smaller file.';
+  }
+
+  if (status >= 500) {
+    console.error(err);
+  }
+
+  res.status(status).json({ message });
+});
 
 async function start() {
   try {

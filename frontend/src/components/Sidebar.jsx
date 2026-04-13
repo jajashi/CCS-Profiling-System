@@ -1,14 +1,15 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { FiHome, FiUsers, FiBriefcase, FiBookOpen, FiCalendar, FiStar, FiLogOut } from 'react-icons/fi';
-import { auth } from '../auth';
+import { FiHome, FiUsers, FiBriefcase, FiBookOpen, FiCalendar, FiStar, FiLogOut, FiBarChart2 } from 'react-icons/fi';
+import { useAuth } from '../context/AuthContext';
 import logoSrc from '../assets/images/ccs-logo.jpg';
 
 const Sidebar = () => {
   const navigate = useNavigate();
+  const { logout, isAdmin, isStudent, user } = useAuth();
 
   const handleLogout = () => {
-    auth.logout();
+    logout();
     navigate('/');
   };
 
@@ -24,7 +25,9 @@ const Sidebar = () => {
           />
           <span style={{ display: 'none' }} className="text-logo">CCS</span>
         </div>
-        <h2 className="brand-name">Profiling System</h2>
+        <h2 className="brand-name">
+          {isAdmin ? "CCS Student Profiling System" : "CCS Student Profile"}
+        </h2>
       </div>
 
       <nav className="sidebar-nav">
@@ -36,40 +39,60 @@ const Sidebar = () => {
             </NavLink>
           </li>
 
-          <li className="nav-item">
-            <NavLink to="/dashboard/student-info" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
-              <span className="nav-icon"><FiUsers /></span>
-              <span className="nav-text">Student Information</span>
-            </NavLink>
-          </li>
+          {isStudent ? (
+            <li className="nav-item">
+              <NavLink to={`/dashboard/student-info/${user?.studentId || ''}`} className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                <span className="nav-icon"><FiUsers /></span>
+                <span className="nav-text">My Profile</span>
+              </NavLink>
+            </li>
+          ) : (
+            <>
+              <li className="nav-item">
+                <NavLink to="/dashboard/student-info" end className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                  <span className="nav-icon"><FiUsers /></span>
+                  <span className="nav-text">Student Information</span>
+                </NavLink>
+              </li>
 
-          <li className="nav-item">
-            <NavLink to="/dashboard/faculty-info" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
-              <span className="nav-icon"><FiBriefcase /></span>
-              <span className="nav-text">Faculty Information</span>
-            </NavLink>
-          </li>
+              <li className="nav-item">
+                <NavLink to="/dashboard/faculty-info" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                  <span className="nav-icon"><FiBriefcase /></span>
+                  <span className="nav-text">Faculty Information</span>
+                </NavLink>
+              </li>
 
-          <li className="nav-item">
-            <NavLink to="/dashboard/instruction" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
-              <span className="nav-icon"><FiBookOpen /></span>
-              <span className="nav-text">Instruction</span>
-            </NavLink>
-          </li>
+              <li className="nav-item">
+                <NavLink to="/dashboard/instruction" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                  <span className="nav-icon"><FiBookOpen /></span>
+                  <span className="nav-text">Instruction</span>
+                </NavLink>
+              </li>
 
-          <li className="nav-item">
-            <NavLink to="/dashboard/scheduling" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
-              <span className="nav-icon"><FiCalendar /></span>
-              <span className="nav-text">Scheduling</span>
-            </NavLink>
-          </li>
+              <li className="nav-item">
+                <NavLink to="/dashboard/scheduling" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                  <span className="nav-icon"><FiCalendar /></span>
+                  <span className="nav-text">Scheduling</span>
+                </NavLink>
+              </li>
 
-          <li className="nav-item">
-            <NavLink to="/dashboard/events" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
-              <span className="nav-icon"><FiStar /></span>
-              <span className="nav-text">Events</span>
-            </NavLink>
-          </li>
+              <li className="nav-item">
+                <NavLink to="/dashboard/events" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                  <span className="nav-icon"><FiStar /></span>
+                  <span className="nav-text">Events</span>
+                </NavLink>
+              </li>
+            </>
+          )}
+          
+          {isAdmin ? (
+            <li className="nav-item">
+              <NavLink to="/dashboard/reports" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                <span className="nav-icon"><FiBarChart2 /></span>
+                <span className="nav-text">Reports</span>
+              </NavLink>
+            </li>
+          ) : null}
         </ul>
       </nav>
 

@@ -1,15 +1,64 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import DashboardLayout from './pages/DashboardLayout';
 import DashboardHome from './pages/DashboardHome';
 import PlaceholderPage from './pages/PlaceholderPage';
 import StudentInformation from './pages/StudentInformation';
-import { auth } from './auth';
+import FacultyInformation from './pages/FacultyInformation';
+import { useAuth } from './context/AuthContext';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
-  if (!auth.isAuthenticated()) {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) {
     return <Navigate to="/" replace />;
+  }
+  return children;
+};
+
+const AdminRoute = ({ children }) => {
+  const { isAuthenticated, isAdmin } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  if (!isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+};
+
+const NonStudentRoute = ({ children }) => {
+  const { isAuthenticated, isStudent } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  if (isStudent) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+};
+
+/** Students may not use the full directory index; send them to their profile. */
+const StudentDirectoryRoute = ({ children }) => {
+  const { isAuthenticated, isStudent, user } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  if (isStudent && user?.studentId) {
+    return <Navigate to={`/dashboard/student-info/${user.studentId}`} replace />;
+  }
+  return children;
+};
+
+/** Students may only open their own profile URL. */
+const StudentProfileRoute = ({ children }) => {
+  const { id } = useParams();
+  const { isAuthenticated, isStudent, user } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  if (isStudent && user?.studentId && String(id) !== String(user.studentId)) {
+    return <Navigate to={`/dashboard/student-info/${user.studentId}`} replace />;
   }
   return children;
 };
@@ -27,11 +76,23 @@ function App() {
         }
       >
         <Route index element={<DashboardHome />} />
-        <Route path="student-info" element={<StudentInformation />} />
-        <Route path="faculty-info" element={<PlaceholderPage title="Faculty Information" />} />
-        <Route path="instruction" element={<PlaceholderPage title="Instruction" />} />
-        <Route path="scheduling" element={<PlaceholderPage title="Scheduling" />} />
-        <Route path="events" element={<PlaceholderPage title="Events" />} />
+        <Route path="student-info" element={<StudentDirectoryRoute><StudentInformation /></StudentDirectoryRoute>} />
+        <Route path="student-info/:id" element={<StudentProfileRoute><StudentInformation /></StudentProfileRoute>} />
+        
+        <Route path="faculty-info" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />
+        <Route path="faculty-info/:employeeId" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />
+        
+        <Route
+          path="reports"
+          element={(
+            <AdminRoute>
+              <PlaceholderPage title="Reports" />
+            </AdminRoute>
+          )}
+        />
+        <Route path="instruction" element={<NonStudentRoute><PlaceholderPage title="Instruction" /></NonStudentRoute>} />
+        <Route path="scheduling" element={<NonStudentRoute><PlaceholderPage title="Scheduling" /></NonStudentRoute>} />
+        <Route path="events" element={<NonStudentRoute><PlaceholderPage title="Events" /></NonStudentRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
