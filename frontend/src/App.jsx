@@ -7,6 +7,7 @@ import StudentInformation from './features/students/routes/StudentInformation';
 import FacultyInformation from './features/faculty/routes/FacultyInformation';
 import SpecializationManagement from './features/faculty/routes/SpecializationManagement';
 import FacultyDashboard from './features/faculty/routes/FacultyDashboard';
+import CurriculaManagement from './features/instruction/routes/CurriculaManagement';
 import { useAuth } from './providers/AuthContext';
 
 // Protected Route Wrapper
@@ -113,6 +114,7 @@ function App() {
           )}
         />
         <Route path="instruction" element={<NonStudentRoute><PlaceholderPage title="Instruction" /></NonStudentRoute>} />
+        <Route path="instruction/curricula" element={<NonStudentRoute><CurriculaManagement /></NonStudentRoute>} />
         <Route path="scheduling" element={<NonStudentRoute><PlaceholderPage title="Scheduling" /></NonStudentRoute>} />
         <Route path="events" element={<NonStudentRoute><PlaceholderPage title="Events" /></NonStudentRoute>} />
       </Route>

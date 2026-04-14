@@ -137,7 +137,7 @@ const Sidebar = () => {
               </li>
 
               <li className="nav-item">
-                <NavLink to="/dashboard/instruction" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                <NavLink to="/dashboard/instruction/curricula" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
                   <span className="nav-icon"><FiBookOpen /></span>
                   <span className="nav-text">Instruction</span>
                 </NavLink>
