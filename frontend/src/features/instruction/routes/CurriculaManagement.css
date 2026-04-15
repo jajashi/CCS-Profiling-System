@@ -1,0 +1,253 @@
+.curricula-page {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.curriculum-toolbar {
+  align-items: center;
+}
+
+.curriculum-filters-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: nowrap;
+  padding: 0.95rem 1.35rem;
+  border-bottom: 1px solid #e5edf5;
+  background: #fff;
+}
+
+.curriculum-search {
+  min-width: 280px;
+  flex: 1;
+  margin: 0;
+}
+
+.curriculum-table {
+  min-width: 900px;
+}
+
+.curriculum-select {
+  min-width: 165px;
+  width: auto;
+  flex: 0 0 auto;
+  max-width: 190px;
+  margin: 0;
+}
+
+.curriculum-filters-row .filter-select {
+  width: auto;
+}
+
+.curriculum-modal {
+  max-width: 760px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin: auto;
+}
+
+.curriculum-modal-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.curriculum-form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.curriculum-modal .spec-modal-header {
+  padding: 1.15rem 1.35rem;
+  flex-shrink: 0;
+  position: sticky;       
+  top: 0;
+  background: #fff;       
+  z-index: 2;
+}
+
+.curriculum-modal .spec-modal-sub {
+  margin-top: 0.35rem;
+}
+
+.curriculum-modal .spec-modal-body {
+  padding: 1.2rem 1.35rem 1.1rem;
+  overflow-y: auto;      
+  flex: 1;                
+  min-height: 0;  
+}
+
+.curriculum-modal .spec-modal-footer {
+  padding: 0.2rem 1.35rem 1.35rem;
+  flex-shrink: 0;
+  border-top: 1px solid #e5edf5;
+  position: sticky;       /* keep visible */
+  bottom: 0;
+  background: #fff;
+  z-index: 2;
+}
+
+.curriculum-three-col {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.curriculum-prereq-box {
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.65rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  background: #f8fafc;
+}
+
+.curriculum-prereq-box--empty {
+  max-height: none;
+  overflow: hidden;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+}
+
+.curriculum-prereq-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: #334155;
+}
+
+.curriculum-prereq-option:hover {
+  background: #fff;
+  border-radius: 8px;
+}
+
+.curriculum-clo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.curriculum-clo-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.curriculum-muted {
+  margin: 0;
+  grid-column: 1 / -1;
+  color: #64748b;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.curriculum-form-grid > .spec-field-label {
+  margin-top: 0.2rem;
+}
+
+.curriculum-form-grid > .spec-field-label:first-child {
+  margin-top: 0;
+}
+
+.curriculum-form-grid .spec-btn-secondary {
+  width: fit-content;
+}
+
+.curriculum-form-grid .spec-field-error {
+  margin-top: 0.2rem;
+}
+
+.curriculum-table .status-archived {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.curriculum-table .status-active {
+  background: #d5f2e3;
+  color: #198754;
+}
+
+.curriculum-archived-badge {
+  background: #94a3b8;
+}
+
+.curriculum-restore-btn {
+  color: #0f766e;
+  border-color: #99f6e4;
+  background: #f0fdfa;
+}
+
+.curriculum-restore-btn:hover:not(:disabled) {
+  background: #ccfbf1;
+  border-color: #5eead4;
+  color: #115e59;
+}
+
+@media (max-width: 1024px) {
+  .curriculum-modal {
+    max-width: 90vw;
+    max-height: 85vh;
+  }
+
+  .curriculum-three-col {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .curriculum-prereq-box {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .curriculum-modal {
+    max-width: 95vw;
+    max-height: 80vh;
+  }
+
+  .curriculum-three-col {
+    grid-template-columns: 1fr;
+  }
+
+  .curriculum-prereq-box {
+    grid-template-columns: 1fr;
+  }
+
+  .curriculum-filters-row {
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+
+  .curriculum-select {      
+    width: 100%;
+    max-width: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .curriculum-three-col,
+  .curriculum-prereq-box {
+    grid-template-columns: 1fr;
+  }
+
+  .curriculum-filters-row {
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+
+  .curriculum-select {      
+    width: 100%;
+    max-width: none;
+  }
+}

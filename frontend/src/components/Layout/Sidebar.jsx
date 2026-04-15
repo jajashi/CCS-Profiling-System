@@ -1,12 +1,47 @@
-import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { FiHome, FiUsers, FiBriefcase, FiBookOpen, FiCalendar, FiStar, FiLogOut, FiBarChart2 } from 'react-icons/fi';
+import React, { useEffect, useState } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import {
+  FiHome,
+  FiUsers,
+  FiBriefcase,
+  FiBookOpen,
+  FiCalendar,
+  FiStar,
+  FiLogOut,
+  FiBarChart2,
+  FiLayers,
+  FiChevronDown,
+  FiChevronUp,
+  FiUserCheck,
+} from 'react-icons/fi';
 import { useAuth } from '../../providers/AuthContext';
 import logoSrc from '../../assets/images/ccs-logo.jpg';
 
+const FACULTY_PREFIX = '/dashboard/faculty';
+const INSTRUCTION_PREFIX = '/dashboard/instruction';
+
 const Sidebar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { logout, isAdmin, isStudent, user } = useAuth();
+  const [facultyNavOpen, setFacultyNavOpen] = useState(() =>
+    location.pathname.startsWith(FACULTY_PREFIX),
+  );
+  const [instructionNavOpen, setInstructionNavOpen] = useState(() =>
+    location.pathname.startsWith(INSTRUCTION_PREFIX),
+  );
+
+  useEffect(() => {
+    if (location.pathname.startsWith(FACULTY_PREFIX)) {
+      setFacultyNavOpen(true);
+    }
+    if (location.pathname.startsWith(INSTRUCTION_PREFIX)) {
+      setInstructionNavOpen(true);
+    }
+  }, [location.pathname]);
+
+  const isFacultySectionActive = location.pathname.startsWith(FACULTY_PREFIX);
+  const isInstructionSectionActive = location.pathname.startsWith(INSTRUCTION_PREFIX);
 
   const handleLogout = () => {
     logout();
@@ -55,18 +90,99 @@ const Sidebar = () => {
                 </NavLink>
               </li>
 
-              <li className="nav-item">
-                <NavLink to="/dashboard/faculty/directory" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+              <li className={`nav-item nav-group${facultyNavOpen ? ' nav-group--open' : ''}`}>
+                <button
+                  type="button"
+                  className={`nav-link nav-group-toggle${isFacultySectionActive ? ' nav-group-toggle--within' : ''}`}
+                  aria-expanded={facultyNavOpen}
+                  aria-controls="sidebar-faculty-subnav"
+                  id="sidebar-faculty-trigger"
+                  onClick={() => setFacultyNavOpen((open) => !open)}
+                >
                   <span className="nav-icon"><FiBriefcase /></span>
                   <span className="nav-text">Faculty Directory</span>
-                </NavLink>
+                  <span className="nav-group-chevron" aria-hidden>
+                    {facultyNavOpen ? <FiChevronUp /> : <FiChevronDown />}
+                  </span>
+                </button>
+                {facultyNavOpen ? (
+                  <ul className="nav-sublist" id="sidebar-faculty-subnav" role="list">
+                    {isAdmin ? (
+                      <li className="nav-subitem">
+                        <NavLink
+                          to="/dashboard/faculty"
+                          end
+                          className={({ isActive }) => (isActive ? 'nav-link nav-sublink active' : 'nav-link nav-sublink')}
+                        >
+                          <span className="nav-icon nav-sublink-icon"><FiBarChart2 /></span>
+                          <span className="nav-text">Faculty overview</span>
+                        </NavLink>
+                      </li>
+                    ) : null}
+                    <li className="nav-subitem">
+                      <NavLink
+                        to="/dashboard/faculty/directory"
+                        className={({ isActive }) => (isActive ? 'nav-link nav-sublink active' : 'nav-link nav-sublink')}
+                      >
+                        <span className="nav-icon nav-sublink-icon"><FiUserCheck /></span>
+                        <span className="nav-text">Faculty Information</span>
+                      </NavLink>
+                    </li>
+                    {isAdmin ? (
+                      <li className="nav-subitem">
+                        <NavLink
+                          to="/dashboard/faculty/specializations"
+                          end
+                          className={({ isActive }) => (isActive ? 'nav-link nav-sublink active' : 'nav-link nav-sublink')}
+                        >
+                          <span className="nav-icon nav-sublink-icon"><FiLayers /></span>
+                          <span className="nav-text">Specializations</span>
+                        </NavLink>
+                      </li>
+                    ) : null}
+                  </ul>
+                ) : null}
               </li>
 
-              <li className="nav-item">
-                <NavLink to="/dashboard/instruction" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+              <li className={`nav-item nav-group${instructionNavOpen ? ' nav-group--open' : ''}`}>
+                <button
+                  type="button"
+                  className={`nav-link nav-group-toggle${isInstructionSectionActive ? ' nav-group-toggle--within' : ''}`}
+                  aria-expanded={instructionNavOpen}
+                  aria-controls="sidebar-instruction-subnav"
+                  id="sidebar-instruction-trigger"
+                  onClick={() => setInstructionNavOpen((open) => !open)}
+                >
                   <span className="nav-icon"><FiBookOpen /></span>
                   <span className="nav-text">Instruction</span>
-                </NavLink>
+                  <span className="nav-group-chevron" aria-hidden>
+                    {instructionNavOpen ? <FiChevronUp /> : <FiChevronDown />}
+                  </span>
+                </button>
+                {instructionNavOpen ? (
+                  <ul className="nav-sublist" id="sidebar-instruction-subnav" role="list">
+                    <li className="nav-subitem">
+                      <NavLink
+                        to="/dashboard/instruction/curricula"
+                        end
+                        className={({ isActive }) => (isActive ? 'nav-link nav-sublink active' : 'nav-link nav-sublink')}
+                      >
+                        <span className="nav-icon nav-sublink-icon"><FiLayers /></span>
+                        <span className="nav-text">Curricula</span>
+                      </NavLink>
+                    </li>
+                    <li className="nav-subitem">
+                      <NavLink
+                        to="/dashboard/instruction/syllabi"
+                        end
+                        className={({ isActive }) => (isActive ? 'nav-link nav-sublink active' : 'nav-link nav-sublink')}
+                      >
+                        <span className="nav-icon nav-sublink-icon"><FiBookOpen /></span>
+                        <span className="nav-text">Syllabi</span>
+                      </NavLink>
+                    </li>
+                  </ul>
+                ) : null}
               </li>
 
               <li className="nav-item">

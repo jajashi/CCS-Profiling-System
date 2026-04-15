@@ -7,6 +7,8 @@ const studentRoutes = require('./routes/studentRoutes');
 const facultyRoutes = require('./routes/facultyRoutes');
 const specializationRoutes = require('./routes/specializationRoutes');
 const authRoutes = require('./routes/authRoutes');
+const curriculumRoutes = require('./routes/curriculumRoutes');
+const syllabusRoutes = require('./routes/syllabusRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -40,6 +42,8 @@ app.use('/api/auth', authRoutes);
 app.use("/api/students", studentRoutes);
 app.use('/api/faculty', facultyRoutes);
 app.use('/api/specializations', specializationRoutes);
+app.use('/api/curricula', curriculumRoutes);
+app.use('/api/syllabi', syllabusRoutes);
 
 // Error handler
 app.use((err, _req, res, _next) => {

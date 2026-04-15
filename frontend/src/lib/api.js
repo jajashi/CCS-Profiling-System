@@ -1,5 +1,16 @@
 const rawBaseUrl = import.meta.env.VITE_API_URL;
-const normalizedBaseUrl = rawBaseUrl ? rawBaseUrl.replace(/\/+$/, "") : "";
+
+function resolveFallbackBaseUrl() {
+  if (typeof window === 'undefined') return '';
+  const host = window.location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return 'http://localhost:5000';
+  }
+  return '';
+}
+
+const resolvedBaseUrl = rawBaseUrl || resolveFallbackBaseUrl();
+const normalizedBaseUrl = resolvedBaseUrl ? resolvedBaseUrl.replace(/\/+$/, "") : "";
 
 export const apiBaseUrl = normalizedBaseUrl;
 

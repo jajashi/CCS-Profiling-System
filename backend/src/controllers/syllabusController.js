@@ -1,0 +1,541 @@
+const mongoose = require('mongoose');
+const { Curriculum } = require('../models/Curriculum');
+const Faculty = require('../models/Faculty');
+const { Syllabus, SYLLABUS_STATUS_ENUM, LESSON_STATUS_ENUM } = require('../models/Syllabus');
+
+function normalizeString(value) {
+  return String(value ?? '').trim();
+}
+
+function normalizeStringArray(values) {
+  if (!Array.isArray(values)) return [];
+  return values.map((value) => normalizeString(value)).filter(Boolean);
+}
+
+function normalizeOptionalObjectId(value) {
+  if (value == null || value === '') return null;
+  return mongoose.Types.ObjectId.isValid(value) ? new mongoose.Types.ObjectId(value) : null;
+}
+
+function parseNonNegativeNumber(value, fallback = 0) {
+  if (value == null || value === '') return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+function isAdmin(req) {
+  return req.user?.role === 'admin';
+}
+
+async function resolveSectionModel() {
+  if (mongoose.models.Section) return mongoose.models.Section;
+  try {
+    return require('../models/Section');
+  } catch {
+    return null;
+  }
+}
+
+function buildListPopulateOptions(includeSection) {
+  const populate = [
+    { path: 'curriculumId', select: 'courseCode courseTitle' },
+    { path: 'facultyId', select: 'employeeId firstName lastName' },
+  ];
+
+  if (includeSection) {
+    populate.push({
+      path: 'sectionId',
+      select: 'sectionIdentifier term academicYear',
+    });
+  }
+
+  return populate;
+}
+
+function buildDetailPopulateOptions(includeSection) {
+  const populate = ['curriculumId', 'facultyId'];
+  if (includeSection) populate.push('sectionId');
+  return populate;
+}
+
+function validateSequentialWeekNumbers(weeklyLessons) {
+  if (!Array.isArray(weeklyLessons)) return 'weeklyLessons must be an array.';
+
+  const weekNumbers = weeklyLessons.map((lesson) => Number(lesson.weekNumber));
+  if (weekNumbers.some((weekNumber) => !Number.isInteger(weekNumber))) {
+    return 'Each weekly lesson must include an integer weekNumber.';
+  }
+
+  const sorted = [...weekNumbers].sort((a, b) => a - b);
+  const uniqueCount = new Set(sorted).size;
+  if (uniqueCount !== sorted.length) {
+    return 'weekNumber values must be unique across weeklyLessons.';
+  }
+
+  for (let index = 0; index < sorted.length; index += 1) {
+    const expected = index + 1;
+    if (sorted[index] !== expected) {
+      return 'weekNumber values must be sequential starting at 1 with no gaps.';
+    }
+  }
+
+  return null;
+}
+
+function normalizeLessonPayload(lesson, { allowPartial = false } = {}) {
+  const payload = {};
+
+  if (!allowPartial || Object.prototype.hasOwnProperty.call(lesson, 'weekNumber')) {
+    const weekNumber = Number(lesson.weekNumber);
+    payload.weekNumber = Number.isFinite(weekNumber) ? weekNumber : lesson.weekNumber;
+  }
+
+  if (!allowPartial || Object.prototype.hasOwnProperty.call(lesson, 'topic')) {
+    payload.topic = normalizeString(lesson.topic);
+  }
+
+  if (!allowPartial || Object.prototype.hasOwnProperty.call(lesson, 'objectives')) {
+    payload.objectives = normalizeStringArray(lesson.objectives);
+  }
+
+  if (!allowPartial || Object.prototype.hasOwnProperty.call(lesson, 'materials')) {
+    payload.materials = normalizeStringArray(lesson.materials);
+  }
+
+  if (!allowPartial || Object.prototype.hasOwnProperty.call(lesson, 'assessments')) {
+    payload.assessments = normalizeString(lesson.assessments);
+  }
+
+  if (!allowPartial || Object.prototype.hasOwnProperty.call(lesson, 'timeAllocation')) {
+    const timeAllocation = lesson.timeAllocation && typeof lesson.timeAllocation === 'object'
+      ? lesson.timeAllocation
+      : {};
+
+    payload.timeAllocation = {
+      lectureMinutes: parseNonNegativeNumber(timeAllocation.lectureMinutes, 0),
+      labMinutes: parseNonNegativeNumber(timeAllocation.labMinutes, 0),
+    };
+  }
+
+  if (!allowPartial || Object.prototype.hasOwnProperty.call(lesson, 'status')) {
+    payload.status = normalizeString(lesson.status || 'Pending');
+  }
+
+  return payload;
+}
+
+function validateLessonShape(lesson, { allowPartial = false } = {}) {
+  if (!allowPartial || Object.prototype.hasOwnProperty.call(lesson, 'weekNumber')) {
+    if (!Number.isInteger(lesson.weekNumber) || lesson.weekNumber < 1 || lesson.weekNumber > 18) {
+      return 'weekNumber must be an integer between 1 and 18.';
+    }
+  }
+
+  if (!allowPartial || Object.prototype.hasOwnProperty.call(lesson, 'topic')) {
+    if (!lesson.topic) return 'topic is required for each weekly lesson.';
+  }
+
+  if (Object.prototype.hasOwnProperty.call(lesson, 'timeAllocation')) {
+    if (lesson.timeAllocation.lectureMinutes === null || lesson.timeAllocation.labMinutes === null) {
+      return 'timeAllocation lectureMinutes and labMinutes must be 0 or greater.';
+    }
+  }
+
+  if ((!allowPartial || Object.prototype.hasOwnProperty.call(lesson, 'status'))
+    && !LESSON_STATUS_ENUM.includes(lesson.status)) {
+    return `Lesson status must be one of: ${LESSON_STATUS_ENUM.join(', ')}.`;
+  }
+
+  return null;
+}
+
+function buildSyllabusPayload(payload) {
+  const data = {
+    curriculumId: normalizeOptionalObjectId(payload.curriculumId),
+    facultyId: normalizeOptionalObjectId(payload.facultyId),
+    sectionId: normalizeOptionalObjectId(payload.sectionId),
+    description: normalizeString(payload.description),
+    gradingSystem: normalizeString(payload.gradingSystem),
+    coursePolicies: normalizeString(payload.coursePolicies),
+    status: normalizeString(payload.status || 'Draft') || 'Draft',
+  };
+
+  if (Object.prototype.hasOwnProperty.call(payload, 'weeklyLessons')) {
+    data.weeklyLessons = Array.isArray(payload.weeklyLessons)
+      ? payload.weeklyLessons.map((lesson) => normalizeLessonPayload(lesson))
+      : payload.weeklyLessons;
+  }
+
+  return data;
+}
+
+function validateTopLevelPayload(payload, { isCreate = false } = {}) {
+  const requiredFields = ['curriculumId', 'facultyId'];
+  const objectIdFields = ['curriculumId', 'facultyId', 'sectionId'];
+
+  if (isCreate) {
+    const missing = requiredFields.filter((key) => !payload[key]);
+    if (missing.length > 0) {
+      return `Missing required field(s): ${missing.join(', ')}.`;
+    }
+  }
+
+  for (const key of objectIdFields) {
+    if (payload[key] != null && payload[key] !== '' && !mongoose.Types.ObjectId.isValid(payload[key])) {
+      return `${key} must be a valid ObjectId.`;
+    }
+  }
+
+  if (payload.status != null && payload.status !== '' && !SYLLABUS_STATUS_ENUM.includes(normalizeString(payload.status))) {
+    return `status must be one of: ${SYLLABUS_STATUS_ENUM.join(', ')}.`;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(payload, 'weeklyLessons')) {
+    if (!Array.isArray(payload.weeklyLessons)) {
+      return 'weeklyLessons must be an array.';
+    }
+
+    for (const lesson of payload.weeklyLessons) {
+      const normalizedLesson = normalizeLessonPayload(lesson);
+      const lessonError = validateLessonShape(normalizedLesson);
+      if (lessonError) return lessonError;
+    }
+
+    const sequenceError = validateSequentialWeekNumbers(payload.weeklyLessons);
+    if (sequenceError) return sequenceError;
+  }
+
+  return null;
+}
+
+async function ensureReferencesExist(data, { checkFacultyActive = false } = {}) {
+  const curriculum = await Curriculum.findById(data.curriculumId).select('_id').lean();
+  if (!curriculum) return 'Referenced curriculum was not found.';
+
+  const faculty = await Faculty.findById(data.facultyId).select('_id status').lean();
+  if (!faculty) return 'Referenced faculty was not found.';
+  if (checkFacultyActive && faculty.status === 'Inactive') {
+    return 'Inactive faculty cannot create a new syllabus.';
+  }
+
+  const Section = await resolveSectionModel();
+  if (Section && data.sectionId) {
+    const section = await Section.findById(data.sectionId).select('_id').lean();
+    if (!section) return 'Referenced section was not found.';
+  }
+
+  return null;
+}
+
+async function ensureCombinationAvailable({ syllabusId = null, facultyId, sectionId }) {
+  if (!sectionId) return null;
+
+  const duplicate = await Syllabus.findOne({
+    _id: syllabusId ? { $ne: syllabusId } : { $exists: true },
+    facultyId,
+    sectionId,
+    status: { $in: ['Draft', 'Active'] },
+  })
+    .select('_id status')
+    .lean();
+
+  if (duplicate) {
+    return 'A draft or active syllabus already exists for this faculty and section.';
+  }
+
+  return null;
+}
+
+async function getSyllabi(req, res, next) {
+  try {
+    const { facultyId, curriculumId, sectionId, status } = req.query;
+    const query = {};
+
+    if (facultyId) {
+      if (!mongoose.Types.ObjectId.isValid(facultyId)) {
+        return res.status(400).json({ message: 'facultyId must be a valid ObjectId.' });
+      }
+      query.facultyId = facultyId;
+    }
+
+    if (curriculumId) {
+      if (!mongoose.Types.ObjectId.isValid(curriculumId)) {
+        return res.status(400).json({ message: 'curriculumId must be a valid ObjectId.' });
+      }
+      query.curriculumId = curriculumId;
+    }
+
+    if (sectionId) {
+      if (!mongoose.Types.ObjectId.isValid(sectionId)) {
+        return res.status(400).json({ message: 'sectionId must be a valid ObjectId.' });
+      }
+      query.sectionId = sectionId;
+    }
+
+    if (status) {
+      const normalizedStatus = normalizeString(status);
+      if (!SYLLABUS_STATUS_ENUM.includes(normalizedStatus)) {
+        return res.status(400).json({ message: `status must be one of: ${SYLLABUS_STATUS_ENUM.join(', ')}.` });
+      }
+      query.status = normalizedStatus;
+    }
+
+    const Section = await resolveSectionModel();
+    const syllabi = await Syllabus.find(query)
+      .populate(buildListPopulateOptions(Boolean(Section)))
+      .sort({ updatedAt: -1, createdAt: -1 });
+
+    return res.status(200).json(syllabi.map((row) => row.toJSON()));
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function getSyllabusById(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid syllabus id.' });
+    }
+
+    const Section = await resolveSectionModel();
+    const syllabus = await Syllabus.findById(id).populate(buildDetailPopulateOptions(Boolean(Section)));
+    if (!syllabus) {
+      return res.status(404).json({ message: 'Syllabus not found.' });
+    }
+
+    return res.status(200).json(syllabus.toJSON());
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function createSyllabus(req, res, next) {
+  try {
+    const payload = req.body || {};
+    const validationError = validateTopLevelPayload(payload, { isCreate: true });
+    if (validationError) {
+      return res.status(400).json({ message: validationError });
+    }
+
+    const data = buildSyllabusPayload(payload);
+    const referenceError = await ensureReferencesExist(data, { checkFacultyActive: true });
+    if (referenceError) {
+      return res.status(400).json({ message: referenceError });
+    }
+
+    const duplicateError = await ensureCombinationAvailable({
+      facultyId: data.facultyId,
+      sectionId: data.sectionId,
+    });
+    if (duplicateError) {
+      return res.status(409).json({ message: duplicateError });
+    }
+
+    const created = await Syllabus.create(data);
+    const Section = await resolveSectionModel();
+    const populated = await Syllabus.findById(created._id).populate(buildDetailPopulateOptions(Boolean(Section)));
+    return res.status(201).json(populated.toJSON());
+  } catch (err) {
+    if (err && err.name === 'ValidationError') {
+      return res.status(400).json({ message: 'Please check syllabus fields and try again.' });
+    }
+    return next(err);
+  }
+}
+
+async function updateSyllabus(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid syllabus id.' });
+    }
+
+    const payload = req.body || {};
+    const validationError = validateTopLevelPayload(payload, { isCreate: false });
+    if (validationError) {
+      return res.status(400).json({ message: validationError });
+    }
+
+    const syllabus = await Syllabus.findById(id);
+    if (!syllabus) {
+      return res.status(404).json({ message: 'Syllabus not found.' });
+    }
+
+    if (syllabus.status === 'Archived') {
+      return res.status(400).json({ message: 'Archived syllabi are read-only and cannot be updated.' });
+    }
+
+    const requestedStatus = payload.status == null ? syllabus.status : normalizeString(payload.status);
+    if (requestedStatus === 'Archived') {
+      return res.status(400).json({ message: 'Use DELETE /api/syllabi/:id to archive a syllabus.' });
+    }
+
+    if (syllabus.status === 'Draft' && requestedStatus === 'Active' && !isAdmin(req)) {
+      return res.status(403).json({ message: 'Only admins can transition a syllabus from Draft to Active.' });
+    }
+
+    const nextFacultyId = payload.facultyId ? normalizeOptionalObjectId(payload.facultyId) : syllabus.facultyId;
+    const nextCurriculumId = payload.curriculumId
+      ? normalizeOptionalObjectId(payload.curriculumId)
+      : syllabus.curriculumId;
+    const nextSectionId = payload.sectionId ? normalizeOptionalObjectId(payload.sectionId) : syllabus.sectionId;
+
+    const referenceError = await ensureReferencesExist(
+      {
+        curriculumId: nextCurriculumId,
+        facultyId: nextFacultyId,
+        sectionId: nextSectionId,
+      },
+      { checkFacultyActive: false },
+    );
+    if (referenceError) {
+      return res.status(400).json({ message: referenceError });
+    }
+
+    const duplicateError = await ensureCombinationAvailable({
+      syllabusId: syllabus._id,
+      facultyId: nextFacultyId,
+      sectionId: nextSectionId,
+    });
+    if (duplicateError) {
+      return res.status(409).json({ message: duplicateError });
+    }
+
+    const data = buildSyllabusPayload(payload);
+
+    if (payload.curriculumId != null) syllabus.curriculumId = data.curriculumId;
+    if (payload.facultyId != null) syllabus.facultyId = data.facultyId;
+    if (payload.sectionId != null) syllabus.sectionId = data.sectionId;
+    if (payload.description != null) syllabus.description = data.description;
+    if (payload.gradingSystem != null) syllabus.gradingSystem = data.gradingSystem;
+    if (payload.coursePolicies != null) syllabus.coursePolicies = data.coursePolicies;
+    if (payload.status != null) syllabus.status = requestedStatus;
+    if (Object.prototype.hasOwnProperty.call(payload, 'weeklyLessons')) syllabus.weeklyLessons = data.weeklyLessons;
+
+    await syllabus.save();
+
+    const Section = await resolveSectionModel();
+    const populated = await Syllabus.findById(syllabus._id).populate(buildDetailPopulateOptions(Boolean(Section)));
+    return res.status(200).json(populated.toJSON());
+  } catch (err) {
+    if (err && err.name === 'ValidationError') {
+      return res.status(400).json({ message: 'Please check syllabus fields and try again.' });
+    }
+    return next(err);
+  }
+}
+
+async function archiveSyllabus(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid syllabus id.' });
+    }
+
+    const syllabus = await Syllabus.findById(id);
+    if (!syllabus) {
+      return res.status(404).json({ message: 'Syllabus not found.' });
+    }
+
+    if (syllabus.status === 'Archived') {
+      return res.status(400).json({ message: 'Syllabus is already archived.' });
+    }
+
+    if (syllabus.status === 'Active' && !isAdmin(req)) {
+      return res.status(403).json({ message: 'Only admins can archive an active syllabus.' });
+    }
+
+    syllabus.status = 'Archived';
+    await syllabus.save();
+
+    return res.status(200).json({ message: 'Syllabus archived successfully.', syllabus: syllabus.toJSON() });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function updateWeeklyLesson(req, res, next) {
+  try {
+    const { id, lessonId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid syllabus id.' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(lessonId)) {
+      return res.status(400).json({ message: 'Invalid lesson id.' });
+    }
+
+    const syllabus = await Syllabus.findById(id);
+    if (!syllabus) {
+      return res.status(404).json({ message: 'Syllabus not found.' });
+    }
+    if (syllabus.status === 'Archived') {
+      return res.status(400).json({ message: 'Archived syllabi are read-only and cannot be updated.' });
+    }
+
+    const lesson = syllabus.weeklyLessons.id(lessonId);
+    if (!lesson) {
+      return res.status(404).json({ message: 'Weekly lesson not found.' });
+    }
+
+    const payload = req.body || {};
+    const normalizedLesson = normalizeLessonPayload(payload, { allowPartial: true });
+    const lessonError = validateLessonShape(normalizedLesson, { allowPartial: true });
+    if (lessonError) {
+      return res.status(400).json({ message: lessonError });
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, 'weekNumber')) lesson.weekNumber = normalizedLesson.weekNumber;
+    if (Object.prototype.hasOwnProperty.call(payload, 'topic')) lesson.topic = normalizedLesson.topic;
+    if (Object.prototype.hasOwnProperty.call(payload, 'objectives')) lesson.objectives = normalizedLesson.objectives;
+    if (Object.prototype.hasOwnProperty.call(payload, 'materials')) lesson.materials = normalizedLesson.materials;
+    if (Object.prototype.hasOwnProperty.call(payload, 'assessments')) lesson.assessments = normalizedLesson.assessments;
+    if (Object.prototype.hasOwnProperty.call(payload, 'timeAllocation')) {
+      lesson.timeAllocation = normalizedLesson.timeAllocation;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, 'status')) {
+      lesson.status = normalizedLesson.status;
+
+      if (normalizedLesson.status === 'Delivered') {
+        const deliveredBy = normalizeOptionalObjectId(payload.facultyId);
+        if (!deliveredBy) {
+          return res.status(400).json({ message: 'facultyId is required when marking a lesson as Delivered.' });
+        }
+
+        const faculty = await Faculty.findById(deliveredBy).select('_id').lean();
+        if (!faculty) {
+          return res.status(400).json({ message: 'Referenced deliveredBy faculty was not found.' });
+        }
+
+        lesson.deliveredAt = new Date();
+        lesson.deliveredBy = deliveredBy;
+      } else if (normalizedLesson.status === 'Pending') {
+        lesson.deliveredAt = null;
+        lesson.deliveredBy = null;
+      }
+    }
+
+    const sequenceError = validateSequentialWeekNumbers(syllabus.weeklyLessons);
+    if (sequenceError) {
+      return res.status(400).json({ message: sequenceError });
+    }
+
+    await syllabus.save();
+    return res.status(200).json(lesson.toJSON());
+  } catch (err) {
+    if (err && err.name === 'ValidationError') {
+      return res.status(400).json({ message: 'Please check weekly lesson fields and try again.' });
+    }
+    return next(err);
+  }
+}
+
+module.exports = {
+  getSyllabi,
+  getSyllabusById,
+  createSyllabus,
+  updateSyllabus,
+  archiveSyllabus,
+  updateWeeklyLesson,
+};
