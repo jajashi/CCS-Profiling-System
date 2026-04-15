@@ -18,10 +18,36 @@ const emptyForm = {
   employmentType: '',
   contractType: '',
   dateHired: '',
+  status: 'Active',
+  inactiveReasonCategory: '',
+  inactiveReasonOther: '',
   highestEducation: '',
   fieldOfStudy: '',
   certifications: '',
+  specializations: [],
 };
+
+const INACTIVE_REASON_PRESETS = ['Resigned', 'Retired', 'On Leave', 'Terminated', 'Other'];
+
+function parseInactiveFieldsFromReason(reason) {
+  const r = String(reason || '').trim();
+  if (!r) return { inactiveReasonCategory: '', inactiveReasonOther: '' };
+  const fixed = INACTIVE_REASON_PRESETS.filter((x) => x !== 'Other');
+  if (fixed.includes(r)) return { inactiveReasonCategory: r, inactiveReasonOther: '' };
+  const otherMatch = r.match(/^Other:\s*(.*)$/i);
+  if (otherMatch) {
+    return { inactiveReasonCategory: 'Other', inactiveReasonOther: otherMatch[1].trim() };
+  }
+  return { inactiveReasonCategory: 'Other', inactiveReasonOther: r };
+}
+
+function buildStoredInactiveReason(category, otherDetail) {
+  if (category === 'Other') {
+    const d = String(otherDetail || '').trim();
+    return d ? `Other: ${d}` : '';
+  }
+  return String(category || '').trim();
+}
 
 const PH_MOBILE_REGEX = /^09\d{9}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -81,6 +107,7 @@ export default function AddFacultyForm({
   const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [avatarInputMode, setAvatarInputMode] = useState('url');
+  const [specializationOptions, setSpecializationOptions] = useState([]);
 
   const controlClass = 'add-student-control mt-1 block';
   const labelClass = 'add-student-label';
@@ -91,7 +118,31 @@ export default function AddFacultyForm({
   );
 
   useEffect(() => {
+    let cancelled = false;
+    const loadSpecs = async () => {
+      try {
+        const res = await apiFetch('/api/specializations');
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (!cancelled && Array.isArray(data)) {
+          setSpecializationOptions(data);
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+    loadSpecs();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (isEditMode && initialData) {
+      const inactiveFields =
+        String(initialData.status || 'Active') === 'Inactive'
+          ? parseInactiveFieldsFromReason(initialData.inactiveReason)
+          : { inactiveReasonCategory: '', inactiveReasonOther: '' };
       setFormData({
         firstName: String(initialData.firstName || ''),
         middleName: String(initialData.middleName || ''),
@@ -108,9 +159,17 @@ export default function AddFacultyForm({
         employmentType: String(initialData.employmentType || ''),
         contractType: String(initialData.contractType || ''),
         dateHired: String(initialData.dateHired || ''),
+        status: String(initialData.status || 'Active') === 'Inactive' ? 'Inactive' : 'Active',
+        inactiveReasonCategory: inactiveFields.inactiveReasonCategory,
+        inactiveReasonOther: inactiveFields.inactiveReasonOther,
         highestEducation: String(initialData.highestEducation || ''),
         fieldOfStudy: String(initialData.fieldOfStudy || ''),
         certifications: String(initialData.certifications || ''),
+        specializations: Array.isArray(initialData.specializations)
+          ? initialData.specializations
+              .map((s) => (s && typeof s === 'object' ? String(s._id || '') : String(s || '')))
+              .filter(Boolean)
+          : [],
       });
       setOriginalUpdatedAt(String(initialData.updatedAt || ''));
     } else {
@@ -200,6 +259,17 @@ export default function AddFacultyForm({
       next.employmentType = 'Employment Type must be Full-time or Part-time.';
     }
 
+    if (formData.status === 'Inactive') {
+      if (!isNonEmpty(formData.inactiveReasonCategory)) {
+        next.inactiveReasonCategory = 'Select a reason for inactivation.';
+      } else if (
+        formData.inactiveReasonCategory === 'Other' &&
+        !isNonEmpty(formData.inactiveReasonOther)
+      ) {
+        next.inactiveReasonOther = 'Please describe the reason when selecting Other.';
+      }
+    }
+
     return next;
   };
 
@@ -210,7 +280,24 @@ export default function AddFacultyForm({
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      if (name === 'status' && value === 'Active') {
+        return { ...prev, status: value, inactiveReasonCategory: '', inactiveReasonOther: '' };
+      }
+      return { ...prev, [name]: value };
+    });
+  };
+
+  const toggleSpecialization = (id) => {
+    const sid = String(id);
+    setFormData((prev) => {
+      const current = Array.isArray(prev.specializations) ? prev.specializations : [];
+      const has = current.includes(sid);
+      return {
+        ...prev,
+        specializations: has ? current.filter((x) => x !== sid) : [...current, sid],
+      };
+    });
   };
 
   const handleAddCertificationSuggestion = (suggestion) => {
@@ -269,9 +356,15 @@ export default function AddFacultyForm({
         employmentType: formData.employmentType,
         contractType: formData.contractType.trim(),
         dateHired: formData.dateHired.trim(),
+        status: formData.status,
+        inactiveReason:
+          formData.status === 'Inactive'
+            ? buildStoredInactiveReason(formData.inactiveReasonCategory, formData.inactiveReasonOther)
+            : '',
         highestEducation: formData.highestEducation,
         fieldOfStudy: formData.fieldOfStudy.trim(),
         certifications: formData.certifications.trim(),
+        specializations: Array.isArray(formData.specializations) ? formData.specializations : [],
       };
 
       if (isEditMode && originalUpdatedAt) {
@@ -559,6 +652,52 @@ export default function AddFacultyForm({
                       <label htmlFor="yearsOfServicePreview" className={labelClass}>Years of Service</label>
                       <input id="yearsOfServicePreview" value={String(yearsOfService)} readOnly className={controlClass} />
                     </div>
+                    <div>
+                      <label htmlFor="status" className={labelClass}>Status <span className="text-red-600">*</span></label>
+                      <select id="status" name="status" value={formData.status} onChange={handleChange} className={controlClass}>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                      </select>
+                    </div>
+                    {formData.status === 'Inactive' ? (
+                      <>
+                        <div>
+                          <label htmlFor="inactiveReasonCategory" className={labelClass}>
+                            Reason for Inactivation <span className="text-red-600">*</span>
+                          </label>
+                          <select
+                            id="inactiveReasonCategory"
+                            name="inactiveReasonCategory"
+                            value={formData.inactiveReasonCategory}
+                            onChange={handleChange}
+                            className={controlClass}
+                          >
+                            <option value="">Select reason</option>
+                            {INACTIVE_REASON_PRESETS.map((opt) => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                          <FieldError name="inactiveReasonCategory" />
+                        </div>
+                        {formData.inactiveReasonCategory === 'Other' ? (
+                          <div className="md:col-span-2">
+                            <label htmlFor="inactiveReasonOther" className={labelClass}>
+                              Describe reason <span className="text-red-600">*</span>
+                            </label>
+                            <textarea
+                              id="inactiveReasonOther"
+                              name="inactiveReasonOther"
+                              rows={2}
+                              value={formData.inactiveReasonOther}
+                              onChange={handleChange}
+                              className={controlClass}
+                              placeholder="Required when reason is Other"
+                            />
+                            <FieldError name="inactiveReasonOther" />
+                          </div>
+                        ) : null}
+                      </>
+                    ) : null}
                   </div>
                 </section>
 
@@ -589,6 +728,51 @@ export default function AddFacultyForm({
                         <option value="Educational Technology">Educational Technology</option>
                       </select>
                       <FieldError name="fieldOfStudy" />
+                    </div>
+                    <div className="faculty-spec-block">
+                      <div className="faculty-spec-head">
+                        <div className="faculty-spec-title-wrap">
+                          <p className="faculty-spec-title">SPECIALIZATIONS <span className="text-red-600">*</span></p>
+                        </div>
+                      </div>
+                      {specializationOptions.length === 0 ? (
+                        <p className="faculty-spec-empty">
+                          No specializations in the catalog yet. An administrator can add them under
+                          Specializations in the sidebar.
+                        </p>
+                      ) : (
+                        <div className="faculty-spec-grid">
+                          {specializationOptions.map((opt) => {
+                            const sid = String(opt._id || '');
+                            const inputId = `faculty-spec-${sid.replace(/\s/g, '')}`;
+                            const checked = (formData.specializations || []).includes(sid);
+                            return (
+                              <label
+                                key={sid || opt.name}
+                                htmlFor={inputId}
+                                className={`faculty-spec-chip ${checked ? 'is-selected' : ''}`}
+                              >
+                                <input
+                                  id={inputId}
+                                  type="checkbox"
+                                  className="faculty-spec-input"
+                                  checked={checked}
+                                  onChange={() => toggleSpecialization(sid)}
+                                />
+                                <span className="faculty-spec-check" aria-hidden>
+                                  <span className="faculty-spec-check-inner" />
+                                </span>
+                                <span className="faculty-spec-label-wrap">
+                                  <span className="faculty-spec-label">{opt.name}</span>
+                                  {String(opt.description || '').trim() ? (
+                                    <span className="faculty-spec-desc">{opt.description}</span>
+                                  ) : null}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                     <div className="md:col-span-2">
                       <label htmlFor="certifications" className={labelClass}>Certifications / Licenses</label>
@@ -627,8 +811,33 @@ export default function AddFacultyForm({
                   <div className="preview-item"><span className="preview-label">Contract Type</span><span className="preview-value">{formData.contractType || '-'}</span></div>
                   <div className="preview-item"><span className="preview-label">Date Hired</span><span className="preview-value">{formData.dateHired || '-'}</span></div>
                   <div className="preview-item"><span className="preview-label">Years of Service</span><span className="preview-value">{yearsOfService}</span></div>
+                  <div className="preview-item"><span className="preview-label">Status</span><span className="preview-value">{formData.status || 'Active'}</span></div>
+                  {formData.status === 'Inactive' ? (
+                    <div className="preview-item preview-item-full">
+                      <span className="preview-label">Reason for Inactivation</span>
+                      <span className="preview-value">
+                        {buildStoredInactiveReason(formData.inactiveReasonCategory, formData.inactiveReasonOther) || '-'}
+                      </span>
+                    </div>
+                  ) : null}
                   <div className="preview-item"><span className="preview-label">Highest Education</span><span className="preview-value">{formData.highestEducation || '-'}</span></div>
                   <div className="preview-item"><span className="preview-label">Field of Study</span><span className="preview-value">{formData.fieldOfStudy || '-'}</span></div>
+                  <div className="preview-item preview-item-full">
+                    <span className="preview-label">Specializations</span>
+                    <span className="preview-value">
+                      {(formData.specializations || []).length === 0
+                        ? '-'
+                        : (formData.specializations || [])
+                            .map((sid) => {
+                              const o = specializationOptions.find((x) => String(x._id) === String(sid));
+                              if (!o) return String(sid);
+                              const d = String(o.description || '').trim();
+                              return d ? `${o.name} (${d})` : o.name;
+                            })
+                            .filter(Boolean)
+                            .join('; ')}
+                    </span>
+                  </div>
                   <div className="preview-item preview-item-full"><span className="preview-label">Certifications / Licenses</span><span className="preview-value">{formData.certifications || '-'}</span></div>
                 </div>
               </div>

@@ -9,8 +9,9 @@
     "dev": "nodemon src/index.js",
     "seed": "node src/scripts/seedStudents.js",
     "seed:faculty": "node src/scripts/seedFaculty.js",
+    "seed:specializations": "node src/scripts/seedSpecializations.js",
     "seed:users": "node src/scripts/seedUsers.js",
-    "seed:all": "node src/scripts/seedStudents.js && node src/scripts/seedFaculty.js && node src/scripts/seedUsers.js"
+    "seed:all": "node src/scripts/seedStudents.js && node src/scripts/seedSpecializations.js && node src/scripts/seedFaculty.js && node src/scripts/seedUsers.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

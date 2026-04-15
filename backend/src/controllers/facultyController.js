@@ -72,7 +72,7 @@ function validatePayload(payload, isCreate) {
     return 'emergencyContactNumber must start with 09 and contain exactly 11 digits.';
   }
 
-  const status = normalizeString(payload.status || 'Active');
+  const status = normalizeString(payload.status || 'Active') || 'Active';
   if (status === 'Inactive' && !normalizeString(payload.inactiveReason)) {
     return 'inactiveReason is required when status is Inactive.';
   }
@@ -180,7 +180,7 @@ async function getFaculty(req, res, next) {
       const skip = (safePage - 1) * limit;
 
       const faculty = await Faculty.find(query)
-        .populate('specializations', 'name')
+        .populate('specializations', 'name description')
         .skip(skip)
         .limit(limit);
 
@@ -193,7 +193,7 @@ async function getFaculty(req, res, next) {
       });
     }
 
-    const faculty = await Faculty.find(query).populate('specializations', 'name');
+    const faculty = await Faculty.find(query).populate('specializations', 'name description');
     return res.status(200).json(faculty.map(mapFacultyResponse));
   } catch (err) {
     return next(err);
@@ -212,7 +212,7 @@ async function getNextFacultyIdPreview(req, res, next) {
 async function getFacultyById(req, res, next) {
   try {
     const { employeeId } = req.params;
-    const faculty = await Faculty.findOne({ employeeId }).populate('specializations', 'name');
+    const faculty = await Faculty.findOne({ employeeId }).populate('specializations', 'name description');
 
     if (!faculty) {
       return res.status(404).json({ message: 'Faculty record not found.' });
@@ -234,6 +234,10 @@ async function createFaculty(req, res, next) {
 
     const specializations = await resolveSpecializationIds(payload.specializations);
 
+    const status = normalizeString(payload.status || 'Active') || 'Active';
+    const inactiveReason =
+      status === 'Active' ? '' : normalizeString(payload.inactiveReason);
+
     const data = {
       employeeId: await generateNextEmployeeId(),
       firstName: normalizeString(payload.firstName),
@@ -251,8 +255,8 @@ async function createFaculty(req, res, next) {
       employmentType: normalizeString(payload.employmentType),
       contractType: normalizeString(payload.contractType),
       dateHired: normalizeString(payload.dateHired),
-      status: normalizeString(payload.status || 'Active') || 'Active',
-      inactiveReason: normalizeString(payload.inactiveReason),
+      status,
+      inactiveReason,
       highestEducation: normalizeString(payload.highestEducation),
       fieldOfStudy: normalizeString(payload.fieldOfStudy),
       certifications: normalizeString(payload.certifications),
@@ -261,7 +265,7 @@ async function createFaculty(req, res, next) {
     };
 
     const created = await Faculty.create(data);
-    const populated = await Faculty.findById(created._id).populate('specializations', 'name');
+    const populated = await Faculty.findById(created._id).populate('specializations', 'name description');
     return res.status(201).json(mapFacultyResponse(populated));
   } catch (err) {
     if (err && err.code === 11000) {
@@ -313,6 +317,10 @@ async function updateFaculty(req, res, next) {
 
     const specializations = await resolveSpecializationIds(payload.specializations);
 
+    const status = normalizeString(payload.status || 'Active') || 'Active';
+    const inactiveReason =
+      status === 'Active' ? '' : normalizeString(payload.inactiveReason);
+
     const data = {
       firstName: normalizeString(payload.firstName),
       middleName: normalizeString(payload.middleName),
@@ -329,8 +337,8 @@ async function updateFaculty(req, res, next) {
       employmentType: normalizeString(payload.employmentType),
       contractType: normalizeString(payload.contractType),
       dateHired: normalizeString(payload.dateHired),
-      status: normalizeString(payload.status || 'Active') || 'Active',
-      inactiveReason: normalizeString(payload.inactiveReason),
+      status,
+      inactiveReason,
       highestEducation: normalizeString(payload.highestEducation),
       fieldOfStudy: normalizeString(payload.fieldOfStudy),
       certifications: normalizeString(payload.certifications),
@@ -341,7 +349,7 @@ async function updateFaculty(req, res, next) {
     const updated = await Faculty.findOneAndUpdate({ employeeId }, data, {
       new: true,
       runValidators: true,
-    }).populate('specializations', 'name');
+    }).populate('specializations', 'name description');
 
     return res.status(200).json(mapFacultyResponse(updated));
   } catch (err) {
@@ -384,6 +392,26 @@ async function getFacultyAnalytics(_req, res, next) {
                     $cond: [{ $eq: ['$status', 'Inactive'] }, 1, 0],
                   },
                 },
+                fullTime: {
+                  $sum: {
+                    $cond: [{ $eq: ['$employmentType', 'Full-time'] }, 1, 0],
+                  },
+                },
+                partTime: {
+                  $sum: {
+                    $cond: [{ $eq: ['$employmentType', 'Part-time'] }, 1, 0],
+                  },
+                },
+                itDept: {
+                  $sum: {
+                    $cond: [{ $eq: ['$department', 'IT'] }, 1, 0],
+                  },
+                },
+                csDept: {
+                  $sum: {
+                    $cond: [{ $eq: ['$department', 'CS'] }, 1, 0],
+                  },
+                },
               },
             },
           ],
@@ -401,12 +429,24 @@ async function getFacultyAnalytics(_req, res, next) {
       },
     ]);
 
-    const totals = summary?.totals?.[0] || { total: 0, active: 0, inactive: 0 };
+    const totals = summary?.totals?.[0] || {
+      total: 0,
+      active: 0,
+      inactive: 0,
+      fullTime: 0,
+      partTime: 0,
+      itDept: 0,
+      csDept: 0,
+    };
 
     return res.status(200).json({
       totalFaculty: totals.total || 0,
       activeFaculty: totals.active || 0,
       inactiveFaculty: totals.inactive || 0,
+      fullTimeFaculty: totals.fullTime || 0,
+      partTimeFaculty: totals.partTime || 0,
+      itDepartmentCount: totals.itDept || 0,
+      csDepartmentCount: totals.csDept || 0,
       departmentDistribution: summary?.departmentDistribution || [],
       employmentTypeDistribution: summary?.employmentTypeDistribution || [],
     });

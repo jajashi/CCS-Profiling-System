@@ -1,0 +1,219 @@
+.faculty-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.faculty-dashboard .page-header h2 {
+  color: var(--text-main);
+}
+
+.faculty-dashboard-distributions {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.faculty-dashboard-distributions h3 {
+  font-size: 1.125rem;
+  margin: 0 0 1.25rem;
+  color: var(--text-main);
+}
+
+.distribution-row {
+  margin-bottom: 1.25rem;
+}
+
+.distribution-row:last-child {
+  margin-bottom: 0;
+}
+
+.distribution-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.distribution-row-label {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.distribution-bar-track {
+  height: 10px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+  display: flex;
+}
+
+.distribution-bar-segment {
+  height: 100%;
+  min-width: 0;
+  transition: width 0.25s ease;
+}
+
+.distribution-bar-segment--active {
+  background: #059669;
+}
+
+.distribution-bar-segment--inactive {
+  background: #94a3b8;
+}
+
+.distribution-bar-segment--fulltime {
+  background: #4f46e5;
+}
+
+.distribution-bar-segment--parttime {
+  background: #c084fc;
+}
+
+.distribution-bar-segment--it {
+  background: #db2777;
+}
+
+.distribution-bar-segment--cs {
+  background: #ea580c;
+}
+
+.distribution-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.distribution-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.distribution-badge--active {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.distribution-badge--inactive {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.distribution-badge--fulltime {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.distribution-badge--parttime {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+
+.distribution-badge--it {
+  background: #fce7f3;
+  color: #be185d;
+}
+
+.distribution-badge--cs {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.faculty-dashboard-placeholder-card {
+  border-style: dashed;
+  opacity: 0.95;
+}
+
+.faculty-dashboard-placeholder-card .stat-value {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.faculty-dashboard-empty {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px dashed var(--border-color);
+}
+
+.faculty-dashboard-empty h3 {
+  margin: 0 0 0.75rem;
+  color: var(--text-main);
+}
+
+.faculty-dashboard-empty p {
+  margin: 0 0 1.25rem;
+  color: var(--text-muted);
+  max-width: 28rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.faculty-dashboard-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 4rem 1.5rem;
+  color: var(--text-muted);
+}
+
+.faculty-dashboard-loading .spin {
+  animation: faculty-dashboard-spin 0.9s linear infinite;
+}
+
+@keyframes faculty-dashboard-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.faculty-dashboard-error {
+  padding: 1.5rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius);
+  color: #991b1b;
+}
+
+.faculty-dashboard-error button {
+  margin-top: 0.75rem;
+}
+
+.faculty-dashboard-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+
+.faculty-dashboard-skeleton-card {
+  height: 104px;
+  border-radius: var(--radius);
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: faculty-dashboard-shimmer 1.2s ease-in-out infinite;
+  border: 1px solid var(--border-color);
+}
+
+@keyframes faculty-dashboard-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

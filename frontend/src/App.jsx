@@ -84,9 +84,24 @@ function App() {
         <Route path="student-info" element={<StudentDirectoryRoute><StudentInformation /></StudentDirectoryRoute>} />
         <Route path="student-info/:id" element={<StudentProfileRoute><StudentInformation /></StudentProfileRoute>} />
         
-        <Route path="faculty" element={<Navigate to="/dashboard/faculty/directory" replace />} />
+        <Route
+          path="faculty"
+          element={(
+            <AdminRoute>
+              <FacultyDashboard />
+            </AdminRoute>
+          )}
+        />
         <Route path="faculty/directory" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />
         <Route path="faculty/directory/:employeeId" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />
+        <Route
+          path="faculty/specializations"
+          element={(
+            <AdminRoute>
+              <SpecializationManagement />
+            </AdminRoute>
+          )}
+        />
         <Route path="faculty/profile" element={<Navigate to="/dashboard/faculty/directory" replace />} />
         <Route path="faculty/profile/:employeeId" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />
         <Route path="faculty-info" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />

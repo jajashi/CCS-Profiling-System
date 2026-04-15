@@ -128,6 +128,57 @@
   font-size: 1.2rem;
 }
 
+/* Faculty expandable group */
+.nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.nav-group-toggle {
+  justify-content: flex-start;
+}
+
+.nav-group-toggle--within:not(.active) {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.nav-group-chevron {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  font-size: 1.05rem;
+  opacity: 0.85;
+}
+
+.nav-sublist {
+  list-style: none;
+  margin: 0.15rem 0 0 0;
+  padding: 0 0 0.15rem 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  border-left: 2px solid var(--border-color);
+  margin-left: 1.35rem;
+}
+
+.nav-subitem {
+  margin: 0;
+  padding: 0;
+}
+
+.nav-sublink {
+  padding: 0.55rem 0.65rem 0.55rem 0.75rem;
+  font-size: 0.875rem;
+  border-radius: var(--radius);
+}
+
+.nav-sublink-icon {
+  font-size: 1rem;
+  margin-right: 0.55rem;
+}
+
 .sidebar-footer {
   padding: 1rem;
   border-top: 1px solid var(--border-color);
