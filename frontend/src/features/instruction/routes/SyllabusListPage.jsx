@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FiArchive, FiBookOpen, FiEdit2, FiEye, FiPlus, FiSearch } from 'react-icons/fi';
+import { FiArchive, FiBookOpen, FiEdit2, FiEye, FiLayers, FiPlus, FiSearch } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../../../lib/api';
 import { useAuth } from '../../../providers/AuthContext';
 import AddEditSyllabusModal from '../components/AddEditSyllabusModal';
+import SyllabusQuickViewModal from '../components/SyllabusQuickViewModal';
 import '../../students/routes/StudentInformation.css';
 import '../../faculty/routes/SpecializationManagement.css';
 import './SyllabusPages.css';
@@ -28,6 +29,7 @@ function SyllabusSkeletonRows() {
     <tr key={`syllabus-skeleton-${index}`} className="skeleton-row">
       <td><span className="skeleton-block" style={{ width: '92px' }} /></td>
       <td><span className="skeleton-block" style={{ width: '180px' }} /></td>
+      <td><span className="skeleton-block" style={{ width: '88px' }} /></td>
       <td><span className="skeleton-block" style={{ width: '74px' }} /></td>
       <td><span className="skeleton-block" style={{ width: '140px' }} /></td>
       <td><span className="skeleton-block" style={{ width: '84px' }} /></td>
@@ -53,6 +55,7 @@ export default function SyllabusListPage() {
   const [archiveSubmittingId, setArchiveSubmittingId] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSyllabusId, setEditingSyllabusId] = useState('');
+  const [previewSyllabusId, setPreviewSyllabusId] = useState('');
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -127,6 +130,7 @@ export default function SyllabusListPage() {
         buildFacultyName(row.facultyId),
         getSectionValue(row.sectionId, 'term'),
         getSectionValue(row.sectionId, 'academicYear'),
+        row.curriculumId?.curriculumYear,
         row.status,
       ].some((value) => String(value || '').toLowerCase().includes(searchTerm));
     });
@@ -241,6 +245,7 @@ export default function SyllabusListPage() {
               <tr>
                 <th>Course Code</th>
                 <th>Course Title</th>
+                <th>Curriculum year</th>
                 <th>Section</th>
                 <th>Faculty Name</th>
                 <th>Term</th>
@@ -253,7 +258,7 @@ export default function SyllabusListPage() {
               {loading ? <SyllabusSkeletonRows /> : null}
               {!loading && !filteredRows.length ? (
                 <tr>
-                  <td colSpan={8} className="spec-empty">No syllabi matched the current filters.</td>
+                  <td colSpan={9} className="spec-empty">No syllabi matched the current filters.</td>
                 </tr>
               ) : null}
               {!loading ? filteredRows.map((row) => {
@@ -263,6 +268,7 @@ export default function SyllabusListPage() {
                   <tr key={row._id} className={archived ? 'row-inactive' : ''}>
                     <td><span className={`id-badge ${archived ? 'curriculum-archived-badge' : ''}`}>{row.curriculumId?.courseCode || '-'}</span></td>
                     <td className={archived ? 'faculty-directory-name-inactive' : ''}>{row.curriculumId?.courseTitle || '-'}</td>
+                    <td>{row.curriculumId?.curriculumYear?.trim() || '—'}</td>
                     <td>{getSectionValue(row.sectionId, 'sectionIdentifier') || '-'}</td>
                     <td>{buildFacultyName(row.facultyId)}</td>
                     <td>{getSectionValue(row.sectionId, 'term') || '-'}</td>
@@ -274,6 +280,15 @@ export default function SyllabusListPage() {
                           <FiEye />
                           <span>View</span>
                         </Link>
+                        <button
+                          type="button"
+                          className="spec-btn-ghost"
+                          onClick={() => setPreviewSyllabusId(row._id)}
+                          title="Quick preview in modal"
+                        >
+                          <FiLayers />
+                          <span>Preview</span>
+                        </button>
                         <button
                           type="button"
                           className="spec-btn-ghost"
@@ -313,6 +328,12 @@ export default function SyllabusListPage() {
         onClose={closeModal}
         editSyllabusId={editingSyllabusId || null}
         onSuccess={loadData}
+      />
+
+      <SyllabusQuickViewModal
+        syllabusId={previewSyllabusId}
+        isOpen={Boolean(previewSyllabusId)}
+        onClose={() => setPreviewSyllabusId('')}
       />
     </div>
   );

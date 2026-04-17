@@ -4,6 +4,20 @@
   margin: 0 auto;
 }
 
+/* Match Curricula / Student directory hero typography */
+.syllabi-page .directory-hero-title {
+  margin: 0;
+  color: #7c2d12;
+  font-weight: 800;
+  font-size: 1.22rem;
+}
+
+.syllabi-page .directory-hero-subtitle {
+  margin: 0.3rem 0 0;
+  color: #9a3412;
+  font-size: 1rem;
+}
+
 .syllabus-toolbar {
   align-items: center;
 }
@@ -157,6 +171,10 @@
   flex-direction: column;
   gap: 0.35rem;
   min-width: 0;
+}
+
+.syllabus-info-span-2 {
+  grid-column: 1 / -1;
 }
 
 .syllabus-body-copy {
@@ -627,6 +645,146 @@
   justify-content: flex-end;
 }
 
+/* Scheduling panel (authoring form — no section dropdown) */
+.syllabus-scheduling-panel {
+  margin-top: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid #e5edf5;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.syllabus-scheduling-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.syllabus-scheduling-hint {
+  margin: 0 0 0.85rem;
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.syllabus-scheduling-muted {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.syllabus-scheduling-notice {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  color: #475569;
+  line-height: 1.45;
+}
+
+.syllabus-scheduling-readonly {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.syllabus-scheduling-readonly--section {
+  margin-top: 0.75rem;
+}
+
+.syllabus-scheduling-error {
+  margin-top: 0.75rem;
+}
+
+/* Quick view modal (shares .modal-container.syllabus-modal base: solid panel, flex column, shadow) */
+.syllabus-quick-modal {
+  max-width: 560px;
+  max-height: 90vh;
+}
+
+.syllabus-quick-body {
+  flex: 1;
+  min-height: 0;
+  padding: 0 1.5rem 1.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow-y: auto;
+}
+
+.syllabus-quick-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+.syllabus-quick-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+.syllabus-quick-value {
+  font-size: 0.95rem;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.syllabus-quick-muted {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.syllabus-quick-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.syllabus-quick-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  text-decoration: none;
+}
+
+.syllabus-quick-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.syllabus-clo-checklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.syllabus-clo-check-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  font-size: 0.92rem;
+  color: #334155;
+  line-height: 1.45;
+  cursor: default;
+}
+
+.syllabus-clo-checkbox {
+  margin-top: 0.2rem;
+  width: 16px;
+  height: 16px;
+  accent-color: #ea580c;
+  flex-shrink: 0;
+}
+
 @media (max-width: 900px) {
   .syllabus-document-header,
   .syllabus-info-grid {
@@ -668,6 +826,18 @@
   .syllabus-no-print,
   .breadcrumb-bar {
     display: none !important;
+  }
+
+  .dashboard-container {
+    display: block !important;
+  }
+
+  .dashboard-main,
+  .dashboard-content {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   .dashboard-container,

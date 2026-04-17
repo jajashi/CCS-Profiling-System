@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { Curriculum } = require('../models/Curriculum');
+const Curriculum = require('../models/Curriculum');
 
 function normalizeString(value) {
   return String(value ?? '').trim();
@@ -60,6 +60,7 @@ async function createCurriculum(req, res, next) {
     const data = {
       courseCode: normalizeString(payload.courseCode).toUpperCase(),
       courseTitle: normalizeString(payload.courseTitle),
+      curriculumYear: normalizeString(payload.curriculumYear),
       description: normalizeString(payload.description),
       program: normalizeString(payload.program),
       creditUnits: parseNonNegativeNumber(payload.creditUnits, 3),
@@ -95,6 +96,7 @@ async function updateCurriculum(req, res, next) {
     const data = {};
     if (payload.courseCode != null) data.courseCode = normalizeString(payload.courseCode).toUpperCase();
     if (payload.courseTitle != null) data.courseTitle = normalizeString(payload.courseTitle);
+    if (payload.curriculumYear != null) data.curriculumYear = normalizeString(payload.curriculumYear);
     if (payload.description != null) data.description = normalizeString(payload.description);
     if (payload.program != null) data.program = normalizeString(payload.program);
     if (payload.creditUnits != null) data.creditUnits = parseNonNegativeNumber(payload.creditUnits);

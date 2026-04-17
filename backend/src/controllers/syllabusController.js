@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { Curriculum } = require('../models/Curriculum');
+const Curriculum = require('../models/Curriculum');
 const Faculty = require('../models/Faculty');
 const { Syllabus, SYLLABUS_STATUS_ENUM, LESSON_STATUS_ENUM } = require('../models/Syllabus');
 
@@ -36,9 +36,39 @@ async function resolveSectionModel() {
   }
 }
 
+async function resolveSectionIdForCreate({ curriculumId, facultyId, explicitSectionId }) {
+  const Section = await resolveSectionModel();
+  if (!Section) {
+    return { sectionId: explicitSectionId || null };
+  }
+
+  if (explicitSectionId) {
+    return { sectionId: explicitSectionId };
+  }
+
+  if (!curriculumId || !facultyId) {
+    return { error: 'curriculumId and facultyId are required to resolve a section.' };
+  }
+
+  const section = await Section.findOne({
+    curriculumId,
+    facultyId,
+    status: 'Active',
+  })
+    .sort({ updatedAt: -1, createdAt: -1 })
+    .select('_id')
+    .lean();
+
+  if (!section) {
+    return { sectionId: null };
+  }
+
+  return { sectionId: section._id };
+}
+
 function buildListPopulateOptions(includeSection) {
   const populate = [
-    { path: 'curriculumId', select: 'courseCode courseTitle' },
+    { path: 'curriculumId', select: 'courseCode courseTitle curriculumYear' },
     { path: 'facultyId', select: 'employeeId firstName lastName' },
   ];
 
@@ -178,6 +208,9 @@ function validateTopLevelPayload(payload, { isCreate = false } = {}) {
     if (missing.length > 0) {
       return `Missing required field(s): ${missing.join(', ')}.`;
     }
+    if (!Array.isArray(payload.weeklyLessons) || payload.weeklyLessons.length < 1) {
+      return 'At least one weekly lesson is required.';
+    }
   }
 
   for (const key of objectIdFields) {
@@ -220,8 +253,14 @@ async function ensureReferencesExist(data, { checkFacultyActive = false } = {}) 
 
   const Section = await resolveSectionModel();
   if (Section && data.sectionId) {
-    const section = await Section.findById(data.sectionId).select('_id').lean();
+    const section = await Section.findById(data.sectionId).select('curriculumId facultyId').lean();
     if (!section) return 'Referenced section was not found.';
+    if (section.curriculumId && data.curriculumId && String(section.curriculumId) !== String(data.curriculumId)) {
+      return 'Section assignment does not match curriculum.';
+    }
+    if (section.facultyId && data.facultyId && String(section.facultyId) !== String(data.facultyId)) {
+      return 'Section assignment does not match faculty.';
+    }
   }
 
   return null;
@@ -319,6 +358,17 @@ async function createSyllabus(req, res, next) {
     }
 
     const data = buildSyllabusPayload(payload);
+
+    const resolved = await resolveSectionIdForCreate({
+      curriculumId: data.curriculumId,
+      facultyId: data.facultyId,
+      explicitSectionId: data.sectionId,
+    });
+    if (resolved.error) {
+      return res.status(400).json({ message: resolved.error });
+    }
+    data.sectionId = resolved.sectionId;
+
     const referenceError = await ensureReferencesExist(data, { checkFacultyActive: true });
     if (referenceError) {
       return res.status(400).json({ message: referenceError });
@@ -379,7 +429,9 @@ async function updateSyllabus(req, res, next) {
     const nextCurriculumId = payload.curriculumId
       ? normalizeOptionalObjectId(payload.curriculumId)
       : syllabus.curriculumId;
-    const nextSectionId = payload.sectionId ? normalizeOptionalObjectId(payload.sectionId) : syllabus.sectionId;
+    const nextSectionId = Object.prototype.hasOwnProperty.call(payload, 'sectionId')
+      ? normalizeOptionalObjectId(payload.sectionId)
+      : syllabus.sectionId;
 
     const referenceError = await ensureReferencesExist(
       {
@@ -406,7 +458,7 @@ async function updateSyllabus(req, res, next) {
 
     if (payload.curriculumId != null) syllabus.curriculumId = data.curriculumId;
     if (payload.facultyId != null) syllabus.facultyId = data.facultyId;
-    if (payload.sectionId != null) syllabus.sectionId = data.sectionId;
+    if (Object.prototype.hasOwnProperty.call(payload, 'sectionId')) syllabus.sectionId = data.sectionId;
     if (payload.description != null) syllabus.description = data.description;
     if (payload.gradingSystem != null) syllabus.gradingSystem = data.gradingSystem;
     if (payload.coursePolicies != null) syllabus.coursePolicies = data.coursePolicies;
@@ -498,7 +550,7 @@ async function updateWeeklyLesson(req, res, next) {
       lesson.status = normalizedLesson.status;
 
       if (normalizedLesson.status === 'Delivered') {
-        const deliveredBy = normalizeOptionalObjectId(payload.facultyId);
+        const deliveredBy = normalizeOptionalObjectId(payload.facultyId ?? payload.deliveredBy);
         if (!deliveredBy) {
           return res.status(400).json({ message: 'facultyId is required when marking a lesson as Delivered.' });
         }

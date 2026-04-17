@@ -15,6 +15,7 @@ function emptyForm() {
   return {
     courseCode: '',
     courseTitle: '',
+    curriculumYear: '',
     description: '',
     program: 'IT',
     creditUnits: 3,
@@ -83,6 +84,7 @@ function CurriculumFormModal({ mode, initialData, onClose, onSaved, options }) {
         ...form,
         courseCode: String(form.courseCode || '').trim().toUpperCase(),
         courseTitle: String(form.courseTitle || '').trim(),
+        curriculumYear: String(form.curriculumYear || '').trim(),
         description: String(form.description || '').trim(),
         creditUnits: Number(form.creditUnits),
         lectureHours: Number(form.lectureHours),
@@ -143,6 +145,17 @@ function CurriculumFormModal({ mode, initialData, onClose, onSaved, options }) {
             </select>
             {errors.program ? <p className="spec-field-error">{errors.program}</p> : null}
 
+            <label className="spec-field-label" htmlFor="curriculumYear">Curriculum year (catalog)</label>
+            <input
+              id="curriculumYear"
+              className="spec-field-input"
+              placeholder="e.g. 2024–2025 or AY 2024"
+              value={form.curriculumYear ?? ''}
+              onChange={(e) => setForm((prev) => ({ ...prev, curriculumYear: e.target.value }))}
+              disabled={submitting}
+            />
+            <p className="spec-field-hint">Which catalog or revision year this course definition applies to (optional).</p>
+
             <div className="curriculum-three-col">
               <div>
                 <label className="spec-field-label" htmlFor="creditUnits">Credit units</label>
@@ -165,7 +178,7 @@ function CurriculumFormModal({ mode, initialData, onClose, onSaved, options }) {
             <textarea id="description" className="spec-field-textarea" value={form.description} onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))} rows={3} disabled={submitting} />
 
             <label className="spec-field-label" htmlFor="prereq-search">Prerequisites</label>
-            <input id="prereq-search" className="spec-field-input" placeholder="Search active course codes" value={prereqQuery} onChange={(e) => setPrereqQuery(e.target.value)} disabled={submitting} />
+            <input id="prereq-search" className="spec-field-input curriculum-prereq-search" placeholder="Search active course codes" value={prereqQuery} onChange={(e) => setPrereqQuery(e.target.value)} disabled={submitting} />
             <div className={`curriculum-prereq-box ${prerequisiteOptions.length === 0 ? 'curriculum-prereq-box--empty' : ''}`}>
               {prerequisiteOptions.map((code) => (
                 <label key={code} className="curriculum-prereq-option">
@@ -261,7 +274,14 @@ export default function CurriculaManagement() {
   const filteredRows = useMemo(() => {
     const term = search.trim().toLowerCase();
     if (!term) return rows;
-    return rows.filter((row) => String(row.courseCode || '').toLowerCase().includes(term) || String(row.courseTitle || '').toLowerCase().includes(term));
+    return rows.filter((row) => {
+      const year = String(row.curriculumYear || '').toLowerCase();
+      return (
+        String(row.courseCode || '').toLowerCase().includes(term)
+        || String(row.courseTitle || '').toLowerCase().includes(term)
+        || year.includes(term)
+      );
+    });
   }, [rows, search]);
 
   const totalPages = Math.max(Math.ceil(filteredRows.length / PAGE_SIZE), 1);
@@ -275,6 +295,7 @@ export default function CurriculaManagement() {
         _id: row._id,
         courseCode: row.courseCode || '',
         courseTitle: row.courseTitle || '',
+        curriculumYear: row.curriculumYear || '',
         description: row.description || '',
         program: row.program || 'IT',
         creditUnits: row.creditUnits ?? 1,
@@ -369,7 +390,7 @@ export default function CurriculaManagement() {
         <div className="curriculum-filters-row">
           <div className="search-box curriculum-search">
             <FiSearch />
-            <input type="text" placeholder="Search by course code or title" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <input type="text" placeholder="Search by code, title, or curriculum year" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           <select className="filter-select curriculum-select" value={programFilter} onChange={(e) => setProgramFilter(e.target.value)}>
             <option value="All">All Programs</option>
@@ -388,6 +409,7 @@ export default function CurriculaManagement() {
               <tr>
                 <th>Course Code</th>
                 <th>Course Title</th>
+                <th>Curriculum year</th>
                 <th>Program</th>
                 <th>Credit Units</th>
                 <th>Total Hours</th>
@@ -396,14 +418,15 @@ export default function CurriculaManagement() {
               </tr>
             </thead>
             <tbody>
-              {loading ? <tr><td colSpan={7} className="spec-loading">Loading curricula...</td></tr> : null}
-              {!loading && paginatedRows.length === 0 ? <tr><td colSpan={7} className="spec-empty">No curricula found.</td></tr> : null}
+              {loading ? <tr><td colSpan={8} className="spec-loading">Loading curricula...</td></tr> : null}
+              {!loading && paginatedRows.length === 0 ? <tr><td colSpan={8} className="spec-empty">No curricula found.</td></tr> : null}
               {!loading ? paginatedRows.map((row) => {
                 const archived = row.status === 'Archived';
                 return (
                   <tr key={row._id} className={archived ? 'row-inactive' : ''}>
                     <td><span className={`id-badge ${archived ? 'curriculum-archived-badge' : ''}`}>{row.courseCode}</span></td>
                     <td className={archived ? 'faculty-directory-name-inactive' : ''}>{row.courseTitle}</td>
+                    <td>{row.curriculumYear || '—'}</td>
                     <td>{row.program}</td>
                     <td>{row.creditUnits}</td>
                     <td>{Number(row.lectureHours || 0) + Number(row.labHours || 0)}</td>

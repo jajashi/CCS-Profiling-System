@@ -39,11 +39,19 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
   });
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [loadingSection, setLoadingSection] = useState(false);
+  const [resolvedSectionId, setResolvedSectionId] = useState('');
+  const [sectionPreview, setSectionPreview] = useState(null);
+  const [sectionMetaError, setSectionMetaError] = useState('');
+  const [sectionScheduleNotice, setSectionScheduleNotice] = useState('');
   const [errors, setErrors] = useState({});
   const [isArchived, setIsArchived] = useState(false);
   const [isActiveWarning, setIsActiveWarning] = useState(false);
   const [formError, setFormError] = useState('');
+  const [syllabusReady, setSyllabusReady] = useState(true);
   const formRef = useRef(null);
+  const preferredSectionIdRef = useRef('');
+  const headerDirtyRef = useRef(false);
 
   const loadOptions = useCallback(async () => {
     try {
@@ -74,12 +82,13 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
   const loadSyllabus = useCallback(async (id) => {
     try {
       setLoading(true);
+      setSyllabusReady(false);
       const res = await apiFetch(`/api/syllabi/${id}`);
       const data = await res.json();
       if (res.ok) {
         setFormData({
-          curriculumId: data.curriculumId?._id || '',
-          facultyId: data.facultyId?._id || '',
+          curriculumId: data.curriculumId?._id || data.curriculumId || '',
+          facultyId: data.facultyId?._id || data.facultyId || '',
           description: data.description || '',
           gradingSystem: data.gradingSystem || '',
           coursePolicies: data.coursePolicies || '',
@@ -98,6 +107,28 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
           }))
             : [buildBlankLesson(1)],
         });
+        const sec = data.sectionId && typeof data.sectionId === 'object' ? data.sectionId : null;
+        const cur = data.curriculumId && typeof data.curriculumId === 'object' ? data.curriculumId : null;
+        const sid = sec?._id || data.sectionId || '';
+        preferredSectionIdRef.current = sid ? String(sid) : '';
+        setResolvedSectionId(sid);
+        setSectionPreview(
+          sec
+            ? {
+                sectionIdentifier: sec.sectionIdentifier,
+                term: sec.term,
+                academicYear: sec.academicYear,
+                curriculumYear: cur?.curriculumYear,
+                creditUnits: cur?.creditUnits,
+              }
+            : null,
+        );
+        setSectionMetaError('');
+        setSectionScheduleNotice(
+          sid
+            ? ''
+            : 'No active section in Scheduling yet. You can still save the syllabus; term and academic year will appear here once a section is assigned.',
+        );
         setIsArchived(data.status === 'Archived');
         setIsActiveWarning(data.status === 'Active');
       }
@@ -105,6 +136,7 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
       toast.error('Failed to load syllabus');
     } finally {
       setLoading(false);
+      setSyllabusReady(true);
     }
   }, []);
 
@@ -112,9 +144,18 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
     if (isOpen) {
       loadOptions();
       if (editSyllabusId) {
+        headerDirtyRef.current = false;
+        setSyllabusReady(false);
         loadSyllabus(editSyllabusId);
       } else {
+        headerDirtyRef.current = false;
+        setSyllabusReady(true);
         setFormData(buildDefaultFormData());
+        preferredSectionIdRef.current = '';
+        setResolvedSectionId('');
+        setSectionPreview(null);
+        setSectionMetaError('');
+        setSectionScheduleNotice('');
         setIsArchived(false);
         setIsActiveWarning(false);
         setErrors({});
@@ -123,14 +164,92 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
     } else {
       setFormData(buildDefaultFormData());
       setOptions({ curricula: [], faculty: [] });
+      preferredSectionIdRef.current = '';
+      headerDirtyRef.current = false;
+      setResolvedSectionId('');
+      setSectionPreview(null);
+      setSectionMetaError('');
+      setSectionScheduleNotice('');
       setErrors({});
       setFormError('');
       setIsArchived(false);
       setIsActiveWarning(false);
+      setSyllabusReady(true);
     }
   }, [isOpen, editSyllabusId, loadOptions, loadSyllabus]);
 
+  useEffect(() => {
+    if (!isOpen || isArchived || !syllabusReady) return undefined;
+    if (editSyllabusId && !headerDirtyRef.current) return undefined;
+    if (!formData.curriculumId || !formData.facultyId) {
+      setResolvedSectionId('');
+      setSectionPreview(null);
+      setSectionMetaError('');
+      setSectionScheduleNotice('');
+      return undefined;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoadingSection(true);
+        setSectionMetaError('');
+        setSectionScheduleNotice('');
+        const res = await apiFetch(
+          `/api/scheduling/sections?curriculumId=${encodeURIComponent(formData.curriculumId)}&facultyId=${encodeURIComponent(formData.facultyId)}&status=Active`,
+        );
+        const list = await res.json();
+        if (cancelled) return;
+        if (!res.ok) {
+          setSectionMetaError(list?.message || 'Could not load scheduled sections.');
+          setResolvedSectionId('');
+          setSectionPreview(null);
+          return;
+        }
+        if (!Array.isArray(list) || !list.length) {
+          setResolvedSectionId('');
+          setSectionPreview(null);
+          setSectionScheduleNotice(
+            'No active section in Scheduling yet. You can still save the syllabus; term and academic year will appear here once a section is assigned.',
+          );
+          return;
+        }
+        const pref = preferredSectionIdRef.current;
+        const pick =
+          pref && list.some((s) => String(s._id) === pref)
+            ? list.find((s) => String(s._id) === pref)
+            : list[0];
+        const cur = pick.curriculumId && typeof pick.curriculumId === 'object' ? pick.curriculumId : null;
+        setResolvedSectionId(pick._id);
+        setSectionPreview({
+          sectionIdentifier: pick.sectionIdentifier,
+          term: pick.term,
+          academicYear: pick.academicYear,
+          curriculumYear: cur?.curriculumYear,
+          creditUnits: cur?.creditUnits,
+        });
+      } catch {
+        if (!cancelled) {
+          setSectionMetaError('Network error while loading scheduled sections.');
+          setSectionScheduleNotice('');
+          setResolvedSectionId('');
+          setSectionPreview(null);
+        }
+      } finally {
+        if (!cancelled) setLoadingSection(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, isArchived, syllabusReady, editSyllabusId, formData.curriculumId, formData.facultyId]);
+
   const handleInputChange = useCallback((field, value) => {
+    if (field === 'curriculumId' || field === 'facultyId') {
+      preferredSectionIdRef.current = '';
+      headerDirtyRef.current = true;
+    }
     setFormData((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => {
       const newErrors = { ...prev };
@@ -217,6 +336,7 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
       const payload = {
         curriculumId: formData.curriculumId,
         facultyId: formData.facultyId,
+        sectionId: resolvedSectionId || null,
         description: formData.description,
         gradingSystem: formData.gradingSystem,
         coursePolicies: formData.coursePolicies,
@@ -280,7 +400,7 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
       } finally {
         setSubmitting(false);
       }
-  }, [formData, editSyllabusId, validateForm, onClose, onSuccess]);
+  }, [formData, editSyllabusId, validateForm, onClose, onSuccess, resolvedSectionId]);
 
   const isEditMode = Boolean(editSyllabusId);
   const isDisabled = isArchived || submitting;
@@ -289,7 +409,7 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
     () =>
       options.curricula.map((c) => ({
         value: c._id,
-        label: c.name || c.title || c._id,
+        label: `${c.courseCode || ''} — ${c.courseTitle || ''}`.trim() || String(c._id),
       })),
     [options.curricula]
   );
@@ -303,6 +423,14 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
       })),
     [options.faculty]
   );
+
+  const selectedCurriculum = useMemo(
+    () => options.curricula.find((c) => String(c._id) === String(formData.curriculumId)),
+    [options.curricula, formData.curriculumId]
+  );
+
+  const catalogCurriculumYear = selectedCurriculum?.curriculumYear ?? sectionPreview?.curriculumYear ?? '';
+  const catalogCreditUnits = selectedCurriculum?.creditUnits ?? sectionPreview?.creditUnits;
 
   if (!isOpen) return null;
 
@@ -443,6 +571,66 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
                   </div>
                 )}
 
+              </div>
+
+              <div className="syllabus-scheduling-panel">
+                <p className="syllabus-scheduling-title">Schedule (from Scheduling)</p>
+                <p className="syllabus-scheduling-hint">
+                  Curriculum year and credit units come from the curriculum you select. Term and academic year come from the active section in Scheduling when one exists for this curriculum and faculty. There is no separate section dropdown. You can save without a schedule; section fields will fill in once Scheduling is set up.
+                </p>
+                {loadingSection ? (
+                  <p className="syllabus-scheduling-muted">Resolving section…</p>
+                ) : null}
+                {sectionScheduleNotice && !sectionPreview ? (
+                  <p className="syllabus-scheduling-notice" role="status">
+                    {sectionScheduleNotice}
+                  </p>
+                ) : null}
+                {formData.curriculumId && (selectedCurriculum || sectionPreview) ? (
+                  <div className="syllabus-scheduling-readonly">
+                    <div className="form-field">
+                      <span className="form-label">Curriculum year (catalog)</span>
+                      <input
+                        className="form-input form-input--readonly"
+                        readOnly
+                        value={
+                          catalogCurriculumYear != null && String(catalogCurriculumYear).trim()
+                            ? String(catalogCurriculumYear)
+                            : '—'
+                        }
+                      />
+                    </div>
+                    <div className="form-field">
+                      <span className="form-label">Credit units (from curriculum)</span>
+                      <input
+                        className="form-input form-input--readonly"
+                        readOnly
+                        value={catalogCreditUnits != null ? String(catalogCreditUnits) : '—'}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+                {sectionPreview ? (
+                  <div className="syllabus-scheduling-readonly syllabus-scheduling-readonly--section">
+                    <div className="form-field">
+                      <span className="form-label">Section</span>
+                      <input className="form-input form-input--readonly" readOnly value={sectionPreview.sectionIdentifier || '—'} />
+                    </div>
+                    <div className="form-field">
+                      <span className="form-label">Term</span>
+                      <input className="form-input form-input--readonly" readOnly value={sectionPreview.term || '—'} />
+                    </div>
+                    <div className="form-field">
+                      <span className="form-label">Academic year</span>
+                      <input className="form-input form-input--readonly" readOnly value={sectionPreview.academicYear || '—'} />
+                    </div>
+                  </div>
+                ) : null}
+                {sectionMetaError ? (
+                  <div className="syllabus-form-error syllabus-scheduling-error" role="alert">
+                    {sectionMetaError}
+                  </div>
+                ) : null}
               </div>
             </section>
 

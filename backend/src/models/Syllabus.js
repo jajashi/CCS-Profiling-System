@@ -76,7 +76,7 @@ const syllabusSchema = new mongoose.Schema(
     sectionId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Section',
-      required: false,
+      default: null,
       index: true,
     },
     description: {

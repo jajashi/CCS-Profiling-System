@@ -85,6 +85,11 @@ export default function SyllabusDetailPage() {
       : [];
   }, [data]);
 
+  const curriculum = data?.curriculumId && typeof data.curriculumId === 'object' ? data.curriculumId : null;
+  const clos = Array.isArray(curriculum?.courseLearningOutcomes)
+    ? curriculum.courseLearningOutcomes.map((c) => String(c || '').trim()).filter(Boolean)
+    : [];
+
   if (loading) {
     return (
       <div className="student-directory spec-page syllabi-page">
@@ -164,14 +169,33 @@ export default function SyllabusDetailPage() {
             <section className="syllabus-read-section syllabus-print-section">
               <h2 className="syllabus-section-title">Course Information</h2>
               <div className="syllabus-info-grid">
-                <div className="syllabus-info-item"><span className="label">Course Code</span><span className="value">{data.curriculumId?.courseCode || '-'}</span></div>
-                <div className="syllabus-info-item"><span className="label">Course Title</span><span className="value">{data.curriculumId?.courseTitle || '-'}</span></div>
+                <div className="syllabus-info-item"><span className="label">Course Code</span><span className="value">{curriculum?.courseCode || '-'}</span></div>
+                <div className="syllabus-info-item"><span className="label">Course Title</span><span className="value">{curriculum?.courseTitle || '-'}</span></div>
+                <div className="syllabus-info-item"><span className="label">Curriculum year (catalog)</span><span className="value">{curriculum?.curriculumYear?.trim() ? curriculum.curriculumYear : '-'}</span></div>
+                <div className="syllabus-info-item"><span className="label">Credit units</span><span className="value">{curriculum?.creditUnits != null ? `${curriculum.creditUnits} units` : '-'}</span></div>
+                <div className="syllabus-info-item"><span className="label">Lecture / Lab hours</span><span className="value">{(curriculum?.lectureHours != null || curriculum?.labHours != null) ? `${curriculum?.lectureHours ?? 0} lec / ${curriculum?.labHours ?? 0} lab` : '-'}</span></div>
                 <div className="syllabus-info-item"><span className="label">Section</span><span className="value">{data.sectionId?.sectionIdentifier || '-'}</span></div>
                 <div className="syllabus-info-item"><span className="label">Term</span><span className="value">{data.sectionId?.term || '-'}</span></div>
                 <div className="syllabus-info-item"><span className="label">Academic Year</span><span className="value">{data.sectionId?.academicYear || '-'}</span></div>
-                <div className="syllabus-info-item"><span className="label">Description</span><span className="value">{data.description || 'No course description provided.'}</span></div>
+                <div className="syllabus-info-item syllabus-info-span-2"><span className="label">Description</span><span className="value">{data.description || 'No course description provided.'}</span></div>
               </div>
             </section>
+
+            {clos.length ? (
+              <section className="syllabus-read-section syllabus-print-section">
+                <h2 className="syllabus-section-title">Course Learning Outcomes (CLOs)</h2>
+                <ul className="syllabus-clo-checklist syllabus-clo-checklist--readonly">
+                  {clos.map((clo, index) => (
+                    <li key={`detail-clo-${index}`}>
+                      <label className="syllabus-clo-check-label">
+                        <input type="checkbox" checked readOnly className="syllabus-clo-checkbox" />
+                        <span>{clo}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
 
             <section className="syllabus-read-section syllabus-print-section">
               <h2 className="syllabus-section-title">Faculty Information</h2>

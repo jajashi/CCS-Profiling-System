@@ -14,6 +14,11 @@ const curriculumSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    curriculumYear: {
+      type: String,
+      default: '',
+      trim: true,
+    },
     description: {
       type: String,
       default: '',
