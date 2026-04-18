@@ -1,7 +1,168 @@
 const mongoose = require('mongoose');
+const Curriculum = require('../models/Curriculum');
+const TimeBlock = require('../models/TimeBlock');
+
+const DAY_ENUM = TimeBlock.DAY_ENUM || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const STATUS_ENUM = TimeBlock.STATUS_ENUM || ['Active', 'Archived'];
+
+const TIME_RE = /^([01]?\d|2[0-3]):([0-5]\d)$/;
 
 function normalizeString(value) {
   return String(value ?? '').trim();
+}
+
+function normalizeOptionalObjectId(value) {
+  if (value == null || value === '') return null;
+  return mongoose.Types.ObjectId.isValid(value) ? new mongoose.Types.ObjectId(value) : null;
+}
+
+function parseTimeToMinutes(value) {
+  const m = TIME_RE.exec(normalizeString(value));
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (!Number.isInteger(h) || h < 0 || h > 23) return null;
+  if (!Number.isInteger(min) || min < 0 || min > 59) return null;
+  return h * 60 + min;
+}
+
+/**
+ * Enforces startTime + durationMinutes === endTime for same-calendar-day slots (institutional day bounds).
+ */
+function validateStartDurationEnd(startTime, endTime, durationMinutes) {
+  const start = parseTimeToMinutes(startTime);
+  const end = parseTimeToMinutes(endTime);
+  if (start == null || end == null) {
+    return 'startTime and endTime must use HH:mm (24-hour, e.g. 08:30 or 14:00).';
+  }
+  const dur = Number(durationMinutes);
+  if (!Number.isFinite(dur) || !Number.isInteger(dur) || dur < 1) {
+    return 'durationMinutes must be a positive integer (minutes).';
+  }
+  if (start + dur !== end) {
+    return 'startTime plus durationMinutes must exactly equal endTime.';
+  }
+  return null;
+}
+
+function normalizeDays(value) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const d of value) {
+    const day = normalizeString(d);
+    if (!DAY_ENUM.includes(day)) continue;
+    if (!seen.has(day)) {
+      seen.add(day);
+      out.push(day);
+    }
+  }
+  return out.sort((a, b) => DAY_ENUM.indexOf(a) - DAY_ENUM.indexOf(b));
+}
+
+/**
+ * When a curriculum is assigned, ensure block length fits weekly lecture/lab minute budgets from the Curriculum module.
+ */
+async function validateCurriculumBounds(curriculumId, durationMinutes) {
+  if (!curriculumId) return null;
+  const curriculum = await Curriculum.findById(curriculumId).select('lectureHours labHours status').lean();
+  if (!curriculum) return 'Referenced curriculum was not found.';
+  if (normalizeString(curriculum.status) !== 'Active') {
+    return 'Curriculum must be Active when assigned to a time block.';
+  }
+
+  const lecMin = Math.round(Number(curriculum.lectureHours || 0) * 60);
+  const labMin = Math.round(Number(curriculum.labHours || 0) * 60);
+  if (lecMin <= 0 && labMin <= 0) {
+    return 'Curriculum has no lecture or lab hours; set hours before binding this time block.';
+  }
+
+  const maxPerSession = Math.max(lecMin, labMin);
+  const totalWeeklyContact = lecMin + labMin;
+  const dur = Number(durationMinutes);
+
+  if (dur > maxPerSession) {
+    return `Block duration (${dur} min) cannot exceed the curriculum weekly lecture/lab ceiling used for scheduling (${maxPerSession} min).`;
+  }
+  if (dur > totalWeeklyContact) {
+    return `Block duration (${dur} min) cannot exceed combined weekly lecture and lab minutes (${totalWeeklyContact} min).`;
+  }
+
+  return null;
+}
+
+function buildPayload(body, { partial = false } = {}) {
+  const raw = body || {};
+  const data = {};
+
+  if (!partial || Object.prototype.hasOwnProperty.call(raw, 'label')) {
+    data.label = normalizeString(raw.label);
+  }
+  if (!partial || Object.prototype.hasOwnProperty.call(raw, 'durationMinutes')) {
+    data.durationMinutes = raw.durationMinutes == null ? null : Number(raw.durationMinutes);
+  }
+  if (!partial || Object.prototype.hasOwnProperty.call(raw, 'daysOfWeek')) {
+    data.daysOfWeek = normalizeDays(raw.daysOfWeek);
+  }
+  if (!partial || Object.prototype.hasOwnProperty.call(raw, 'startTime')) {
+    data.startTime = normalizeString(raw.startTime);
+  }
+  if (!partial || Object.prototype.hasOwnProperty.call(raw, 'endTime')) {
+    data.endTime = normalizeString(raw.endTime);
+  }
+  if (!partial || Object.prototype.hasOwnProperty.call(raw, 'status')) {
+    data.status = raw.status == null ? 'Active' : normalizeString(raw.status);
+  }
+  if (!partial || Object.prototype.hasOwnProperty.call(raw, 'curriculumId')) {
+    data.curriculumId = normalizeOptionalObjectId(raw.curriculumId);
+  }
+
+  return data;
+}
+
+function validatePayload(data, { isCreate = false, existing = null } = {}) {
+  const merged = isCreate
+    ? { ...data }
+    : {
+        label: data.label != null ? data.label : existing.label,
+        durationMinutes: data.durationMinutes != null ? data.durationMinutes : existing.durationMinutes,
+        daysOfWeek: data.daysOfWeek != null ? data.daysOfWeek : existing.daysOfWeek,
+        startTime: data.startTime != null ? data.startTime : existing.startTime,
+        endTime: data.endTime != null ? data.endTime : existing.endTime,
+        status: data.status != null ? data.status : existing.status,
+        curriculumId: Object.prototype.hasOwnProperty.call(data, 'curriculumId')
+          ? data.curriculumId
+          : existing.curriculumId,
+      };
+
+  if (isCreate || data.label != null) {
+    if (!merged.label) return 'label is required.';
+  }
+  if (isCreate || data.durationMinutes != null) {
+    if (!Number.isFinite(merged.durationMinutes) || !Number.isInteger(merged.durationMinutes) || merged.durationMinutes < 1) {
+      return 'durationMinutes must be a positive integer.';
+    }
+  }
+  if (isCreate || data.daysOfWeek != null) {
+    if (!merged.daysOfWeek.length) return 'At least one dayOfWeek is required.';
+    for (const d of merged.daysOfWeek) {
+      if (!DAY_ENUM.includes(d)) {
+        return `Invalid dayOfWeek "${d}". Use Mon–Sun.`;
+      }
+    }
+    if (merged.daysOfWeek.length !== new Set(merged.daysOfWeek).size) {
+      return 'daysOfWeek must not contain duplicates.';
+    }
+  }
+  if (isCreate || data.startTime != null || data.endTime != null || data.durationMinutes != null) {
+    const timeErr = validateStartDurationEnd(merged.startTime, merged.endTime, merged.durationMinutes);
+    if (timeErr) return timeErr;
+  }
+  if (merged.status != null && merged.status !== '' && !STATUS_ENUM.includes(merged.status)) {
+    return `status must be one of: ${STATUS_ENUM.join(', ')}.`;
+  }
+
+  return null;
 }
 
 async function resolveSectionModel() {
@@ -58,6 +219,133 @@ async function listSections(req, res, next) {
   }
 }
 
+async function listTimeBlocks(_req, res, next) {
+  try {
+    const rows = await TimeBlock.find({ status: 'Active' })
+      .populate('curriculumId', 'courseCode courseTitle lectureHours labHours status')
+      .sort({ label: 1 });
+    return res.status(200).json(rows.map((row) => row.toJSON()));
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function createTimeBlock(req, res, next) {
+  try {
+    const payload = buildPayload(req.body, { partial: false });
+    const err = validatePayload(payload, { isCreate: true });
+    if (err) return res.status(400).json({ message: err });
+
+    if (payload.curriculumId) {
+      const curErr = await validateCurriculumBounds(payload.curriculumId, payload.durationMinutes);
+      if (curErr) return res.status(400).json({ message: curErr });
+    }
+
+    const created = await TimeBlock.create({
+      label: payload.label,
+      durationMinutes: payload.durationMinutes,
+      daysOfWeek: payload.daysOfWeek,
+      startTime: payload.startTime,
+      endTime: payload.endTime,
+      status: 'Active',
+      curriculumId: payload.curriculumId,
+    });
+    const populated = await TimeBlock.findById(created._id).populate(
+      'curriculumId',
+      'courseCode courseTitle lectureHours labHours status',
+    );
+    return res.status(201).json(populated.toJSON());
+  } catch (err) {
+    if (err && err.name === 'ValidationError') {
+      return res.status(400).json({ message: err.message || 'Invalid time block.' });
+    }
+    return next(err);
+  }
+}
+
+async function updateTimeBlock(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid time block id.' });
+    }
+
+    const existing = await TimeBlock.findById(id);
+    if (!existing) {
+      return res.status(404).json({ message: 'Time block not found.' });
+    }
+    if (existing.status === 'Archived') {
+      return res.status(400).json({ message: 'Archived time blocks cannot be updated.' });
+    }
+
+    const payload = buildPayload(req.body, { partial: true });
+    if (payload.status != null && payload.status === 'Archived') {
+      return res.status(400).json({ message: 'Use DELETE /api/scheduling/timeblocks/:id to archive a time block.' });
+    }
+    const err = validatePayload(payload, { isCreate: false, existing });
+    if (err) return res.status(400).json({ message: err });
+
+    const mergedDuration = payload.durationMinutes != null ? payload.durationMinutes : existing.durationMinutes;
+    const mergedCurriculum = Object.prototype.hasOwnProperty.call(payload, 'curriculumId')
+      ? payload.curriculumId
+      : existing.curriculumId;
+
+    if (mergedCurriculum) {
+      const curErr = await validateCurriculumBounds(mergedCurriculum, mergedDuration);
+      if (curErr) return res.status(400).json({ message: curErr });
+    }
+
+    if (payload.label != null) existing.label = payload.label;
+    if (payload.durationMinutes != null) existing.durationMinutes = payload.durationMinutes;
+    if (payload.daysOfWeek != null) existing.daysOfWeek = payload.daysOfWeek;
+    if (payload.startTime != null) existing.startTime = payload.startTime;
+    if (payload.endTime != null) existing.endTime = payload.endTime;
+    if (payload.status != null && payload.status !== '') existing.status = payload.status;
+    if (Object.prototype.hasOwnProperty.call(payload, 'curriculumId')) {
+      existing.curriculumId = payload.curriculumId;
+    }
+
+    await existing.save();
+    const populated = await TimeBlock.findById(existing._id).populate(
+      'curriculumId',
+      'courseCode courseTitle lectureHours labHours status',
+    );
+    return res.status(200).json(populated.toJSON());
+  } catch (err) {
+    if (err && err.name === 'ValidationError') {
+      return res.status(400).json({ message: err.message || 'Invalid time block.' });
+    }
+    return next(err);
+  }
+}
+
+async function archiveTimeBlock(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid time block id.' });
+    }
+
+    const row = await TimeBlock.findById(id);
+    if (!row) {
+      return res.status(404).json({ message: 'Time block not found.' });
+    }
+    if (row.status === 'Archived') {
+      return res.status(400).json({ message: 'Time block is already archived.' });
+    }
+
+    row.status = 'Archived';
+    await row.save();
+    return res.status(200).json({ message: 'Time block archived.', timeBlock: row.toJSON() });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   listSections,
+  listTimeBlocks,
+  createTimeBlock,
+  updateTimeBlock,
+  archiveTimeBlock,
 };

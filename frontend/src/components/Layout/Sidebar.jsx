@@ -13,12 +13,15 @@ import {
   FiChevronDown,
   FiChevronUp,
   FiUserCheck,
+  FiClock,
+  FiGrid,
 } from 'react-icons/fi';
 import { useAuth } from '../../providers/AuthContext';
 import logoSrc from '../../assets/images/ccs-logo.jpg';
 
 const FACULTY_PREFIX = '/dashboard/faculty';
 const INSTRUCTION_PREFIX = '/dashboard/instruction';
+const SCHEDULING_PREFIX = '/dashboard/scheduling';
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -30,6 +33,9 @@ const Sidebar = () => {
   const [instructionNavOpen, setInstructionNavOpen] = useState(() =>
     location.pathname.startsWith(INSTRUCTION_PREFIX),
   );
+  const [schedulingNavOpen, setSchedulingNavOpen] = useState(() =>
+    location.pathname.startsWith(SCHEDULING_PREFIX),
+  );
 
   useEffect(() => {
     if (location.pathname.startsWith(FACULTY_PREFIX)) {
@@ -38,10 +44,14 @@ const Sidebar = () => {
     if (location.pathname.startsWith(INSTRUCTION_PREFIX)) {
       setInstructionNavOpen(true);
     }
+    if (location.pathname.startsWith(SCHEDULING_PREFIX)) {
+      setSchedulingNavOpen(true);
+    }
   }, [location.pathname]);
 
   const isFacultySectionActive = location.pathname.startsWith(FACULTY_PREFIX);
   const isInstructionSectionActive = location.pathname.startsWith(INSTRUCTION_PREFIX);
+  const isSchedulingSectionActive = location.pathname.startsWith(SCHEDULING_PREFIX);
 
   const handleLogout = () => {
     logout();
@@ -185,11 +195,45 @@ const Sidebar = () => {
                 ) : null}
               </li>
 
-              <li className="nav-item">
-                <NavLink to="/dashboard/scheduling" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+              <li className={`nav-item nav-group${schedulingNavOpen ? ' nav-group--open' : ''}`}>
+                <button
+                  type="button"
+                  className={`nav-link nav-group-toggle${isSchedulingSectionActive ? ' nav-group-toggle--within' : ''}`}
+                  aria-expanded={schedulingNavOpen}
+                  aria-controls="sidebar-scheduling-subnav"
+                  id="sidebar-scheduling-trigger"
+                  onClick={() => setSchedulingNavOpen((open) => !open)}
+                >
                   <span className="nav-icon"><FiCalendar /></span>
                   <span className="nav-text">Scheduling</span>
-                </NavLink>
+                  <span className="nav-group-chevron" aria-hidden>
+                    {schedulingNavOpen ? <FiChevronUp /> : <FiChevronDown />}
+                  </span>
+                </button>
+                {schedulingNavOpen ? (
+                  <ul className="nav-sublist" id="sidebar-scheduling-subnav" role="list">
+                    <li className="nav-subitem">
+                      <NavLink
+                        to="/dashboard/scheduling"
+                        end
+                        className={({ isActive }) => (isActive ? 'nav-link nav-sublink active' : 'nav-link nav-sublink')}
+                      >
+                        <span className="nav-icon nav-sublink-icon"><FiClock /></span>
+                        <span className="nav-text">Time blocks</span>
+                      </NavLink>
+                    </li>
+                    <li className="nav-subitem">
+                      <NavLink
+                        to="/dashboard/scheduling/rooms"
+                        end
+                        className={({ isActive }) => (isActive ? 'nav-link nav-sublink active' : 'nav-link nav-sublink')}
+                      >
+                        <span className="nav-icon nav-sublink-icon"><FiGrid /></span>
+                        <span className="nav-text">Room registry</span>
+                      </NavLink>
+                    </li>
+                  </ul>
+                ) : null}
               </li>
 
               <li className="nav-item">

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FiBookOpen, FiEdit2, FiPlus, FiRotateCcw, FiSearch, FiTrash2, FiX } from 'react-icons/fi';
+import { FiArchive, FiBookOpen, FiEdit2, FiEye, FiPlus, FiRotateCcw, FiSearch, FiX } from 'react-icons/fi';
 import { apiFetch } from '../../../lib/api';
 import '../../students/routes/StudentInformation.css';
 import '../../faculty/routes/SpecializationManagement.css';
@@ -229,6 +229,7 @@ export default function CurriculaManagement() {
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [restoreSubmittingId, setRestoreSubmittingId] = useState('');
   const [activeCodes, setActiveCodes] = useState([]);
+  const [viewRow, setViewRow] = useState(null);
 
   const loadActiveCodes = useCallback(async () => {
     try {
@@ -289,6 +290,7 @@ export default function CurriculaManagement() {
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
 
   const openEdit = (row) => {
+    setViewRow(null);
     setFormModal({
       mode: 'edit',
       data: {
@@ -312,6 +314,11 @@ export default function CurriculaManagement() {
     toast.success('Curriculum saved successfully.');
     await loadCurricula();
     await loadActiveCodes();
+  };
+
+  const openArchiveConfirm = (row) => {
+    setViewRow(null);
+    setDeleteTarget(row);
   };
 
   const handleArchive = async () => {
@@ -338,6 +345,7 @@ export default function CurriculaManagement() {
 
   const handleRestore = async (row) => {
     if (!row?._id) return;
+    setViewRow(null);
     setRestoreSubmittingId(row._id);
     try {
       const res = await apiFetch(`/api/curricula/${row._id}/restore`, { method: 'PATCH' });
@@ -375,16 +383,21 @@ export default function CurriculaManagement() {
             <p className="spec-toolbar-sub">
               Filter by program and status, then search by code or title.
             </p>
-            {!loading ? (
-              <span className="spec-count-pill">
-                {filteredRows.length} total
-              </span>
-            ) : null}
           </div>
-          <button type="button" className="spec-btn-primary" onClick={() => setFormModal({ mode: 'create', data: emptyForm() })}>
-            <FiPlus />
-            <span>Add curriculum</span>
-          </button>
+          <div className="spec-toolbar-right">
+            {!loading ? (
+              <div className="student-count-badge">
+                <FiBookOpen />
+                <span>
+                  {filteredRows.length} {filteredRows.length === 1 ? 'curriculum' : 'curricula'}
+                </span>
+              </div>
+            ) : null}
+            <button type="button" className="spec-btn-primary" onClick={() => { setViewRow(null); setFormModal({ mode: 'create', data: emptyForm() }); }}>
+              <FiPlus />
+              <span>Add curriculum</span>
+            </button>
+          </div>
         </div>
 
         <div className="curriculum-filters-row">
@@ -400,6 +413,13 @@ export default function CurriculaManagement() {
             {STATUS_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
           </select>
         </div>
+
+        {!loading ? (
+          <div className="results-count">
+            Showing <strong>{filteredRows.length}</strong>{' '}
+            {filteredRows.length === 1 ? 'curriculum' : 'curricula'}
+          </div>
+        ) : null}
 
         {error ? <div className="spec-alert">{error}</div> : null}
 
@@ -423,7 +443,11 @@ export default function CurriculaManagement() {
               {!loading ? paginatedRows.map((row) => {
                 const archived = row.status === 'Archived';
                 return (
-                  <tr key={row._id} className={archived ? 'row-inactive' : ''}>
+                  <tr
+                    key={row._id}
+                    className={`${archived ? 'row-inactive' : ''} spec-table-row-clickable`.trim()}
+                    onClick={() => setViewRow(row)}
+                  >
                     <td><span className={`id-badge ${archived ? 'curriculum-archived-badge' : ''}`}>{row.courseCode}</span></td>
                     <td className={archived ? 'faculty-directory-name-inactive' : ''}>{row.courseTitle}</td>
                     <td>{row.curriculumYear || '—'}</td>
@@ -432,20 +456,35 @@ export default function CurriculaManagement() {
                     <td>{Number(row.lectureHours || 0) + Number(row.labHours || 0)}</td>
                     <td><span className={`status-badge status-${String(row.status || '').toLowerCase()}`}>{row.status}</span></td>
                     <td className="spec-td-actions">
-                      <div className="spec-actions">
-                        <button type="button" className="spec-btn-ghost" onClick={() => openEdit(row)}><FiEdit2 /></button>
+                      <div className="action-buttons" onClick={(e) => e.stopPropagation()}>
+                        <button type="button" className="action-btn view" title="View curriculum" aria-label="View curriculum" onClick={() => setViewRow(row)}>
+                          <FiEye />
+                        </button>
+                        <button type="button" className="action-btn edit" title="Edit curriculum" aria-label="Edit curriculum" onClick={() => openEdit(row)}>
+                          <FiEdit2 />
+                        </button>
                         {archived ? (
                           <button
                             type="button"
-                            className="spec-btn-ghost curriculum-restore-btn"
+                            className="action-btn toggle curriculum-restore-btn"
                             onClick={() => handleRestore(row)}
                             disabled={restoreSubmittingId === row._id}
                             title="Restore curriculum"
+                            aria-label="Restore curriculum"
                           >
                             <FiRotateCcw />
                           </button>
                         ) : null}
-                        <button type="button" className="spec-btn-ghost spec-btn-danger" onClick={() => setDeleteTarget(row)} disabled={archived} title={archived ? 'Already archived' : 'Archive curriculum'}><FiTrash2 /></button>
+                        <button
+                          type="button"
+                          className="action-btn delete"
+                          onClick={() => openArchiveConfirm(row)}
+                          disabled={archived}
+                          title={archived ? 'Already archived' : 'Archive curriculum'}
+                          aria-label="Archive curriculum"
+                        >
+                          <FiArchive />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -456,6 +495,122 @@ export default function CurriculaManagement() {
         </div>
         {filteredRows.length > PAGE_SIZE ? <div className="table-pagination"><button type="button" className="pagination-btn" disabled={page <= 1} onClick={() => setPage((prev) => prev - 1)}>Previous</button><span className="pagination-meta">Page {page} of {totalPages}</span><button type="button" className="pagination-btn" disabled={page >= totalPages} onClick={() => setPage((prev) => prev + 1)}>Next</button></div> : null}
       </div>
+
+      {viewRow ? (
+        <div className="student-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="curriculum-view-title" onClick={() => setViewRow(null)}>
+          <div className="student-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <p className="modal-eyebrow">Curriculum</p>
+                <h3 id="curriculum-view-title">{viewRow.courseCode} — {viewRow.courseTitle}</h3>
+                <p className="modal-subtitle">
+                  <span className={`status-badge status-${String(viewRow.status || '').toLowerCase()}`}>{viewRow.status}</span>
+                  {' · '}
+                  {viewRow.program}
+                </p>
+              </div>
+              <div className="flex items-start gap-2">
+                <button
+                  type="button"
+                  className="modal-edit-btn"
+                  onClick={() => {
+                    const r = viewRow;
+                    openEdit(r);
+                  }}
+                >
+                  <FiEdit2 />
+                  <span>Edit</span>
+                </button>
+                {viewRow.status === 'Archived' ? (
+                  <button
+                    type="button"
+                    className="modal-edit-btn"
+                    onClick={() => handleRestore(viewRow)}
+                    disabled={restoreSubmittingId === viewRow._id}
+                  >
+                    <FiRotateCcw />
+                    <span>Restore</span>
+                  </button>
+                ) : null}
+                {viewRow.status !== 'Archived' ? (
+                  <button
+                    type="button"
+                    className="modal-edit-btn modal-delete-btn"
+                    onClick={() => openArchiveConfirm(viewRow)}
+                  >
+                    <FiArchive />
+                    <span>Archive</span>
+                  </button>
+                ) : null}
+                <button type="button" className="modal-close" onClick={() => setViewRow(null)} aria-label="Close">
+                  <FiX />
+                </button>
+              </div>
+            </div>
+            <div className="profile-details-container">
+              <div className="modal-grid">
+                <div>
+                  <p className="label">Course code</p>
+                  <input className="readonly-field" type="text" value={viewRow.courseCode || '—'} readOnly />
+                </div>
+                <div>
+                  <p className="label">Curriculum year</p>
+                  <input className="readonly-field" type="text" value={viewRow.curriculumYear || '—'} readOnly />
+                </div>
+                <div>
+                  <p className="label">Credit units</p>
+                  <input className="readonly-field" type="text" value={String(viewRow.creditUnits ?? '—')} readOnly />
+                </div>
+                <div>
+                  <p className="label">Lecture hours</p>
+                  <input className="readonly-field" type="text" value={String(viewRow.lectureHours ?? 0)} readOnly />
+                </div>
+                <div>
+                  <p className="label">Lab hours</p>
+                  <input className="readonly-field" type="text" value={String(viewRow.labHours ?? 0)} readOnly />
+                </div>
+                <div>
+                  <p className="label">Total contact hours</p>
+                  <input
+                    className="readonly-field"
+                    type="text"
+                    value={String(Number(viewRow.lectureHours || 0) + Number(viewRow.labHours || 0))}
+                    readOnly
+                  />
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <p className="label">Description</p>
+                  <textarea className="readonly-field" readOnly rows={3} value={String(viewRow.description || '').trim() || '—'} />
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <p className="label">Prerequisites</p>
+                  <input
+                    className="readonly-field"
+                    type="text"
+                    readOnly
+                    value={Array.isArray(viewRow.prerequisites) && viewRow.prerequisites.length ? viewRow.prerequisites.join(', ') : '—'}
+                  />
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <p className="label">Course learning outcomes</p>
+                  <textarea
+                    className="readonly-field"
+                    readOnly
+                    rows={6}
+                    value={
+                      (viewRow.courseLearningOutcomes || []).filter(Boolean).length
+                        ? (viewRow.courseLearningOutcomes || [])
+                            .map((c, i) => `${i + 1}. ${String(c).trim()}`)
+                            .join('\n')
+                        : '—'
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {formModal ? <CurriculumFormModal mode={formModal.mode} initialData={formModal.data} options={activeCodes} onClose={() => setFormModal(null)} onSaved={handleSaved} /> : null}
       {deleteTarget ? (

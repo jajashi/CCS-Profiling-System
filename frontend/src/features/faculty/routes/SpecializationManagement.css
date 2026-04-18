@@ -55,6 +55,14 @@
   gap: 0.2rem;
 }
 
+.spec-toolbar-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .spec-toolbar-title {
   margin: 0;
   font-size: 0.95rem;
@@ -487,4 +495,13 @@
 .spec-delete-name {
   font-weight: 700;
   color: #0f172a;
+}
+
+/* Row opens detail modal (matches student/faculty directory behavior) */
+.spec-table tbody tr.spec-table-row-clickable {
+  cursor: pointer;
+}
+
+.spec-table tbody tr.spec-table-row-clickable:hover {
+  background: #f8fafc;
 }

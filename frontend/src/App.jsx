@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams, Outlet } from 'react-router-dom';
 import LoginPage from './features/auth/routes/LoginPage';
 import DashboardLayout from './components/Layout/DashboardLayout';
 import DashboardHome from './features/dashboard/routes/DashboardHome';
@@ -10,6 +10,8 @@ import FacultyDashboard from './features/faculty/routes/FacultyDashboard';
 import CurriculaManagement from './features/instruction/routes/CurriculaManagement';
 import SyllabusListPage from './features/instruction/routes/SyllabusListPage';
 import SyllabusDetailPage from './features/instruction/routes/SyllabusDetailPage';
+import TimeBlocksPage from './features/scheduling/routes/TimeBlocksPage';
+import RoomsPage from './features/scheduling/routes/RoomsPage';
 import { useAuth } from './providers/AuthContext';
 
 // Protected Route Wrapper
@@ -119,7 +121,17 @@ function App() {
         <Route path="instruction/curricula" element={<NonStudentRoute><CurriculaManagement /></NonStudentRoute>} />
         <Route path="instruction/syllabi" element={<NonStudentRoute><SyllabusListPage /></NonStudentRoute>} />
         <Route path="instruction/syllabi/:id" element={<NonStudentRoute><SyllabusDetailPage /></NonStudentRoute>} />
-        <Route path="scheduling" element={<NonStudentRoute><PlaceholderPage title="Scheduling" /></NonStudentRoute>} />
+        <Route
+          path="scheduling"
+          element={(
+            <NonStudentRoute>
+              <Outlet />
+            </NonStudentRoute>
+          )}
+        >
+          <Route index element={<TimeBlocksPage />} />
+          <Route path="rooms" element={<RoomsPage />} />
+        </Route>
         <Route path="events" element={<NonStudentRoute><PlaceholderPage title="Events" /></NonStudentRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

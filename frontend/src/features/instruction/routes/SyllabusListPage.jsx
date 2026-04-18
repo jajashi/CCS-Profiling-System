@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FiArchive, FiBookOpen, FiEdit2, FiEye, FiLayers, FiPlus, FiSearch } from 'react-icons/fi';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../../lib/api';
 import { useAuth } from '../../../providers/AuthContext';
 import AddEditSyllabusModal from '../components/AddEditSyllabusModal';
@@ -41,6 +41,7 @@ function SyllabusSkeletonRows() {
 }
 
 export default function SyllabusListPage() {
+  const navigate = useNavigate();
   const { isAdmin } = useAuth();
   const [rows, setRows] = useState([]);
   const [facultyOptions, setFacultyOptions] = useState([]);
@@ -191,21 +192,28 @@ export default function SyllabusListPage() {
           <div className="spec-toolbar-meta">
             <h2 className="spec-toolbar-title">Syllabi list</h2>
             <p className="spec-toolbar-sub">Find draft and active syllabi quickly, with archived entries hidden by default.</p>
-            {!loading ? <span className="spec-count-pill">{filteredRows.length} results</span> : null}
           </div>
-          <div className="syllabus-toolbar-actions">
-            <button type="button" className="spec-btn-primary" onClick={openCreateModal}>
-              <FiPlus />
-              <span>Add Syllabus</span>
-            </button>
-            <label className="syllabus-archive-toggle">
-              <input
-                type="checkbox"
-                checked={showArchived}
-                onChange={(event) => setShowArchived(event.target.checked)}
-              />
-              <span>Show Archived</span>
-            </label>
+          <div className="spec-toolbar-right">
+            {!loading ? (
+              <div className="student-count-badge">
+                <FiBookOpen />
+                <span>{filteredRows.length} syllabi</span>
+              </div>
+            ) : null}
+            <div className="syllabus-toolbar-actions">
+              <button type="button" className="spec-btn-primary" onClick={openCreateModal}>
+                <FiPlus />
+                <span>Add Syllabus</span>
+              </button>
+              <label className="syllabus-archive-toggle">
+                <input
+                  type="checkbox"
+                  checked={showArchived}
+                  onChange={(event) => setShowArchived(event.target.checked)}
+                />
+                <span>Show Archived</span>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -237,6 +245,12 @@ export default function SyllabusListPage() {
           </select>
         </div>
 
+        {!loading ? (
+          <div className="results-count">
+            Showing <strong>{filteredRows.length}</strong> {filteredRows.length === 1 ? 'syllabus' : 'syllabi'}
+          </div>
+        ) : null}
+
         {error ? <div className="spec-alert" role="alert">{error}</div> : null}
 
         <div className="spec-table-wrap">
@@ -265,7 +279,11 @@ export default function SyllabusListPage() {
                 const archived = String(row.status || '') === 'Archived';
                 const archiveDisabled = archived || (!isAdmin && String(row.status || '') === 'Active');
                 return (
-                  <tr key={row._id} className={archived ? 'row-inactive' : ''}>
+                  <tr
+                    key={row._id}
+                    className={`${archived ? 'row-inactive' : ''} spec-table-row-clickable`.trim()}
+                    onClick={() => row._id && navigate(`/dashboard/instruction/syllabi/${row._id}`)}
+                  >
                     <td><span className={`id-badge ${archived ? 'curriculum-archived-badge' : ''}`}>{row.curriculumId?.courseCode || '-'}</span></td>
                     <td className={archived ? 'faculty-directory-name-inactive' : ''}>{row.curriculumId?.courseTitle || '-'}</td>
                     <td>{row.curriculumId?.curriculumYear?.trim() || '—'}</td>
@@ -275,31 +293,31 @@ export default function SyllabusListPage() {
                     <td>{getSectionValue(row.sectionId, 'academicYear') || '-'}</td>
                     <td><span className={`status-badge status-${String(row.status || '').toLowerCase()}`}>{row.status || '-'}</span></td>
                     <td className="spec-td-actions">
-                      <div className="spec-actions">
-                        <Link to={`/dashboard/instruction/syllabi/${row._id}`} className="spec-btn-ghost syllabus-action-link" title="View syllabus">
+                      <div className="action-buttons">
+                        <Link
+                          to={`/dashboard/instruction/syllabi/${row._id}`}
+                          className="action-btn view"
+                          title="View syllabus"
+                          aria-label="View syllabus"
+                        >
                           <FiEye />
-                          <span>View</span>
                         </Link>
                         <button
                           type="button"
-                          className="spec-btn-ghost"
+                          className="action-btn toggle syllabus-preview-btn"
                           onClick={() => setPreviewSyllabusId(row._id)}
                           title="Quick preview in modal"
+                          aria-label="Preview syllabus in modal"
                         >
                           <FiLayers />
                           <span>Preview</span>
                         </button>
-                        <button
-                          type="button"
-                          className="spec-btn-ghost"
-                          onClick={() => openEditModal(row._id)}
-                        >
+                        <button type="button" className="action-btn edit" onClick={() => openEditModal(row._id)} title="Edit syllabus" aria-label="Edit syllabus">
                           <FiEdit2 />
-                          <span>Edit</span>
                         </button>
                         <button
                           type="button"
-                          className="spec-btn-ghost spec-btn-danger"
+                          className="action-btn delete"
                           onClick={() => handleArchive(row)}
                           disabled={archiveDisabled || archiveSubmittingId === row._id}
                           title={
@@ -309,9 +327,9 @@ export default function SyllabusListPage() {
                                 ? 'Only admins can archive active syllabi'
                                 : 'Archive syllabus'
                           }
+                          aria-label={archiveSubmittingId === row._id ? 'Archiving' : 'Archive syllabus'}
                         >
                           <FiArchive />
-                          <span>{archiveSubmittingId === row._id ? 'Archiving...' : 'Archive'}</span>
                         </button>
                       </div>
                     </td>

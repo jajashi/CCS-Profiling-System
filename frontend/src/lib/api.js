@@ -1,4 +1,18 @@
-const rawBaseUrl = import.meta.env.VITE_API_URL;
+/**
+ * In Vite dev, use same-origin `/api/...` requests so the dev-server proxy (see vite.config.js)
+ * forwards to the Express API. Calling http://localhost:5000 directly can 404 if nothing is
+ * listening there, an old server is running without the latest routes, or the port differs.
+ */
+function resolveApiBaseUrl() {
+  if (import.meta.env.DEV && import.meta.env.VITE_DEV_DIRECT_API !== '1') {
+    return '';
+  }
+  const raw = import.meta.env.VITE_API_URL;
+  if (raw != null && String(raw).trim() !== '') {
+    return String(raw).trim().replace(/\/+$/, '');
+  }
+  return resolveFallbackBaseUrl().replace(/\/+$/, '');
+}
 
 function resolveFallbackBaseUrl() {
   if (typeof window === 'undefined') return '';
@@ -9,8 +23,7 @@ function resolveFallbackBaseUrl() {
   return '';
 }
 
-const resolvedBaseUrl = rawBaseUrl || resolveFallbackBaseUrl();
-const normalizedBaseUrl = resolvedBaseUrl ? resolvedBaseUrl.replace(/\/+$/, "") : "";
+const normalizedBaseUrl = resolveApiBaseUrl();
 
 export const apiBaseUrl = normalizedBaseUrl;
 

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   FiArrowLeft,
   FiEdit2,
+  FiEye,
   FiLayers,
   FiPlus,
   FiTrash2,
@@ -25,6 +26,7 @@ export default function SpecializationManagement() {
   const [modalError, setModalError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [viewRow, setViewRow] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -51,6 +53,7 @@ export default function SpecializationManagement() {
   }, [load]);
 
   const openAdd = () => {
+    setViewRow(null);
     setModal({ mode: 'add', id: null });
     setFormName('');
     setFormDescription('');
@@ -58,6 +61,7 @@ export default function SpecializationManagement() {
   };
 
   const openEdit = (row) => {
+    setViewRow(null);
     setModal({ mode: 'edit', id: row._id });
     setFormName(row.name || '');
     setFormDescription(String(row.description || ''));
@@ -104,8 +108,13 @@ export default function SpecializationManagement() {
   };
 
   const openDelete = (row) => {
+    setViewRow(null);
     setDeleteTarget(row);
     setError('');
+  };
+
+  const openView = (row) => {
+    setViewRow(row);
   };
 
   const closeDelete = () => {
@@ -161,17 +170,28 @@ export default function SpecializationManagement() {
             <p className="spec-toolbar-sub">
               {loading ? 'Loading…' : 'Deletion is blocked while a specialization is still assigned.'}
             </p>
-            {!loading ? (
-              <span className="spec-count-pill">
-                {rows.length} total
-              </span>
-            ) : null}
           </div>
-          <button type="button" onClick={openAdd} className="spec-btn-primary">
-            <FiPlus aria-hidden />
-            Add specialization
-          </button>
+          <div className="spec-toolbar-right">
+            {!loading ? (
+              <div className="student-count-badge">
+                <FiLayers />
+                <span>
+                  {rows.length} specialization{rows.length === 1 ? '' : 's'}
+                </span>
+              </div>
+            ) : null}
+            <button type="button" onClick={openAdd} className="spec-btn-primary">
+              <FiPlus aria-hidden />
+              Add specialization
+            </button>
+          </div>
         </div>
+
+        {!loading ? (
+          <div className="results-count">
+            Showing <strong>{rows.length}</strong> specialization{rows.length === 1 ? '' : 's'}
+          </div>
+        ) : null}
 
         {error ? (
           <div className="spec-alert" role="alert">
@@ -206,7 +226,11 @@ export default function SpecializationManagement() {
                 rows.map((row) => {
                   const count = row.assignedCount ?? 0;
                   return (
-                    <tr key={row._id}>
+                    <tr
+                      key={row._id}
+                      className="spec-table-row-clickable"
+                      onClick={() => openView(row)}
+                    >
                       <td className="spec-name-cell">{row.name}</td>
                       <td
                         className={`spec-desc-cell ${String(row.description || '').trim() ? '' : 'is-empty'}`}
@@ -227,20 +251,31 @@ export default function SpecializationManagement() {
                         </span>
                       </td>
                       <td className="spec-td-actions">
-                        <div className="spec-actions">
+                        <div className="action-buttons" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            onClick={() => openView(row)}
+                            className="action-btn view"
+                            title="View specialization"
+                            aria-label="View specialization"
+                          >
+                            <FiEye size={16} aria-hidden />
+                          </button>
                           <button
                             type="button"
                             onClick={() => openEdit(row)}
-                            className="spec-btn-ghost"
+                            className="action-btn edit"
                             title="Edit specialization"
+                            aria-label="Edit specialization"
                           >
                             <FiEdit2 size={16} aria-hidden />
                           </button>
                           <button
                             type="button"
                             onClick={() => openDelete(row)}
-                            className="spec-btn-ghost spec-btn-danger"
+                            className="action-btn delete"
                             title="Delete specialization"
+                            aria-label="Delete specialization"
                           >
                             <FiTrash2 size={16} aria-hidden />
                           </button>
@@ -254,6 +289,70 @@ export default function SpecializationManagement() {
           </table>
         </div>
       </div>
+
+      {viewRow ? (
+        <div className="student-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="spec-view-title" onClick={() => setViewRow(null)}>
+          <div className="student-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <p className="modal-eyebrow">Specialization</p>
+                <h3 id="spec-view-title">{viewRow.name}</h3>
+                <p className="modal-subtitle">Catalog entry — {viewRow.assignedCount ?? 0} assigned faculty</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <button
+                  type="button"
+                  className="modal-edit-btn"
+                  onClick={() => {
+                    const row = viewRow;
+                    setViewRow(null);
+                    openEdit(row);
+                  }}
+                >
+                  <FiEdit2 />
+                  <span>Edit</span>
+                </button>
+                <button
+                  type="button"
+                  className="modal-edit-btn modal-delete-btn"
+                  onClick={() => {
+                    const row = viewRow;
+                    setViewRow(null);
+                    openDelete(row);
+                  }}
+                >
+                  <FiTrash2 />
+                  <span>Delete</span>
+                </button>
+                <button type="button" className="modal-close" onClick={() => setViewRow(null)} aria-label="Close">
+                  <FiX />
+                </button>
+              </div>
+            </div>
+            <div className="profile-details-container">
+              <div className="modal-grid">
+                <div>
+                  <p className="label">Name</p>
+                  <input className="readonly-field" type="text" value={viewRow.name || '—'} readOnly />
+                </div>
+                <div>
+                  <p className="label">Assigned faculty</p>
+                  <input className="readonly-field" type="text" value={String(viewRow.assignedCount ?? 0)} readOnly />
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <p className="label">Description</p>
+                  <textarea
+                    className="readonly-field"
+                    readOnly
+                    rows={4}
+                    value={String(viewRow.description || '').trim() || 'No description'}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {modal ? (
         <div

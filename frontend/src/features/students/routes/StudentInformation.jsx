@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 import {
   FiPlus,
   FiSearch,
+  FiEye,
   FiUser,
   FiMail,
   FiPhone,
@@ -922,6 +923,15 @@ const StudentInformation = () => {
                   </td>
                   <td>
                     <div className="action-buttons" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        className="action-btn view"
+                        type="button"
+                        aria-label="View student profile"
+                        title="View student profile"
+                        onClick={() => navigate(`/dashboard/student-info/${encodeURIComponent(student.id)}`)}
+                      >
+                        <FiEye />
+                      </button>
                       {isAdmin ? (
                         <>
                           <button

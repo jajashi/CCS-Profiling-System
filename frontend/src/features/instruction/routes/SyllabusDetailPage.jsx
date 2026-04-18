@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FiArrowLeft, FiBookOpen, FiPrinter, FiRefreshCw } from 'react-icons/fi';
+import { FiArrowLeft, FiBookOpen, FiLoader, FiPrinter, FiRefreshCw } from 'react-icons/fi';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '../../../lib/api';
 import '../../students/routes/StudentInformation.css';
@@ -11,14 +11,17 @@ function buildFacultyName(faculty) {
   return [faculty.firstName, faculty.lastName].filter(Boolean).join(' ') || faculty.employeeId || 'Unassigned';
 }
 
-function formatMinutes(timeAllocation) {
+function formatTimeAllocationLectureLab(timeAllocation) {
   const lecture = Number(timeAllocation?.lectureMinutes || 0);
   const lab = Number(timeAllocation?.labMinutes || 0);
-  if (!lecture && !lab) return '-';
-  const parts = [];
-  if (lecture) parts.push(`${lecture} min lecture`);
-  if (lab) parts.push(`${lab} min lab`);
-  return parts.join(' / ');
+  return `Lecture ${lecture} min / Lab ${lab} min`;
+}
+
+function formatDeliveredAt(value) {
+  if (value == null || value === '') return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 }
 
 function DetailSkeleton() {
@@ -56,6 +59,8 @@ export default function SyllabusDetailPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [loadingLessonId, setLoadingLessonId] = useState(null);
+  const [lessonRowErrors, setLessonRowErrors] = useState(() => ({}));
 
   const loadSyllabus = useCallback(async () => {
     setLoading(true);
@@ -84,6 +89,85 @@ export default function SyllabusDetailPage() {
       ? [...data.weeklyLessons].sort((a, b) => Number(a.weekNumber || 0) - Number(b.weekNumber || 0))
       : [];
   }, [data]);
+
+  const lessonProgress = useMemo(() => {
+    const total = weeklyLessons.length;
+    const delivered = weeklyLessons.filter((l) => String(l.status || '') === 'Delivered').length;
+    const pct = total ? Math.round((delivered / total) * 100) : 0;
+    let tone = 'red';
+    if (pct === 100) tone = 'green';
+    else if (pct >= 50) tone = 'yellow';
+    return { total, delivered, pct, tone };
+  }, [weeklyLessons]);
+
+  const syllabusInstructorId = data?.facultyId?._id ?? data?.facultyId ?? '';
+  const isArchivedSyllabus = String(data?.status || '') === 'Archived';
+
+  const patchLesson = useCallback(
+    async (lessonId, body) => {
+      const res = await apiFetch(`/api/syllabi/${id}/lessons/${lessonId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(payload?.message || `Update failed (${res.status}).`);
+      }
+      return payload;
+    },
+    [id],
+  );
+
+  const handleMarkDelivered = useCallback(
+    async (lessonId) => {
+      if (!syllabusInstructorId) return;
+      setLoadingLessonId(lessonId);
+      setLessonRowErrors((prev) => ({ ...prev, [lessonId]: '' }));
+      try {
+        const updated = await patchLesson(lessonId, {
+          status: 'Delivered',
+          facultyId: syllabusInstructorId,
+        });
+        setData((prev) => {
+          if (!prev) return prev;
+          const next = prev.weeklyLessons.map((row) =>
+            String(row._id) === String(updated._id) ? { ...row, ...updated } : row,
+          );
+          return { ...prev, weeklyLessons: next };
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Could not update lesson.';
+        setLessonRowErrors((prev) => ({ ...prev, [lessonId]: msg }));
+      } finally {
+        setLoadingLessonId(null);
+      }
+    },
+    [patchLesson, syllabusInstructorId],
+  );
+
+  const handleUndoDelivery = useCallback(
+    async (lessonId) => {
+      setLoadingLessonId(lessonId);
+      setLessonRowErrors((prev) => ({ ...prev, [lessonId]: '' }));
+      try {
+        const updated = await patchLesson(lessonId, { status: 'Pending' });
+        setData((prev) => {
+          if (!prev) return prev;
+          const next = prev.weeklyLessons.map((row) =>
+            String(row._id) === String(updated._id) ? { ...row, ...updated } : row,
+          );
+          return { ...prev, weeklyLessons: next };
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Could not update lesson.';
+        setLessonRowErrors((prev) => ({ ...prev, [lessonId]: msg }));
+      } finally {
+        setLoadingLessonId(null);
+      }
+    },
+    [patchLesson],
+  );
 
   const curriculum = data?.curriculumId && typeof data.curriculumId === 'object' ? data.curriculumId : null;
   const clos = Array.isArray(curriculum?.courseLearningOutcomes)
@@ -217,39 +301,108 @@ export default function SyllabusDetailPage() {
 
             <section className="syllabus-read-section syllabus-print-section">
               <h2 className="syllabus-section-title">Weekly Lessons</h2>
+              {isArchivedSyllabus ? (
+                <div className="syllabus-banner syllabus-banner--archived syllabus-lesson-archive-banner" role="status">
+                  This syllabus is archived. Lesson tracking is disabled.
+                </div>
+              ) : null}
+              {weeklyLessons.length ? (
+                <div
+                  className="syllabus-lesson-progress"
+                  aria-label={`${lessonProgress.delivered} of ${lessonProgress.total} lessons delivered`}
+                >
+                  <div className="syllabus-lesson-progress-head">
+                    <span className="syllabus-lesson-progress-label">
+                      {lessonProgress.delivered} of {lessonProgress.total} lessons delivered
+                    </span>
+                    <span className="syllabus-lesson-progress-pct">{lessonProgress.pct}%</span>
+                  </div>
+                  <div className="syllabus-lesson-progress-track">
+                    <div
+                      className={`syllabus-lesson-progress-fill syllabus-lesson-progress-fill--${lessonProgress.tone}`}
+                      style={{ width: `${lessonProgress.pct}%` }}
+                    />
+                  </div>
+                </div>
+              ) : null}
               <div className="spec-table-wrap">
-                <table className="spec-table syllabus-table syllabus-weekly-table">
+                <table className="spec-table syllabus-table syllabus-weekly-table syllabus-weekly-tracking-table">
                   <thead>
                     <tr>
-                      <th>Week</th>
+                      <th>Week Number</th>
                       <th>Topic</th>
-                      <th>Objectives</th>
-                      <th>Time Allocation</th>
+                      <th>Time Allocation (Lecture / Lab minutes)</th>
                       <th>Status</th>
+                      <th>Delivered At</th>
+                      {isArchivedSyllabus ? null : (
+                        <th className="syllabus-weekly-actions-col syllabus-no-print">Actions</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
                     {!weeklyLessons.length ? (
                       <tr>
-                        <td colSpan={5} className="spec-empty">No weekly lessons available.</td>
+                        <td colSpan={isArchivedSyllabus ? 5 : 6} className="spec-empty">No weekly lessons available.</td>
                       </tr>
-                    ) : weeklyLessons.map((lesson) => (
-                      <tr key={lesson._id || lesson.weekNumber}>
-                        <td>{lesson.weekNumber || '-'}</td>
-                        <td>{lesson.topic || '-'}</td>
-                        <td>
-                          {Array.isArray(lesson.objectives) && lesson.objectives.length ? (
-                            <ul className="syllabus-objectives-list">
-                              {lesson.objectives.map((objective, index) => (
-                                <li key={`${lesson._id || lesson.weekNumber}-objective-${index}`}>{objective}</li>
-                              ))}
-                            </ul>
-                          ) : '-'}
-                        </td>
-                        <td>{formatMinutes(lesson.timeAllocation)}</td>
-                        <td><span className={`status-badge status-${String(lesson.status || '').toLowerCase()}`}>{lesson.status || '-'}</span></td>
-                      </tr>
-                    ))}
+                    ) : weeklyLessons.map((lesson) => {
+                      const lessonKey = String(lesson._id || lesson.weekNumber);
+                      const rowBusy = loadingLessonId === lessonKey;
+                      const statusLabel = lesson.status || '—';
+                      const isPending = String(lesson.status || '') === 'Pending';
+                      const isDelivered = String(lesson.status || '') === 'Delivered';
+                      const rowError = lessonRowErrors[lessonKey];
+                      return (
+                        <tr key={lessonKey} aria-busy={rowBusy}>
+                          <td>{lesson.weekNumber ?? '—'}</td>
+                          <td>{lesson.topic || '—'}</td>
+                          <td>{formatTimeAllocationLectureLab(lesson.timeAllocation)}</td>
+                          <td>
+                            <span className={`status-badge status-${String(lesson.status || '').toLowerCase()}`}>
+                              {statusLabel}
+                            </span>
+                          </td>
+                          <td>{isDelivered ? formatDeliveredAt(lesson.deliveredAt) : '—'}</td>
+                          {isArchivedSyllabus ? null : (
+                            <td className="syllabus-weekly-actions-cell syllabus-no-print">
+                              <div className="syllabus-lesson-actions">
+                                {rowBusy ? (
+                                  <span className="syllabus-lesson-row-loading" aria-live="polite" aria-label="Updating lesson">
+                                    <FiLoader className="spin-icon" aria-hidden />
+                                  </span>
+                                ) : (
+                                  <>
+                                    {isPending ? (
+                                      <button
+                                        type="button"
+                                        className="spec-btn-primary btn-sm"
+                                        disabled={!syllabusInstructorId}
+                                        onClick={() => handleMarkDelivered(lessonKey)}
+                                      >
+                                        Mark as Delivered
+                                      </button>
+                                    ) : null}
+                                    {isDelivered ? (
+                                      <button
+                                        type="button"
+                                        className="spec-btn-secondary btn-sm"
+                                        onClick={() => handleUndoDelivery(lessonKey)}
+                                      >
+                                        Undo Delivery
+                                      </button>
+                                    ) : null}
+                                  </>
+                                )}
+                              </div>
+                              {rowError ? (
+                                <span className="syllabus-lesson-row-error field-error field-error--table" role="alert">
+                                  {rowError}
+                                </span>
+                              ) : null}
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

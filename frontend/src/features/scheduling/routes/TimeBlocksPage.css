@@ -1,0 +1,251 @@
+/* Table rows align with spec-table / syllabus-table (SyllabusPages.css) */
+.scheduling-timeblocks-table {
+  min-width: 1080px;
+}
+
+/* Orange accent matches global id-badge; used only for the Label column in this table */
+.scheduling-tb-label--accent {
+  display: inline-block;
+  background: #ff5f00;
+  color: #fff;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  font-size: 0.9rem;
+  max-width: 100%;
+}
+
+.scheduling-duration-value {
+  font-weight: 600;
+  color: #334155;
+  font-variant-numeric: tabular-nums;
+}
+
+.scheduling-slot-text {
+  font-weight: 600;
+  color: #334155;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.scheduling-curr-code-chip {
+  display: inline-block;
+  background: #f1f5f9;
+  color: #0f172a;
+  padding: 0.3rem 0.55rem;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border: 1px solid #e2e8f0;
+}
+
+.scheduling-curr-meta {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.88rem;
+  color: #475569;
+  line-height: 1.35;
+  max-width: 280px;
+}
+
+.scheduling-curr-hours {
+  display: block;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-top: 0.15rem;
+}
+
+.timeblock-day-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.timeblock-days-fieldset .timeblock-day-chips {
+  margin-top: 0.35rem;
+}
+
+.timeblock-day-chips--readonly {
+  max-width: 260px;
+  gap: 0.35rem;
+}
+
+.timeblock-day-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+/* Wider dialog so schedule + curriculum sit side-by-side */
+.timeblock-modal.spec-modal--wide {
+  max-width: min(920px, calc(100vw - 2rem));
+}
+
+.timeblock-modal .timeblock-modal-body {
+  padding: 0 1.5rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.timeblock-modal-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(220px, 0.85fr);
+  gap: 1.25rem 1.5rem;
+  align-items: start;
+}
+
+.timeblock-modal-col--main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.timeblock-modal-col--side {
+  min-width: 0;
+  padding: 0.5rem 0 0.5rem 1.25rem;
+  border-left: 1px solid #e8eef4;
+  align-self: stretch;
+}
+
+.timeblock-curriculum-field {
+  height: 100%;
+}
+
+.timeblock-curriculum-select {
+  width: 100%;
+  max-width: 100%;
+}
+
+.timeblock-time-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 0.75rem 1rem;
+  align-items: start;
+}
+
+.timeblock-time-input {
+  font-variant-numeric: tabular-nums;
+}
+
+.timeblock-field-hint {
+  margin: 0.25rem 0 0;
+  font-size: 0.78rem;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+.timeblock-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+}
+
+.timeblock-preset-btn {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.25rem 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.timeblock-preset-btn:hover {
+  background: #fff7ed;
+  border-color: #fdba74;
+  color: #9a3412;
+}
+
+.timeblock-preset-btn--active {
+  background: #ffedd5;
+  border-color: #fb923c;
+  color: #9a3412;
+}
+
+.timeblock-end-field {
+  min-width: 0;
+}
+
+.timeblock-end-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.25rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  font-size: 1.05rem;
+  color: #0f172a;
+}
+
+.timeblock-days-fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.timeblock-day-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  user-select: none;
+}
+
+.timeblock-day-chip--on {
+  background: #ecfdf5;
+  border-color: #6ee7b7;
+  color: #065f46;
+}
+
+.timeblock-day-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.timeblock-modal-footer {
+  margin-top: 0.25rem;
+  border-top: 1px solid #e8eef4;
+  padding-top: 1rem;
+}
+
+@media (max-width: 820px) {
+  .timeblock-modal-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .timeblock-modal-col--side {
+    padding: 0;
+    border-left: none;
+    border-top: 1px solid #e8eef4;
+    padding-top: 1rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .timeblock-time-grid {
+    grid-template-columns: 1fr;
+  }
+}

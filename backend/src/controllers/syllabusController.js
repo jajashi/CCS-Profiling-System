@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Curriculum = require('../models/Curriculum');
 const Faculty = require('../models/Faculty');
+const User = require('../models/User');
 const { Syllabus, SYLLABUS_STATUS_ENUM, LESSON_STATUS_ENUM } = require('../models/Syllabus');
 
 function normalizeString(value) {
@@ -25,6 +26,25 @@ function parseNonNegativeNumber(value, fallback = 0) {
 
 function isAdmin(req) {
   return req.user?.role === 'admin';
+}
+
+/**
+ * Resolve the Faculty document for the current JWT user (faculty accounts use username = employeeId in seed data).
+ */
+async function resolveFacultyActor(req) {
+  if (!req.user || req.user.role !== 'faculty') return null;
+  const user = await User.findById(req.user.id).select('username role').lean();
+  if (!user || user.role !== 'faculty') return null;
+  return Faculty.findOne({ employeeId: user.username }).select('_id').lean();
+}
+
+async function assertCanManageWeeklyLessons(req, syllabus) {
+  if (isAdmin(req)) return null;
+  const actor = await resolveFacultyActor(req);
+  if (!actor || String(actor._id) !== String(syllabus.facultyId)) {
+    return { status: 403, message: 'You can only update weekly lessons on syllabi assigned to you.' };
+  }
+  return null;
 }
 
 async function resolveSectionModel() {
@@ -509,6 +529,10 @@ async function archiveSyllabus(req, res, next) {
 
 async function updateWeeklyLesson(req, res, next) {
   try {
+    /*
+     * Instructor delivery timeline only — records when the syllabus instructor marked a planned week as taught.
+     * Student attendance and participation are explicitly out of scope.
+     */
     const { id, lessonId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: 'Invalid syllabus id.' });
@@ -525,12 +549,21 @@ async function updateWeeklyLesson(req, res, next) {
       return res.status(400).json({ message: 'Archived syllabi are read-only and cannot be updated.' });
     }
 
+    const authzError = await assertCanManageWeeklyLessons(req, syllabus);
+    if (authzError) {
+      return res.status(authzError.status).json({ message: authzError.message });
+    }
+
     const lesson = syllabus.weeklyLessons.id(lessonId);
     if (!lesson) {
       return res.status(404).json({ message: 'Weekly lesson not found.' });
     }
 
-    const payload = req.body || {};
+    const rawBody = req.body || {};
+    const payload = { ...rawBody };
+    delete payload.deliveredAt;
+    delete payload.deliveredBy;
+
     const normalizedLesson = normalizeLessonPayload(payload, { allowPartial: true });
     const lessonError = validateLessonShape(normalizedLesson, { allowPartial: true });
     if (lessonError) {
@@ -550,18 +583,21 @@ async function updateWeeklyLesson(req, res, next) {
       lesson.status = normalizedLesson.status;
 
       if (normalizedLesson.status === 'Delivered') {
-        const deliveredBy = normalizeOptionalObjectId(payload.facultyId ?? payload.deliveredBy);
-        if (!deliveredBy) {
+        const bodyFacultyId = normalizeOptionalObjectId(rawBody.facultyId ?? rawBody.deliveredBy);
+        if (!bodyFacultyId) {
           return res.status(400).json({ message: 'facultyId is required when marking a lesson as Delivered.' });
         }
+        if (String(bodyFacultyId) !== String(syllabus.facultyId)) {
+          return res.status(400).json({ message: 'facultyId must match the syllabus instructor.' });
+        }
 
-        const faculty = await Faculty.findById(deliveredBy).select('_id').lean();
-        if (!faculty) {
-          return res.status(400).json({ message: 'Referenced deliveredBy faculty was not found.' });
+        const instructor = await Faculty.findById(syllabus.facultyId).select('_id').lean();
+        if (!instructor) {
+          return res.status(400).json({ message: 'Syllabus instructor record was not found.' });
         }
 
         lesson.deliveredAt = new Date();
-        lesson.deliveredBy = deliveredBy;
+        lesson.deliveredBy = syllabus.facultyId;
       } else if (normalizedLesson.status === 'Pending') {
         lesson.deliveredAt = null;
         lesson.deliveredBy = null;

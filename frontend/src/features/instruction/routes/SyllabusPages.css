@@ -57,6 +57,21 @@
   min-width: 1120px;
 }
 
+.syllabus-table .action-btn.syllabus-preview-btn {
+  width: auto;
+  min-width: 32px;
+  height: auto;
+  min-height: 32px;
+  padding: 0.35rem 0.55rem;
+  gap: 0.35rem;
+}
+
+.syllabus-table .action-btn.syllabus-preview-btn span {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .syllabus-table .status-draft {
   background: #fff0d5;
   color: #b45309;
@@ -70,6 +85,11 @@
 .syllabus-table .status-archived {
   background: #e2e8f0;
   color: #475569;
+}
+
+.syllabus-table .status-maintenance {
+  background: #fff7ed;
+  color: #c2410c;
 }
 
 .syllabus-action-link {
@@ -188,8 +208,115 @@
   min-width: 960px;
 }
 
+.syllabus-weekly-tracking-table {
+  min-width: 920px;
+}
+
 .syllabus-weekly-table td {
   vertical-align: top;
+}
+
+.syllabus-lesson-archive-banner {
+  margin: 0 0 1rem;
+}
+
+.syllabus-lesson-progress {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid #e5edf5;
+  background: #f8fafc;
+}
+
+.syllabus-lesson-progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.syllabus-lesson-progress-label {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.syllabus-lesson-progress-pct {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.syllabus-lesson-progress-track {
+  height: 10px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.syllabus-lesson-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.35s ease, background 0.2s ease;
+}
+
+.syllabus-lesson-progress-fill--green {
+  background: #22c55e;
+}
+
+.syllabus-lesson-progress-fill--yellow {
+  background: #eab308;
+}
+
+.syllabus-lesson-progress-fill--red {
+  background: #ef4444;
+}
+
+.syllabus-weekly-actions-col {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.syllabus-weekly-actions-cell {
+  text-align: right;
+  vertical-align: middle;
+}
+
+.syllabus-lesson-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.syllabus-lesson-row-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  min-width: 32px;
+  color: #ea580c;
+}
+
+.syllabus-lesson-row-error {
+  display: block;
+  margin-top: 0.35rem;
+  text-align: right;
+}
+
+.syllabus-table .status-pending {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+}
+
+.syllabus-table .status-delivered {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
 }
 
 .syllabus-objectives-list {
