@@ -45,10 +45,21 @@ function getAuthHeaders() {
   }
 }
 
-export const apiFetch = (path, options = {}) => {
+export const apiFetch = async (path, options = {}) => {
   const headers = {
     ...(options.headers || {}),
     ...getAuthHeaders(),
   };
-  return fetch(apiUrl(path), { ...options, headers });
+  const response = await fetch(apiUrl(path), { ...options, headers });
+  
+  if (response.status === 409) {
+    try {
+      const errorData = await response.clone().json();
+      if (errorData.conflictType) {
+        window.dispatchEvent(new CustomEvent('api_conflict', { detail: errorData }));
+      }
+    } catch {}
+  }
+  
+  return response;
 };
