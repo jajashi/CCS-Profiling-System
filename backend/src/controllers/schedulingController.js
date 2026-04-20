@@ -500,10 +500,142 @@ async function updateSectionResources(req, res, next) {
   }
 }
 
+async function getScheduleMatrix(req, res, next) {
+  try {
+    const { term, academicYear } = req.query;
+    if (!term) return res.status(400).json({ message: 'term is required.' });
+    if (!academicYear) return res.status(400).json({ message: 'academicYear is required.' });
+
+    const Section = await resolveSectionModel();
+    if (!Section) {
+      return res.status(503).json({ message: 'Scheduling module is not available.' });
+    }
+
+    const sections = await Section.find({ 
+      term,
+      academicYear,
+      status: { $in: ['Open', 'Waitlisted', 'Closed'] },
+    })
+      .populate('curriculumId', 'courseCode courseTitle')
+      .populate('schedules.roomId', 'name maximumCapacity')
+      .populate('schedules.facultyId', 'firstName lastName employeeId');
+
+    const matrixEvents = [];
+    sections.forEach((sec) => {
+      if (sec.schedules && Array.isArray(sec.schedules)) {
+        sec.schedules.forEach((sched) => {
+          matrixEvents.push({
+            sectionId: sec._id,
+            sectionIdentifier: sec.sectionIdentifier,
+            courseCode: sec.curriculumId?.courseCode,
+            courseTitle: sec.curriculumId?.courseTitle,
+            roomId: sched.roomId?._id,
+            roomName: sched.roomId?.name,
+            facultyId: sched.facultyId?._id,
+            facultyName: sched.facultyId ? `${sched.facultyId.firstName} ${sched.facultyId.lastName}` : 'Unassigned',
+            dayOfWeek: sched.dayOfWeek,
+            startTime: sched.startTime,
+            endTime: sched.endTime,
+          });
+        });
+      }
+    });
+
+    return res.status(200).json(matrixEvents);
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function getRoomUtilization(req, res, next) {
+  try {
+    const { term, academicYear } = req.query;
+    if (!term) return res.status(400).json({ message: 'term is required.' });
+    if (!academicYear) return res.status(400).json({ message: 'academicYear is required.' });
+
+    const Section = await resolveSectionModel();
+
+    // Aggregation pipeline for calculating total hours per room
+    const pipeline = [
+      {
+        $match: {
+          term,
+          academicYear,
+          status: { $in: ['Open', 'Waitlisted', 'Closed'] }
+        }
+      },
+      { $unwind: '$schedules' },
+      {
+        $group: {
+          _id: '$schedules.roomId',
+          totalMinutes: {
+            $sum: {
+              $subtract: [
+                {
+                  $add: [
+                    { $multiply: [{ $toInt: { $substr: ['$schedules.endTime', 0, 2] } }, 60] },
+                    { $toInt: { $substr: ['$schedules.endTime', 3, 2] } }
+                  ]
+                },
+                {
+                  $add: [
+                    { $multiply: [{ $toInt: { $substr: ['$schedules.startTime', 0, 2] } }, 60] },
+                    { $toInt: { $substr: ['$schedules.startTime', 3, 2] } }
+                  ]
+                }
+              ]
+            }
+          },
+          schedules: {
+            $push: {
+              dayOfWeek: '$schedules.dayOfWeek',
+              startTime: '$schedules.startTime',
+              endTime: '$schedules.endTime',
+              sectionIdentifier: '$sectionIdentifier'
+            }
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: 'rooms',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'roomInfo'
+        }
+      },
+      { $unwind: { path: '$roomInfo', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          roomId: '$_id',
+          roomName: '$roomInfo.name',
+          roomType: '$roomInfo.roomType',
+          maximumCapacity: '$roomInfo.maximumCapacity',
+          totalScheduledHours: { $divide: ['$totalMinutes', 60] },
+          utilizationPercentage: {
+             // Default theoretical max: 60 hours per week
+             $multiply: [{ $divide: ['$totalMinutes', 3600] }, 100]
+          },
+          schedules: 1,
+        }
+      },
+      { $sort: { utilizationPercentage: -1 } }
+    ];
+
+    const utilizationData = await Section.aggregate(pipeline);
+
+    return res.status(200).json(utilizationData);
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   listSections,
   createSection,
   updateSectionResources,
+  getScheduleMatrix,
+  getRoomUtilization,
   listTimeBlocks,
   createTimeBlock,
   updateTimeBlock,

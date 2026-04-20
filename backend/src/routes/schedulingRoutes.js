@@ -3,6 +3,8 @@ const {
   listSections,
   createSection,
   updateSectionResources,
+  getScheduleMatrix,
+  getRoomUtilization,
   listTimeBlocks,
   createTimeBlock,
   updateTimeBlock,
@@ -16,6 +18,9 @@ const router = express.Router();
 router.get('/sections', authenticate, requireRoles('admin', 'faculty'), listSections);
 router.post('/sections', authenticate, requireRoles('admin', 'faculty'), createSection);
 router.patch('/sections/:id/resources', authenticate, requireRoles('admin', 'faculty'), updateSectionResources);
+
+router.get('/matrix', authenticate, requireRoles('admin', 'faculty'), getScheduleMatrix);
+router.get('/room-utilization', authenticate, requireRoles('admin', 'faculty'), getRoomUtilization);
 
 router.get('/timeblocks', authenticate, requireRoles('admin', 'faculty'), listTimeBlocks);
 router.post('/timeblocks', authenticate, requireRoles('admin', 'faculty'), createTimeBlock);

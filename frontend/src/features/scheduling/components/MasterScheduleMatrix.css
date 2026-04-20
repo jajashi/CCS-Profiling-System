@@ -1,0 +1,145 @@
+.schedule-matrix-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.matrix-controls {
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.matrix-controls select {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+.matrix-loading {
+  padding: 40px;
+  text-align: center;
+  color: #6c757d;
+}
+
+.matrix-grid {
+  display: flex;
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+
+.matrix-header-cell {
+  height: 40px;
+  border-bottom: 2px solid #dee2e6;
+  background-color: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #495057;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.matrix-time-col {
+  width: 70px;
+  flex-shrink: 0;
+  border-right: 1px solid #dee2e6;
+  position: sticky;
+  left: 0;
+  background-color: #ffffff;
+  z-index: 30;
+}
+
+.matrix-time-col .matrix-header-cell {
+  z-index: 40;
+}
+
+.matrix-time-slot {
+  height: 60px; /* 1 hour = 60px */
+  border-bottom: 1px solid #f1f3f5;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 4px;
+  font-size: 0.8rem;
+  color: #adb5bd;
+}
+
+.matrix-columns-wrapper {
+  display: flex;
+  flex: 1;
+  min-width: max-content;
+}
+
+.matrix-column {
+  width: 150px;
+  min-width: 150px;
+  flex: 1;
+  border-right: 1px solid #dee2e6;
+  display: flex;
+  flex-direction: column;
+}
+
+.matrix-events-area {
+  position: relative;
+  flex: 1;
+  min-height: 900px; /* 15 hours * 60px */
+}
+
+.matrix-grid-line {
+  height: 60px;
+  border-bottom: 1px dashed #e9ecef;
+}
+
+.matrix-event {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  background-color: #e3f2fd;
+  border-left: 4px solid #1976d2;
+  border-radius: 4px;
+  padding: 4px 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  z-index: 10;
+}
+
+.matrix-event:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  z-index: 15;
+}
+
+.event-title {
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: #0d47a1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.event-sub {
+  font-size: 0.7rem;
+  color: #1565c0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
