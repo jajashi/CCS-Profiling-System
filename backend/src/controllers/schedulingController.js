@@ -11,6 +11,11 @@ function normalizeString(value) {
   return String(value ?? '').trim();
 }
 
+/** Escape user input so it is matched literally in RegExp */
+function escapeRegex(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function normalizeOptionalObjectId(value) {
   if (value == null || value === '') return null;
   return mongoose.Types.ObjectId.isValid(value) ? new mongoose.Types.ObjectId(value) : null;
@@ -630,12 +635,82 @@ async function getRoomUtilization(req, res, next) {
   }
 }
 
+async function getMySchedule(req, res, next) {
+  try {
+    const { term } = req.query; // optional term filter
+    const userId = req.user.id;
+    const User = mongoose.model('User');
+    const Faculty = mongoose.model('Faculty');
+
+    const user = await User.findById(userId);
+    if (!user || user.role !== 'faculty') {
+      return res.status(403).json({ message: 'Access denied: Must be authenticated as a faculty member.' });
+    }
+
+    // username of a faculty User is their exact employeeId (e.g. 'fac-2025-001')
+    const faculty = await Faculty.findOne({ employeeId: new RegExp(`^${escapeRegex(user.username)}$`, 'i') });
+    if (!faculty) {
+      return res.status(404).json({ message: 'Faculty profile not found for this user.' });
+    }
+
+    const Section = await resolveSectionModel();
+    const query = { status: { $in: ['Open', 'Waitlisted', 'Closed'] } };
+    if (term) query.term = term;
+
+    const sections = await Section.find(query)
+      .populate('curriculumId', 'courseCode courseTitle')
+      .populate('schedules.roomId', 'name');
+
+    const SyllabusModel = mongoose.models.Syllabus || (await (async () => {
+       try { 
+         const m = require('../models/Syllabus'); 
+         return m.Syllabus || m; 
+       } catch { return null; } 
+    })());
+
+    const myEvents = [];
+    for (const sec of sections) {
+      if (!sec.schedules || !Array.isArray(sec.schedules)) continue;
+      
+      let secSyllabusId = null;
+      if (SyllabusModel) {
+        const syllabus = await SyllabusModel.findOne({ sectionId: sec._id, facultyId: faculty._id }).lean();
+        if (syllabus) secSyllabusId = syllabus._id.toString();
+      }
+
+      for (const sched of sec.schedules) {
+        if (sched.facultyId && sched.facultyId.toString() === faculty._id.toString()) {
+          myEvents.push({
+            sectionId: sec._id.toString(),
+            sectionIdentifier: sec.sectionIdentifier,
+            term: sec.term,
+            academicYear: sec.academicYear,
+            courseCode: sec.curriculumId?.courseCode,
+            courseTitle: sec.curriculumId?.courseTitle,
+            roomId: sched.roomId?._id,
+            roomName: sched.roomId?.name || 'TBA',
+            dayOfWeek: sched.dayOfWeek,
+            startTime: sched.startTime,
+            endTime: sched.endTime,
+            syllabusId: secSyllabusId
+          });
+        }
+      }
+    }
+
+    return res.status(200).json(myEvents);
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   listSections,
   createSection,
   updateSectionResources,
   getScheduleMatrix,
   getRoomUtilization,
+  getMySchedule,
   listTimeBlocks,
   createTimeBlock,
   updateTimeBlock,

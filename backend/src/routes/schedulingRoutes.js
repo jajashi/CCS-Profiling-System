@@ -5,6 +5,7 @@ const {
   updateSectionResources,
   getScheduleMatrix,
   getRoomUtilization,
+  getMySchedule,
   listTimeBlocks,
   createTimeBlock,
   updateTimeBlock,
@@ -21,6 +22,7 @@ router.patch('/sections/:id/resources', authenticate, requireRoles('admin', 'fac
 
 router.get('/matrix', authenticate, requireRoles('admin', 'faculty'), getScheduleMatrix);
 router.get('/room-utilization', authenticate, requireRoles('admin', 'faculty'), getRoomUtilization);
+router.get('/my-schedule', authenticate, requireRoles('admin', 'faculty'), getMySchedule);
 
 router.get('/timeblocks', authenticate, requireRoles('admin', 'faculty'), listTimeBlocks);
 router.post('/timeblocks', authenticate, requireRoles('admin', 'faculty'), createTimeBlock);

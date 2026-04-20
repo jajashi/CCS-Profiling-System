@@ -212,6 +212,18 @@ const Sidebar = () => {
                 </button>
                 {schedulingNavOpen ? (
                   <ul className="nav-sublist" id="sidebar-scheduling-subnav" role="list">
+                    {!isAdmin ? (
+                      <li className="nav-subitem">
+                        <NavLink
+                          to="/dashboard/scheduling/my-schedule"
+                          end
+                          className={({ isActive }) => (isActive ? 'nav-link nav-sublink active' : 'nav-link nav-sublink')}
+                        >
+                          <span className="nav-icon nav-sublink-icon"><FiCalendar /></span>
+                          <span className="nav-text">My Schedule</span>
+                        </NavLink>
+                      </li>
+                    ) : null}
                     <li className="nav-subitem">
                       <NavLink
                         to="/dashboard/scheduling"

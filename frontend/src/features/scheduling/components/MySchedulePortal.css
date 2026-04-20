@@ -1,0 +1,235 @@
+.my-schedule-portal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.portal-header {
+  padding: 20px 24px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.portal-header h2 {
+  margin: 0 0 4px 0;
+  font-size: 1.3rem;
+  color: #343a40;
+}
+
+.portal-header p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #868e96;
+}
+
+.portal-loading {
+  padding: 60px;
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+  flex: 1;
+}
+
+.error-state {
+  justify-content: center;
+  align-items: center;
+  background-color: #fff5f5;
+  border: 1px solid #ffc9c9;
+}
+
+.error-text {
+  color: #e03131;
+  font-weight: 500;
+  max-width: 400px;
+  text-align: center;
+}
+
+.portal-timetable {
+  display: flex;
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  background-color: #fcfcfc;
+}
+
+.timetable-cell-header {
+  height: 48px;
+  background-color: #f1f3f5;
+  border-bottom: 2px solid #dee2e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: #495057;
+  font-size: 0.9rem;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.timetable-time-axis {
+  width: 70px;
+  flex-shrink: 0;
+  border-right: 1px solid #dee2e6;
+  position: sticky;
+  left: 0;
+  background-color: #ffffff;
+  z-index: 30;
+}
+
+.timetable-time-axis .timetable-cell-header {
+  z-index: 40;
+}
+
+.timetable-hour-slot {
+  height: 70px; /* Base 70px an hour scaling parameter */
+  border-bottom: 1px solid #e9ecef;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 8px;
+  color: #adb5bd;
+  font-size: 0.75rem;
+  box-sizing: border-box;
+}
+
+.timetable-days-container {
+  display: flex;
+  flex: 1;
+  min-width: 900px; /* Minimum scrolling viewport */
+}
+
+.timetable-day-column {
+  flex: 1;
+  border-right: 1px solid #dee2e6;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+}
+
+.timetable-events-area {
+  position: relative;
+  flex: 1;
+  min-height: 1050px; /* 15 hrs * 70px */
+}
+
+.timetable-grid-line {
+  height: 70px;
+  border-bottom: 1px dashed #e9ecef;
+  box-sizing: border-box;
+}
+
+.timetable-event-card {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  background-color: #f8f0fc;
+  border-left: 4px solid #b197fc;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+  z-index: 10;
+}
+
+.timetable-event-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  z-index: 15;
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.card-course {
+  font-weight: 700;
+  color: #6741d9;
+  font-size: 0.85rem;
+}
+
+.card-section {
+  font-size: 0.8rem;
+  color: #495057;
+  font-weight: 500;
+}
+
+.card-room, .card-time {
+  font-size: 0.75rem;
+  color: #868e96;
+  margin-top: 2px;
+}
+
+.card-footer {
+  margin-top: auto;
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 6px;
+}
+
+.btn-syllabus-link {
+  background: none;
+  border: 1px solid #9775fa;
+  color: #6741d9;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-syllabus-link:hover {
+  background-color: #9775fa;
+  color: #fff;
+}
+
+.btn-no-syllabus {
+  font-size: 0.7rem;
+  color: #adb5bd;
+  font-style: italic;
+  padding: 4px;
+}
+
+/* Mobile responsive collapsing logic */
+@media (max-width: 1024px) {
+  .timetable-days-container {
+    flex-direction: column;
+    min-width: 100%;
+  }
+
+  .timetable-day-column {
+    border-right: none;
+    border-bottom: 2px solid #dee2e6;
+  }
+  
+  .timetable-events-area {
+    min-height: 200px; /* Shrinks container so dates without blocks vanish essentially */
+    height: auto;
+  }
+
+  .timetable-event-card {
+    position: relative; /* Break out of absolute positioning */
+    inset: auto !important;
+    height: auto !important;
+    margin: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .timetable-grid-line {
+    display: none; /* Hide hours since relative flow acts as standard list cards */
+  }
+
+  .timetable-time-axis {
+    display: none; /* Time axis obsolete in linear list */
+  }
+}
