@@ -186,19 +186,12 @@ async function listSections(req, res, next) {
 
     if (status) {
       const normalized = normalizeString(status);
-      if (!['Active', 'Inactive', 'All'].includes(normalized)) {
-        return res.status(400).json({ message: 'status must be Active, Inactive, or All.' });
+      if (!['Open', 'Closed', 'Waitlisted', 'Archived', 'All'].includes(normalized)) {
+        return res.status(400).json({ message: 'status must be Open, Closed, Waitlisted, Archived, or All.' });
       }
       if (normalized !== 'All') {
         query.status = normalized;
       }
-    }
-
-    if (facultyId) {
-      if (!mongoose.Types.ObjectId.isValid(facultyId)) {
-        return res.status(400).json({ message: 'facultyId must be a valid ObjectId.' });
-      }
-      query.facultyId = facultyId;
     }
 
     if (curriculumId) {
@@ -210,7 +203,6 @@ async function listSections(req, res, next) {
 
     const sections = await Section.find(query)
       .populate('curriculumId', 'courseCode courseTitle curriculumYear creditUnits courseLearningOutcomes status')
-      .populate('facultyId', 'employeeId firstName lastName status')
       .sort({ academicYear: -1, term: -1, updatedAt: -1 });
 
     return res.status(200).json(sections.map((row) => row.toJSON()));
@@ -342,8 +334,66 @@ async function archiveTimeBlock(req, res, next) {
   }
 }
 
+async function createSection(req, res, next) {
+  try {
+    const Section = await resolveSectionModel();
+    if (!Section) {
+      return res.status(503).json({ message: 'Scheduling module is not available.' });
+    }
+
+    const { curriculumId, term, academicYear } = req.body;
+    if (!curriculumId) return res.status(400).json({ message: 'curriculumId is required.' });
+    if (!term) return res.status(400).json({ message: 'term is required.' });
+    if (!academicYear) return res.status(400).json({ message: 'academicYear is required.' });
+
+    const curriculum = await Curriculum.findById(curriculumId);
+    if (!curriculum) return res.status(404).json({ message: 'Curriculum not found.' });
+    if (curriculum.status !== 'Active') {
+      return res.status(400).json({ message: 'Curriculum is not active.' });
+    }
+
+    const count = await Section.countDocuments({ curriculumId, term, academicYear });
+    const sectionIndex = count + 1;
+    
+    // Generate an identifier autonomously
+    const courseCode = normalizeString(curriculum.courseCode).toUpperCase().replace(/\s+/g, '-');
+    const termCode = term.substring(0, 2).toUpperCase();
+    const yearSuffix = academicYear.length > 2 ? academicYear.substring(academicYear.length - 2) : academicYear;
+
+    const sectionIdentifier = `${courseCode}-${termCode}${yearSuffix}-S${sectionIndex}`;
+
+    const newSection = new Section({
+      sectionIdentifier,
+      curriculumId,
+      term,
+      academicYear,
+      status: 'Open',
+      currentEnrollmentCount: 0,
+      schedules: [],
+    });
+
+    await newSection.save();
+
+    const populated = await Section.findById(newSection._id).populate(
+      'curriculumId',
+      'courseCode courseTitle curriculumYear creditUnits courseLearningOutcomes status'
+    );
+
+    return res.status(201).json(populated.toJSON());
+  } catch (err) {
+    if (err && err.name === 'ValidationError') {
+      return res.status(400).json({ message: err.message || 'Invalid section data.' });
+    }
+    if (err && err.code === 11000) {
+      return res.status(400).json({ message: 'Section identifier already exists. Please try again.' });
+    }
+    return next(err);
+  }
+}
+
 module.exports = {
   listSections,
+  createSection,
   listTimeBlocks,
   createTimeBlock,
   updateTimeBlock,

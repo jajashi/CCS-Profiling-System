@@ -5,7 +5,14 @@ const sectionSchema = new mongoose.Schema(
     sectionIdentifier: {
       type: String,
       required: true,
+      unique: true,
       trim: true,
+    },
+    curriculumId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Curriculum',
+      required: true,
+      index: true,
     },
     term: {
       type: String,
@@ -17,21 +24,19 @@ const sectionSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    curriculumId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Curriculum',
-      index: true,
-    },
-    facultyId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Faculty',
-      index: true,
-    },
     status: {
       type: String,
-      enum: ['Active', 'Inactive'],
-      default: 'Active',
+      enum: ['Open', 'Closed', 'Waitlisted', 'Archived'],
+      default: 'Open',
       index: true,
+    },
+    currentEnrollmentCount: {
+      type: Number,
+      default: 0,
+    },
+    schedules: {
+      type: [new mongoose.Schema({}, { strict: false })],
+      default: [],
     },
   },
   {
@@ -39,6 +44,6 @@ const sectionSchema = new mongoose.Schema(
   },
 );
 
-sectionSchema.index({ facultyId: 1, curriculumId: 1, status: 1 });
+sectionSchema.index({ curriculumId: 1, term: 1, academicYear: 1 });
 
 module.exports = mongoose.models.Section || mongoose.model('Section', sectionSchema);

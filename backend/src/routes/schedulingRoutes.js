@@ -1,6 +1,7 @@
 const express = require('express');
 const {
   listSections,
+  createSection,
   listTimeBlocks,
   createTimeBlock,
   updateTimeBlock,
@@ -12,6 +13,7 @@ const { authenticate, requireRoles } = require('../middleware/authMiddleware');
 const router = express.Router();
 
 router.get('/sections', authenticate, requireRoles('admin', 'faculty'), listSections);
+router.post('/sections', authenticate, requireRoles('admin', 'faculty'), createSection);
 
 router.get('/timeblocks', authenticate, requireRoles('admin', 'faculty'), listTimeBlocks);
 router.post('/timeblocks', authenticate, requireRoles('admin', 'faculty'), createTimeBlock);
