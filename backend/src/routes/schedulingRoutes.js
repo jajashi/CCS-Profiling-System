@@ -2,6 +2,7 @@ const express = require('express');
 const {
   listSections,
   createSection,
+  updateSectionResources,
   listTimeBlocks,
   createTimeBlock,
   updateTimeBlock,
@@ -14,6 +15,7 @@ const router = express.Router();
 
 router.get('/sections', authenticate, requireRoles('admin', 'faculty'), listSections);
 router.post('/sections', authenticate, requireRoles('admin', 'faculty'), createSection);
+router.patch('/sections/:id/resources', authenticate, requireRoles('admin', 'faculty'), updateSectionResources);
 
 router.get('/timeblocks', authenticate, requireRoles('admin', 'faculty'), listTimeBlocks);
 router.post('/timeblocks', authenticate, requireRoles('admin', 'faculty'), createTimeBlock);

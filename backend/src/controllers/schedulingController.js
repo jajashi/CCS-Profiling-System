@@ -391,9 +391,51 @@ async function createSection(req, res, next) {
   }
 }
 
+async function updateSectionResources(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid section id.' });
+    }
+
+    const { schedules } = req.body;
+    if (!Array.isArray(schedules)) {
+      return res.status(400).json({ message: 'schedules must be an array.' });
+    }
+
+    const Section = await resolveSectionModel();
+    if (!Section) {
+      return res.status(503).json({ message: 'Scheduling module is not available.' });
+    }
+
+    const section = await Section.findById(id);
+    if (!section) return res.status(404).json({ message: 'Section not found.' });
+    if (section.status === 'Archived') {
+      return res.status(400).json({ message: 'Archived sections cannot be modified.' });
+    }
+
+    // Replace the existing schedules with the new ones provided
+    section.schedules = schedules;
+    await section.save();
+
+    const populated = await Section.findById(id)
+      .populate('curriculumId', 'courseCode courseTitle curriculumYear creditUnits courseLearningOutcomes status')
+      .populate('schedules.roomId', 'name roomType maximumCapacity status')
+      .populate('schedules.facultyId', 'employeeId firstName lastName department status');
+
+    return res.status(200).json(populated.toJSON());
+  } catch (err) {
+    if (err && err.name === 'ValidationError') {
+      return res.status(400).json({ message: err.message || 'Invalid schedules data.' });
+    }
+    return next(err);
+  }
+}
+
 module.exports = {
   listSections,
   createSection,
+  updateSectionResources,
   listTimeBlocks,
   createTimeBlock,
   updateTimeBlock,

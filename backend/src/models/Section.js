@@ -1,5 +1,30 @@
 const mongoose = require('mongoose');
 
+const scheduleSchema = new mongoose.Schema({
+  roomId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Room',
+    required: true,
+  },
+  facultyId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Faculty',
+    required: true,
+  },
+  dayOfWeek: {
+    type: String,
+    required: true,
+  },
+  startTime: {
+    type: String,
+    required: true,
+  },
+  endTime: {
+    type: String,
+    required: true,
+  },
+});
+
 const sectionSchema = new mongoose.Schema(
   {
     sectionIdentifier: {
@@ -35,7 +60,7 @@ const sectionSchema = new mongoose.Schema(
       default: 0,
     },
     schedules: {
-      type: [new mongoose.Schema({}, { strict: false })],
+      type: [scheduleSchema],
       default: [],
     },
   },
