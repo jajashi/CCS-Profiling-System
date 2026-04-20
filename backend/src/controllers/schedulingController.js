@@ -414,6 +414,74 @@ async function updateSectionResources(req, res, next) {
       return res.status(400).json({ message: 'Archived sections cannot be modified.' });
     }
 
+    // Validation & Conflict Check
+    const activeSections = await Section.find({
+      term: section.term,
+      academicYear: section.academicYear,
+      _id: { $ne: section._id },
+      status: { $in: ['Open', 'Waitlisted', 'Closed'] },
+    });
+
+    for (let i = 0; i < schedules.length; i++) {
+      const s = schedules[i];
+      const nStart = parseTimeToMinutes(s.startTime);
+      const nEnd = parseTimeToMinutes(s.endTime);
+
+      if (nStart == null || nEnd == null) {
+        return res.status(400).json({ message: 'Invalid startTime or endTime format. Use HH:mm.' });
+      }
+      if (nStart >= nEnd) {
+        return res.status(400).json({ message: 'startTime must be before endTime.' });
+      }
+
+      // Check intra-schedule conflicts (within the new payload itself)
+      for (let j = i + 1; j < schedules.length; j++) {
+        const s2 = schedules[j];
+        if (s.dayOfWeek === s2.dayOfWeek) {
+          const s2Start = parseTimeToMinutes(s2.startTime);
+          const s2End = parseTimeToMinutes(s2.endTime);
+          if (nStart < s2End && nEnd > s2Start) {
+            return res.status(409).json({
+              message: 'Conflict detected within the new schedules payload.',
+              conflictType: 'INTERNAL_SCHEDULE_CONFLICT',
+              sectionIdentifier: section.sectionIdentifier,
+            });
+          }
+        }
+      }
+
+      // Check external system state conflicts
+      for (const existingSec of activeSections) {
+        if (!existingSec.schedules || !Array.isArray(existingSec.schedules)) continue;
+
+        for (const ex of existingSec.schedules) {
+          if (s.dayOfWeek !== ex.dayOfWeek) continue;
+
+          const eStart = parseTimeToMinutes(ex.startTime);
+          const eEnd = parseTimeToMinutes(ex.endTime);
+
+          if (eStart == null || eEnd == null) continue;
+
+          if (nStart < eEnd && nEnd > eStart) {
+            if (s.roomId && ex.roomId && s.roomId.toString() === ex.roomId.toString()) {
+              return res.status(409).json({
+                message: 'Conflict detected: Room is already booked for this time.',
+                conflictType: 'ROOM_DOUBLE_BOOKED',
+                sectionIdentifier: existingSec.sectionIdentifier,
+              });
+            }
+            if (s.facultyId && ex.facultyId && s.facultyId.toString() === ex.facultyId.toString()) {
+              return res.status(409).json({
+                message: 'Conflict detected: Faculty is already booked for this time.',
+                conflictType: 'FACULTY_DOUBLE_BOOKED',
+                sectionIdentifier: existingSec.sectionIdentifier,
+              });
+            }
+          }
+        }
+      }
+    }
+
     // Replace the existing schedules with the new ones provided
     section.schedules = schedules;
     await section.save();
