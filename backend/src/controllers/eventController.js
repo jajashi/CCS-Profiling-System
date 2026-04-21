@@ -75,10 +75,15 @@ const createEvent = async (req, res) => {
       }
     }
 
-    // Enforce status server-side
+    // Enforce status server-side based on role
+    let eventStatus = 'pending_approval';
+    if (req.user && (req.user.role === 'admin' || req.user.role === 'faculty')) {
+      eventStatus = 'published';
+    }
+
     const newEvent = new Event({
       type,
-      status: 'draft', // Ignored client-supplied status
+      status: eventStatus,
       schedule,
       isVirtual,
       meetingUrl: isVirtual ? meetingUrl : undefined,
@@ -150,6 +155,44 @@ const updateEvent = async (req, res) => {
   }
 };
 
+const updateEventStatus = async (req, res) => {
+  try {
+    const { status, cancelReason } = req.body;
+    
+    // Strict server-side role check
+    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'faculty')) {
+      return res.status(403).json({ message: 'Unauthorized to transition event status.' });
+    }
+
+    if (status !== 'published' && status !== 'rejected') {
+      return res.status(400).json({ message: 'Invalid status transition. Use published or rejected.' });
+    }
+
+    const event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ message: 'Event not found.' });
+
+    if (status === 'rejected') {
+      event.status = 'draft';
+      event.cancelReason = cancelReason;
+      await event.save();
+      // Notify creator (mock)
+      console.log(`Notification sent to creator: Event rejected. Reason: ${cancelReason}`);
+      return res.json({ message: 'Event rejected.', event });
+    }
+
+    if (status === 'published') {
+      event.status = 'published';
+      await event.save();
+      // Trigger calendar and notification pipeline
+      console.log('Event published and calendar updated.');
+      return res.json({ message: 'Event published successfully.', event });
+    }
+
+  } catch (error) {
+    res.status(500).json({ message: 'Server error updating event status.' });
+  }
+};
+
 const deleteEvent = async (req, res) => {
   try {
     const event = await Event.findByIdAndDelete(req.params.id);
@@ -165,5 +208,6 @@ module.exports = {
   getEvents,
   getEventById,
   updateEvent,
-  deleteEvent
+  deleteEvent,
+  updateEventStatus
 };

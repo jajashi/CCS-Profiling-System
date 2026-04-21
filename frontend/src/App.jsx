@@ -14,6 +14,7 @@ import TimeBlocksPage from './features/scheduling/routes/TimeBlocksPage';
 import RoomsPage from './features/scheduling/routes/RoomsPage';
 import MySchedulePage from './features/scheduling/routes/MySchedulePage';
 import EventCreationPage from './features/events/routes/EventCreationPage';
+import EventApprovalPage from './features/events/routes/EventApprovalPage';
 import { useAuth } from './providers/AuthContext';
 
 // Protected Route Wrapper
@@ -136,6 +137,7 @@ function App() {
           <Route path="my-schedule" element={<MySchedulePage />} />
         </Route>
         <Route path="events" element={<NonStudentRoute><EventCreationPage /></NonStudentRoute>} />
+        <Route path="events/approval" element={<AdminRoute><EventApprovalPage /></AdminRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

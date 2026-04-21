@@ -111,9 +111,12 @@ export default function EventCreationForm() {
     }
   };
 
+  const isStudent = user?.role === 'student';
+  const buttonText = isStudent ? 'Submit for Approval' : 'Publish Event';
+
   return (
     <div className="event-creation-form-container">
-      <h2>Create Event</h2>
+      <h2>{isStudent ? 'Propose Event' : 'Create Event'}</h2>
       {error && <div className="error-message">{error}</div>}
       {success && <div className="success-message">Event created successfully!</div>}
       
@@ -196,7 +199,7 @@ export default function EventCreationForm() {
           <button type="button" onClick={addOrganizer} className="btn-add">Add Organizer</button>
         </div>
 
-        <button type="submit" className="btn-submit">Create Event</button>
+        <button type="submit" className="btn-submit">{buttonText}</button>
       </form>
     </div>
   );

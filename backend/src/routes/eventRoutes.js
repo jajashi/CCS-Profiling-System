@@ -5,12 +5,12 @@ const {
   getEvents,
   getEventById,
   updateEvent,
-  deleteEvent
+  deleteEvent,
+  updateEventStatus
 } = require('../controllers/eventController');
-const { protect } = require('../middleware/authMiddleware'); // assuming standard auth
+const { authenticate, requireRoles } = require('../middleware/authMiddleware');
 
-// If auth is needed: router.use(protect);
-// Or we can just build the routes since accept criteria only mention server-side enforcement.
+router.use(authenticate);
 
 router.route('/')
   .post(createEvent)
@@ -20,5 +20,7 @@ router.route('/:id')
   .get(getEventById)
   .patch(updateEvent)
   .delete(deleteEvent);
+
+router.patch('/:id/status', requireRoles('admin', 'faculty'), updateEventStatus);
 
 module.exports = router;
