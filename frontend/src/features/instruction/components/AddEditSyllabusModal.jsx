@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FiX, FiPlus, FiTrash2, FiSave, FiLoader } from 'react-icons/fi';
+import { FiX, FiPlus, FiTrash2, FiSave, FiLoader, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { apiFetch } from '../../../lib/api';
 import '../routes/SyllabusPages.css';
@@ -31,6 +31,12 @@ const csvToArray = (value) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const SYLLABUS_STEPS = [
+  { id: 'basic', label: 'Basic Info' },
+  { id: 'details', label: 'Course Details' },
+  { id: 'lessons', label: 'Lesson Plan' },
+];
+
 function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
   const [formData, setFormData] = useState(buildDefaultFormData);
   const [options, setOptions] = useState({
@@ -49,6 +55,7 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
   const [isActiveWarning, setIsActiveWarning] = useState(false);
   const [formError, setFormError] = useState('');
   const [syllabusReady, setSyllabusReady] = useState(true);
+  const [activeStep, setActiveStep] = useState(0);
   const formRef = useRef(null);
   const preferredSectionIdRef = useRef('');
   const headerDirtyRef = useRef(false);
@@ -142,6 +149,7 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
 
   useEffect(() => {
     if (isOpen) {
+      setActiveStep(0);
       loadOptions();
       if (editSyllabusId) {
         headerDirtyRef.current = false;
@@ -162,6 +170,7 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
         setFormError('');
       }
     } else {
+      setActiveStep(0);
       setFormData(buildDefaultFormData());
       setOptions({ curricula: [], faculty: [] });
       preferredSectionIdRef.current = '';
@@ -306,6 +315,16 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
     if (!formData.curriculumId) newErrors.curriculumId = 'Curriculum is required';
     if (!formData.facultyId) newErrors.facultyId = 'Faculty is required';
 
+    if (!formData.description?.trim()) {
+      newErrors.description = 'Description is required';
+    }
+    if (!formData.gradingSystem?.trim()) {
+      newErrors.gradingSystem = 'Grading system is required';
+    }
+    if (!formData.coursePolicies?.trim()) {
+      newErrors.coursePolicies = 'Course policies are required';
+    }
+
     if (!formData.weeklyLessons || formData.weeklyLessons.length < 1) {
       newErrors.weeklyLessons = 'At least one weekly lesson is required';
     } else {
@@ -317,18 +336,48 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const valid = Object.keys(newErrors).length === 0;
+    let firstErrorStep = 0;
+    if (!valid) {
+      if (newErrors.curriculumId || newErrors.facultyId) firstErrorStep = 0;
+      else if (
+        newErrors.description ||
+        newErrors.gradingSystem ||
+        newErrors.coursePolicies
+      ) {
+        firstErrorStep = 1;
+      } else if (
+        newErrors.weeklyLessons ||
+        Object.keys(newErrors).some((k) => k.startsWith('weeklyLessons.'))
+      ) {
+        firstErrorStep = 2;
+      } else {
+        firstErrorStep = 1;
+      }
+    }
+    return { valid, firstErrorStep };
   }, [formData]);
+
+  const handleStepNext = useCallback(() => {
+    setActiveStep((s) => Math.min(SYLLABUS_STEPS.length - 1, s + 1));
+  }, []);
+
+  const handleStepBack = useCallback(() => {
+    setActiveStep((s) => Math.max(0, s - 1));
+  }, []);
 
   const handleSubmit = useCallback(async (e) => {
       e.preventDefault();
       setFormError('');
 
-      if (!validateForm()) {
-        // Scroll to first error
-        formRef.current?.querySelector('.field-error')?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
+      const { valid, firstErrorStep } = validateForm();
+      if (!valid) {
+        setActiveStep(firstErrorStep);
+        requestAnimationFrame(() => {
+          formRef.current?.querySelector('.field-error')?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+          });
         });
         return;
       }
@@ -432,6 +481,24 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
   const catalogCurriculumYear = selectedCurriculum?.curriculumYear ?? sectionPreview?.curriculumYear ?? '';
   const catalogCreditUnits = selectedCurriculum?.creditUnits ?? sectionPreview?.creditUnits;
 
+  const stepProgressPct =
+    ((activeStep + 1) / SYLLABUS_STEPS.length) * 100;
+
+  /** Per-step completion for stepper visuals only (navigation is never blocked). */
+  const stepCompleteFlags = useMemo(() => {
+    const basicOk = Boolean(formData.curriculumId && formData.facultyId);
+    const detailsOk = Boolean(
+      formData.description?.trim() &&
+        formData.gradingSystem?.trim() &&
+        formData.coursePolicies?.trim()
+    );
+    const lessonsOk =
+      Array.isArray(formData.weeklyLessons) &&
+      formData.weeklyLessons.length >= 1 &&
+      formData.weeklyLessons.every((l) => l.topic && String(l.topic).trim());
+    return [basicOk, detailsOk, lessonsOk];
+  }, [formData]);
+
   if (!isOpen) return null;
 
   return (
@@ -496,10 +563,59 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
             noValidate
             className="syllabus-form"
           >
+            <div className="syllabus-modal-stepper" aria-label="Syllabus form steps">
+              <div className="syllabus-stepper-track" aria-hidden="true">
+                <div
+                  className="syllabus-stepper-track-fill"
+                  style={{ width: `${stepProgressPct}%` }}
+                />
+              </div>
+              <div className="syllabus-tablist" role="tablist" aria-label="Syllabus sections">
+                {SYLLABUS_STEPS.map((step, index) => {
+                  const isActive = activeStep === index;
+                  const isPast = activeStep > index;
+                  const stepFilled = stepCompleteFlags[index];
+                  const showCheck = isPast && stepFilled;
+                  const showPastIncomplete = isPast && !stepFilled;
+                  return (
+                    <button
+                      key={step.id}
+                      type="button"
+                      role="tab"
+                      id={`syllabus-tab-${step.id}`}
+                      aria-selected={isActive}
+                      tabIndex={isActive ? 0 : -1}
+                      aria-controls={`syllabus-panel-${step.id}`}
+                      title={
+                        showPastIncomplete
+                          ? `${step.label} — required fields not filled yet`
+                          : undefined
+                      }
+                      className={`syllabus-tab ${isActive ? 'syllabus-tab--active' : ''} ${showCheck ? 'syllabus-tab--done' : ''} ${showPastIncomplete ? 'syllabus-tab--past-incomplete' : ''}`}
+                      onClick={() => setActiveStep(index)}
+                      disabled={submitting}
+                    >
+                      <span className="syllabus-tab-index" aria-hidden="true">
+                        {showCheck ? '✓' : index + 1}
+                      </span>
+                      <span className="syllabus-tab-label">{step.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* ════════════════════════════════════════
-                SECTION 1 — HEADER DROPDOWNS
+                SECTION 1 — BASIC INFO
             ════════════════════════════════════════ */}
-            <section className="form-section">
+            {activeStep === 0 && (
+            <section
+              className="form-section"
+              role="tabpanel"
+              id="syllabus-panel-basic"
+              aria-labelledby="syllabus-tab-basic"
+            >
+              <h3 className="form-section-title">Basic Info</h3>
               <div className="form-grid">
 
                 {/* Curriculum */}
@@ -633,71 +749,94 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
                 ) : null}
               </div>
             </section>
+            )}
 
             {/* ════════════════════════════════════════
                 SECTION 2 — COURSE DETAILS
             ════════════════════════════════════════ */}
-            <section className="form-section">
+            {activeStep === 1 && (
+            <section
+              className="form-section"
+              role="tabpanel"
+              id="syllabus-panel-details"
+              aria-labelledby="syllabus-tab-details"
+            >
               <h3 className="form-section-title">Course Details</h3>
               <div className="form-grid form-grid--single">
 
                 {/* Description */}
                 <div className="form-field">
                   <label htmlFor="description" className="form-label">
-                    Description
+                    Description <span className="required-star">*</span>
                   </label>
                   <textarea
                     id="description"
-                    className="form-textarea"
+                    className={`form-textarea ${errors.description ? 'input-error' : ''}`}
                     rows={3}
                     value={formData.description}
                     onChange={(e) => handleInputChange('description', e.target.value)}
                     disabled={isDisabled}
                     placeholder="Enter course description..."
                   />
+                  {errors.description && (
+                    <span className="field-error">{errors.description}</span>
+                  )}
                 </div>
 
                 {/* Grading System */}
                 <div className="form-field">
                   <label htmlFor="gradingSystem" className="form-label">
-                    Grading System
+                    Grading System <span className="required-star">*</span>
                   </label>
                   <textarea
                     id="gradingSystem"
-                    className="form-textarea"
+                    className={`form-textarea ${errors.gradingSystem ? 'input-error' : ''}`}
                     rows={3}
                     value={formData.gradingSystem}
                     onChange={(e) => handleInputChange('gradingSystem', e.target.value)}
                     disabled={isDisabled}
                     placeholder="Describe the grading system..."
                   />
+                  {errors.gradingSystem && (
+                    <span className="field-error">{errors.gradingSystem}</span>
+                  )}
                 </div>
 
                 {/* Course Policies */}
                 <div className="form-field">
                   <label htmlFor="coursePolicies" className="form-label">
-                    Course Policies
+                    Course Policies <span className="required-star">*</span>
                   </label>
                   <textarea
                     id="coursePolicies"
-                    className="form-textarea"
+                    className={`form-textarea ${errors.coursePolicies ? 'input-error' : ''}`}
                     rows={3}
                     value={formData.coursePolicies}
                     onChange={(e) => handleInputChange('coursePolicies', e.target.value)}
                     disabled={isDisabled}
                     placeholder="Enter course policies..."
                   />
+                  {errors.coursePolicies && (
+                    <span className="field-error">{errors.coursePolicies}</span>
+                  )}
                 </div>
 
               </div>
             </section>
+            )}
 
             {/* ════════════════════════════════════════
-                SECTION 3 — WEEKLY LESSONS
+                SECTION 3 — LESSON PLAN
             ════════════════════════════════════════ */}
-            <section className="form-section">
+            {activeStep === 2 && (
+            <section
+              className="form-section"
+              role="tabpanel"
+              id="syllabus-panel-lessons"
+              aria-labelledby="syllabus-tab-lessons"
+            >
               <div className="form-section-header">
-                <h3 className="form-section-title">Weekly Lessons</h3>
+                <h3 className="form-section-title">Lesson Plan</h3>
                 <div className="lesson-actions">
                   <button
                     type="button"
@@ -865,36 +1004,63 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
                 </table>
               </div>
             </section>
+            )}
 
             {/* ════════════════════════════════════════
                 FORM FOOTER — ACTION BUTTONS
             ════════════════════════════════════════ */}
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={onClose}
-                disabled={submitting}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={isDisabled}
-              >
-                {submitting ? (
-                  <>
-                    <FiLoader className="spin-icon" />
-                    {isEditMode ? 'Saving...' : 'Creating...'}
-                  </>
-                ) : (
-                  <>
-                    <FiSave />
-                    {isEditMode ? 'Save Changes' : 'Create Syllabus'}
-                  </>
-                )}
-              </button>
+            <div className="modal-footer syllabus-modal-footer">
+              <div className="syllabus-modal-footer-nav">
+                {activeStep > 0 ? (
+                  <button
+                    type="button"
+                    className="btn btn-secondary syllabus-footer-back"
+                    onClick={handleStepBack}
+                    disabled={submitting}
+                  >
+                    <FiChevronLeft aria-hidden />
+                    Back
+                  </button>
+                ) : null}
+                {activeStep < SYLLABUS_STEPS.length - 1 ? (
+                  <button
+                    type="button"
+                    className="btn btn-primary syllabus-footer-next"
+                    onClick={handleStepNext}
+                    disabled={submitting}
+                  >
+                    Next
+                    <FiChevronRight aria-hidden />
+                  </button>
+                ) : null}
+              </div>
+              <div className="syllabus-modal-footer-actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={onClose}
+                  disabled={submitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={isDisabled}
+                >
+                  {submitting ? (
+                    <>
+                      <FiLoader className="spin-icon" />
+                      {isEditMode ? 'Saving...' : 'Creating...'}
+                    </>
+                  ) : (
+                    <>
+                      <FiSave />
+                      {isEditMode ? 'Save Changes' : 'Create Syllabus'}
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
           </form>
