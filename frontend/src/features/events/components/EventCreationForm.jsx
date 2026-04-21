@@ -91,7 +91,13 @@ export default function EventCreationForm() {
       const data = await res.json();
       
       if (!res.ok) {
-        setError(data.message || 'Failed to create event');
+        if (res.status === 409) {
+          const alertMsg = data.message || 'Venue Double-Booked';
+          setError(alertMsg);
+          window.alert(`Venue Double-Booked:\n${alertMsg}`);
+        } else {
+          setError(data.message || 'Failed to create event');
+        }
       } else {
         setSuccess(true);
         setFormData({

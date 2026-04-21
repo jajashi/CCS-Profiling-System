@@ -1,5 +1,6 @@
 const Event = require('../models/Event');
 const Room = require('../models/Room');
+const Section = require('../models/Section');
 
 const createEvent = async (req, res) => {
   try {
@@ -32,6 +33,46 @@ const createEvent = async (req, res) => {
 
     if (startHour > endHour || (startHour === endHour && startMin >= endMin)) {
       return res.status(400).json({ message: 'endTime must be strictly greater than startTime.' });
+    }
+
+    if (!isVirtual && roomId) {
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      // Assuming schedule.date is YYYY-MM-DD, parsing it as UTC gets the exact day
+      const dayOfWeek = days[new Date(schedule.date).getUTCDay()]; 
+
+      // Check Events overlap (same date, same room, overlapping times)
+      // We look for events that end strictly after our start AND start strictly before our end
+      const conflictingEvents = await Event.find({
+        roomId,
+        isVirtual: false,
+        'schedule.date': new Date(schedule.date),
+        'schedule.startTime': { $lt: schedule.endTime },
+        'schedule.endTime': { $gt: schedule.startTime }
+      });
+
+      if (conflictingEvents.length > 0) {
+        return res.status(409).json({ message: 'Venue Double-Booked: Overlaps with another event.', conflictingSchedule: 'Another event' });
+      }
+
+      // Check Sections overlap
+      const sections = await Section.find({ 'schedules.roomId': roomId });
+      let hasSectionConflict = false;
+      
+      for (const section of sections) {
+        for (const sched of section.schedules) {
+          if (sched.roomId.toString() === roomId.toString() && sched.dayOfWeek === dayOfWeek) {
+            if (schedule.startTime < sched.endTime && schedule.endTime > sched.startTime) {
+              hasSectionConflict = true;
+              break;
+            }
+          }
+        }
+        if (hasSectionConflict) break;
+      }
+
+      if (hasSectionConflict) {
+        return res.status(409).json({ message: 'Venue Double-Booked: Overlaps with an active class schedule.', conflictingSchedule: 'Class Section' });
+      }
     }
 
     // Enforce status server-side
