@@ -15,7 +15,12 @@ export default function EventCreationForm() {
     isVirtual: false,
     meetingUrl: '',
     roomId: '',
-    organizers: [{ userId: user?._id || '', role: 'Lead Organizer' }]
+    organizers: [{ userId: user?._id || '', role: 'Lead Organizer' }],
+    targetGroups: {
+      roles: [],
+      programs: [],
+      yearLevels: []
+    }
   });
 
   const [rooms, setRooms] = useState([]);
@@ -44,7 +49,22 @@ export default function EventCreationForm() {
   }, []);
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value, type, checked, options } = e.target;
+    
+    if (type === 'select-multiple') {
+      const values = Array.from(options).filter(opt => opt.selected).map(opt => opt.value);
+      if (name.startsWith('targetGroups.')) {
+        const fieldName = name.split('.')[1];
+        setFormData(prev => ({
+          ...prev,
+          targetGroups: { ...prev.targetGroups, [fieldName]: values }
+        }));
+      } else {
+        setFormData(prev => ({ ...prev, [name]: values }));
+      }
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
@@ -103,7 +123,8 @@ export default function EventCreationForm() {
         setFormData({
           type: '', title: '', date: '', startTime: '', endTime: '',
           isVirtual: false, meetingUrl: '', roomId: '',
-          organizers: [{ userId: user?._id || '', role: 'Lead Organizer' }]
+          organizers: [{ userId: user?._id || '', role: 'Lead Organizer' }],
+          targetGroups: { roles: [], programs: [], yearLevels: [] }
         });
       }
     } catch (err) {
@@ -172,6 +193,39 @@ export default function EventCreationForm() {
             </select>
           </label>
         )}
+
+        <div className="organizers-section">
+          <h3>Audience Targeting</h3>
+          <p style={{fontSize: '0.85rem', color: '#6b7280', margin: '-0.5rem 0 1rem 0'}}>Leave blank to target all users.</p>
+          <div style={{display: 'flex', gap: '1rem', flexWrap: 'wrap'}}>
+            <label style={{flex: 1}}>
+              Target Roles:
+              <select multiple name="targetGroups.roles" value={formData.targetGroups.roles} onChange={handleChange} style={{height: '80px'}}>
+                <option value="student">Student</option>
+                <option value="faculty">Faculty</option>
+                <option value="admin">Admin</option>
+              </select>
+            </label>
+            <label style={{flex: 1}}>
+              Target Programs:
+              <select multiple name="targetGroups.programs" value={formData.targetGroups.programs} onChange={handleChange} style={{height: '80px'}}>
+                <option value="BSCS">BSCS</option>
+                <option value="BSIT">BSIT</option>
+                <option value="BSIS">BSIS</option>
+                <option value="BSAM">BSAM</option>
+              </select>
+            </label>
+            <label style={{flex: 1}}>
+              Target Year Levels:
+              <select multiple name="targetGroups.yearLevels" value={formData.targetGroups.yearLevels} onChange={handleChange} style={{height: '80px'}}>
+                <option value="1">1st Year</option>
+                <option value="2">2nd Year</option>
+                <option value="3">3rd Year</option>
+                <option value="4">4th Year</option>
+              </select>
+            </label>
+          </div>
+        </div>
 
         <div className="organizers-section">
           <h3>Organizers</h3>

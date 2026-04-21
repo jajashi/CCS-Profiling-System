@@ -1,6 +1,9 @@
 const Event = require('../models/Event');
 const Room = require('../models/Room');
 const Section = require('../models/Section');
+const Notification = require('../models/Notification');
+const User = require('../models/User');
+const Student = require('../models/Student');
 
 const createEvent = async (req, res) => {
   try {
@@ -11,7 +14,8 @@ const createEvent = async (req, res) => {
       meetingUrl,
       roomId,
       title,
-      organizers
+      organizers,
+      targetGroups
     } = req.body;
 
     // Validate schedule
@@ -89,10 +93,15 @@ const createEvent = async (req, res) => {
       meetingUrl: isVirtual ? meetingUrl : undefined,
       roomId: !isVirtual ? roomId : undefined,
       title,
-      organizers
+      organizers,
+      targetGroups
     });
 
     await newEvent.save();
+
+    if (eventStatus === 'published') {
+      await dispatchEventNotifications(newEvent);
+    }
 
     res.status(201).json(newEvent);
   } catch (error) {
@@ -101,11 +110,98 @@ const createEvent = async (req, res) => {
   }
 };
 
+
+const dispatchEventNotifications = async (event) => {
+  try {
+    let matchedUserIds = new Set();
+    const { roles, programs, yearLevels } = event.targetGroups || {};
+    
+    // 1. Fetch users by role
+    if (roles && roles.length > 0) {
+      const usersByRole = await User.find({ role: { $in: roles } });
+      usersByRole.forEach(u => matchedUserIds.add(u._id.toString()));
+    }
+    
+    // 2. Fetch users by student programs / year levels
+    if ((programs && programs.length > 0) || (yearLevels && yearLevels.length > 0)) {
+      const studentQuery = {};
+      if (programs && programs.length > 0) studentQuery.program = { $in: programs };
+      if (yearLevels && yearLevels.length > 0) studentQuery.yearLevel = { $in: yearLevels };
+      
+      const matchingStudents = await Student.find(studentQuery);
+      const studentIds = matchingStudents.map(s => s.id); // Student.id maps to User.studentId
+      
+      if (studentIds.length > 0) {
+        const matchingUsers = await User.find({ studentId: { $in: studentIds } });
+        matchingUsers.forEach(u => matchedUserIds.add(u._id.toString()));
+      }
+    }
+    
+    if (matchedUserIds.size === 0 && (!roles || roles.length === 0) && (!programs || programs.length === 0) && (!yearLevels || yearLevels.length === 0)) {
+      // If targeting is completely open, maybe notify everyone or no one.
+      // Assuming 'everyone' if targetGroups is empty
+    }
+
+    const notifications = Array.from(matchedUserIds).map(userId => ({
+      userId,
+      title: `New Event: ${event.title}`,
+      message: `${event.title} is scheduled on ${new Date(event.schedule.date).toLocaleDateString()}`,
+      link: `/dashboard/events/${event._id}`
+    }));
+
+    if (notifications.length > 0) {
+      await Notification.insertMany(notifications);
+      console.log(`Dispatched ${notifications.length} notifications for event ${event._id}`);
+    }
+  } catch (error) {
+    console.error('Error dispatching notifications:', error);
+  }
+};
+
 const getEvents = async (req, res) => {
   try {
+    const userRole = req.user?.role;
+    const userStudentId = req.user?.studentId;
+    
+    let studentProgram = null;
+    let studentYear = null;
+    if (userStudentId) {
+      const student = await Student.findOne({ id: userStudentId });
+      if (student) {
+        studentProgram = student.program;
+        studentYear = student.yearLevel;
+      }
+    }
+
+    // Build the query to filter by targetGroups
+    // Events must be 'published' OR I am an organizer OR I am admin/faculty
+    // For now purely enforcing ACC-4.2
+    
     const events = await Event.find().populate('roomId');
-    res.json(events);
+    
+    // Filter events server-side based on user match
+    const filteredEvents = events.filter(e => {
+      // Basic visibility: admins/faculty see all or if I am an organizer
+      const isOrganizer = e.organizers.some(org => org.userId.toString() === req.user?._id.toString());
+      if (isOrganizer || userRole === 'admin' || userRole === 'faculty') return true;
+      if (e.status !== 'published') return false; // Students only see published
+      
+      const { roles, programs, yearLevels } = e.targetGroups || {};
+      const hasTargeting = (roles && roles.length > 0) || (programs && programs.length > 0) || (yearLevels && yearLevels.length > 0);
+      
+      if (!hasTargeting) return true; // generic audience
+      
+      let matched = false;
+      if (roles && roles.includes(userRole)) matched = true;
+      if (programs && programs.includes(studentProgram)) matched = true;
+      if (yearLevels && yearLevels.includes(studentYear)) matched = true;
+      
+      return matched;
+    });
+
+    res.json(filteredEvents);
   } catch (error) {
+    console.error('Error fetching events:', error);
     res.status(500).json({ message: 'Server error fetching events.' });
   }
 };
@@ -184,6 +280,7 @@ const updateEventStatus = async (req, res) => {
       event.status = 'published';
       await event.save();
       // Trigger calendar and notification pipeline
+      await dispatchEventNotifications(event);
       console.log('Event published and calendar updated.');
       return res.json({ message: 'Event published successfully.', event });
     }

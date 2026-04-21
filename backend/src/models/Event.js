@@ -59,6 +59,11 @@ const eventSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  targetGroups: {
+    roles: [{ type: String }],
+    programs: [{ type: String }],
+    yearLevels: [{ type: String }]
+  },
   organizers: [organizerSchema],
   cancelledAt: {
     type: Date

@@ -86,6 +86,20 @@ export default function EventApprovalQueue() {
                 ) : (
                   <p><strong>Room:</strong> {event.roomId?.name || 'N/A'}</p>
                 )}
+                <div style={{marginTop: '0.75rem', padding: '0.75rem', backgroundColor: '#f3f4f6', borderRadius: '4px'}}>
+                  <p style={{margin: '0', fontSize: '0.85rem'}}><strong>Target Audience:</strong></p>
+                  <ul style={{margin: '0.5rem 0 0 1rem', fontSize: '0.85rem', color: '#4b5563'}}>
+                    {(!event.targetGroups || (!event.targetGroups.roles?.length && !event.targetGroups.programs?.length && !event.targetGroups.yearLevels?.length)) ? (
+                      <li>Campus-Wide (All Users)</li>
+                    ) : (
+                      <>
+                        {event.targetGroups.roles && event.targetGroups.roles.length > 0 && <li>Roles: {event.targetGroups.roles.join(', ')}</li>}
+                        {event.targetGroups.programs && event.targetGroups.programs.length > 0 && <li>Programs: {event.targetGroups.programs.join(', ')}</li>}
+                        {event.targetGroups.yearLevels && event.targetGroups.yearLevels.length > 0 && <li>Year Levels: {event.targetGroups.yearLevels.join(', ')}</li>}
+                      </>
+                    )}
+                  </ul>
+                </div>
               </div>
               
               <div className="queue-card-actions">
