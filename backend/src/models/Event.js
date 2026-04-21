@@ -18,11 +18,11 @@ const scheduleSchema = new mongoose.Schema({
     required: true
   },
   startTime: {
-    type: String,
+    type: Date,
     required: true
   },
   endTime: {
-    type: String,
+    type: Date,
     required: true
   }
 }, { _id: false });
@@ -41,6 +41,10 @@ const eventSchema = new mongoose.Schema({
   schedule: {
     type: scheduleSchema,
     required: true
+  },
+  timezone: {
+    type: String,
+    default: 'UTC'
   },
   isVirtual: {
     type: Boolean,

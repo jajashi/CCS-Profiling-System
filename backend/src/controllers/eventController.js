@@ -16,7 +16,8 @@ const createEvent = async (req, res) => {
       title,
       organizers,
       targetGroups,
-      attachments
+      attachments,
+      timezone
     } = req.body;
 
     // Validate schedule
@@ -25,6 +26,9 @@ const createEvent = async (req, res) => {
     }
 
     const eventDate = new Date(schedule.date);
+    const eventStart = new Date(schedule.startTime);
+    const eventEnd = new Date(schedule.endTime);
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -32,27 +36,25 @@ const createEvent = async (req, res) => {
       return res.status(400).json({ message: 'Event date must not be in the past.' });
     }
 
-    // Convert times to comparable numbers or objects for validation
-    const [startHour, startMin] = schedule.startTime.split(':').map(Number);
-    const [endHour, endMin] = schedule.endTime.split(':').map(Number);
+    const [startHour, startMin] = [eventStart.getUTCHours(), eventStart.getUTCMinutes()];
+    const [endHour, endMin] = [eventEnd.getUTCHours(), eventEnd.getUTCMinutes()];
 
-    if (startHour > endHour || (startHour === endHour && startMin >= endMin)) {
+    if (eventStart >= eventEnd) {
       return res.status(400).json({ message: 'endTime must be strictly greater than startTime.' });
     }
 
     if (!isVirtual && roomId) {
       const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      // Assuming schedule.date is YYYY-MM-DD, parsing it as UTC gets the exact day
-      const dayOfWeek = days[new Date(schedule.date).getUTCDay()]; 
+      // Assuming schedule.date is UTC Datetime mapping back identically
+      const dayOfWeek = days[eventStart.getUTCDay()]; 
 
-      // Check Events overlap (same date, same room, overlapping times)
-      // We look for events that end strictly after our start AND start strictly before our end
+      // Check Events overlap 
+      // events with same room, overlapping times
       const conflictingEvents = await Event.find({
         roomId,
         isVirtual: false,
-        'schedule.date': new Date(schedule.date),
-        'schedule.startTime': { $lt: schedule.endTime },
-        'schedule.endTime': { $gt: schedule.startTime }
+        'schedule.startTime': { $lt: eventEnd },
+        'schedule.endTime': { $gt: eventStart }
       });
 
       if (conflictingEvents.length > 0) {
@@ -66,7 +68,12 @@ const createEvent = async (req, res) => {
       for (const section of sections) {
         for (const sched of section.schedules) {
           if (sched.roomId.toString() === roomId.toString() && sched.dayOfWeek === dayOfWeek) {
-            if (schedule.startTime < sched.endTime && schedule.endTime > sched.startTime) {
+            // section schedule times are strings like "14:30" representing local wall time. Let's compare as HH:MM strings vs UTC wall clock map or assume standard map
+            // Since Event is stored in UTC, and section schedule is string, we should map them back to strings for comparison
+            const startTimeStr = `${startHour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}`;
+            const endTimeStr = `${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}`;
+            
+            if (startTimeStr < sched.endTime && endTimeStr > sched.startTime) {
               hasSectionConflict = true;
               break;
             }
@@ -90,6 +97,7 @@ const createEvent = async (req, res) => {
       type,
       status: eventStatus,
       schedule,
+      timezone: timezone || 'UTC',
       isVirtual,
       meetingUrl: isVirtual ? meetingUrl : undefined,
       roomId: !isVirtual ? roomId : undefined,

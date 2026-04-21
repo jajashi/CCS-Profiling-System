@@ -128,10 +128,15 @@ export default function EventCreationForm() {
       }
 
       // 2. Submit event data
+      const localStartTime = new Date(`${formData.date}T${formData.startTime}:00`);
+      const localEndTime = new Date(`${formData.date}T${formData.endTime}:00`);
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
       const payload = { 
         ...formData, 
+        timezone,
         attachments: uploadedAttachments,
-        schedule: { date: formData.date, startTime: formData.startTime, endTime: formData.endTime } 
+        schedule: { date: localStartTime.toISOString(), startTime: localStartTime.toISOString(), endTime: localEndTime.toISOString() } 
       };
       
       const res = await fetch(`${apiUrl}/api/events`, {
