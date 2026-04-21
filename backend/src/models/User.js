@@ -26,7 +26,13 @@ const userSchema = new mongoose.Schema({
   studentId: {
     type: String,
     sparse: true 
-  }
+  },
+  /** Links faculty login accounts to Faculty.employeeId (e.g. FAC-2026-001). */
+  employeeId: {
+    type: String,
+    sparse: true,
+    trim: true,
+  },
 }, {
   timestamps: true
 });

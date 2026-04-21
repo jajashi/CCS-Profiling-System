@@ -1,9 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  --primary: #ff7f00;
-  --primary-hover: #e67300;
-  --primary-light: #fff3e6;
+  --primary: #f97316;
+  --primary-hover: #ea580c;
+  --primary-light: #fff7ed;
+  --accent: #f97316;
+  --accent-hover: #ea580c;
   --secondary: #1a2b5e;
   --bg-color: #f8fafc;
   --surface: #ffffff;
@@ -16,16 +18,21 @@
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
+/* Faculty portal: same CCS orange as the rest of the app (avoid clashing purple / scattered accents). */
 .theme-faculty {
-  --primary: #8b5cf6;
-  --primary-hover: #7c3aed;
-  --primary-light: #ede9fe;
+  --primary: #f97316;
+  --primary-hover: #ea580c;
+  --primary-light: #fff7ed;
+  --accent: #f97316;
+  --accent-hover: #ea580c;
 }
 
 .theme-student {
   --primary: #10b981;
   --primary-hover: #059669;
   --primary-light: #d1fae5;
+  --accent: #10b981;
+  --accent-hover: #059669;
 }
 
 * {

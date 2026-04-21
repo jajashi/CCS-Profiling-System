@@ -115,11 +115,39 @@ function mapFacultyResponse(doc) {
   return json;
 }
 
+/** Faculty role may only access their own record; requires employeeId on the JWT. */
+function requireFacultyEmployeeId(req) {
+  if (req.user.role !== 'faculty') return null;
+  const emp = req.user.employeeId != null ? String(req.user.employeeId).trim() : '';
+  if (!emp) {
+    return {
+      status: 403,
+      body: {
+        message:
+          'Faculty account is not linked to an employee ID. Ask an administrator to link your account.',
+      },
+    };
+  }
+  return emp;
+}
+
+function normalizeEmployeeIdParam(value) {
+  return String(value ?? '').trim();
+}
+
 async function getFaculty(req, res, next) {
   try {
+    const facultyScope = requireFacultyEmployeeId(req);
+    if (facultyScope && facultyScope.status) {
+      return res.status(facultyScope.status).json(facultyScope.body);
+    }
+
     const { search, department, employmentType, status, specialization, page: pageParam, limit: limitParam } =
       req.query;
     const query = {};
+    if (facultyScope) {
+      query.employeeId = new RegExp(`^${escapeRegex(facultyScope)}$`, 'i');
+    }
     const usePagination = pageParam != null || limitParam != null;
     const limit = Math.min(Math.max(parseInt(limitParam, 10) || 50, 1), 100);
     const currentPage = Math.max(parseInt(pageParam, 10) || 1, 1);
@@ -212,7 +240,17 @@ async function getNextFacultyIdPreview(req, res, next) {
 async function getFacultyById(req, res, next) {
   try {
     const { employeeId } = req.params;
-    const faculty = await Faculty.findOne({ employeeId }).populate('specializations', 'name description');
+    const facultyScope = requireFacultyEmployeeId(req);
+    if (facultyScope && facultyScope.status) {
+      return res.status(facultyScope.status).json(facultyScope.body);
+    }
+    if (facultyScope && normalizeEmployeeIdParam(employeeId).toLowerCase() !== facultyScope.toLowerCase()) {
+      return res.status(403).json({ message: 'You do not have permission to view this faculty profile.' });
+    }
+
+    const faculty = await Faculty.findOne({
+      employeeId: new RegExp(`^${escapeRegex(normalizeEmployeeIdParam(employeeId))}$`, 'i'),
+    }).populate('specializations', 'name description');
 
     if (!faculty) {
       return res.status(404).json({ message: 'Faculty record not found.' });

@@ -8,7 +8,7 @@ import { apiFetch } from '../../../lib/api';
 import './DashboardHome.css';
 
 const DashboardHome = () => {
-  const { isStudent } = useAuth();
+  const { isStudent, isAdmin } = useAuth();
   const [studentCount, setStudentCount] = useState(null);
   const [totalFacultyCount, setTotalFacultyCount] = useState(null);
   const [activeFacultyCount, setActiveFacultyCount] = useState(null);
@@ -20,18 +20,17 @@ const DashboardHome = () => {
 
     (async () => {
       try {
-        const [studentRes, facultyAnalyticsRes] = await Promise.all([
-          apiFetch('/api/students'),
-          apiFetch('/api/faculty/analytics'),
-        ]);
-
+        const studentRes = await apiFetch('/api/students');
         if (!studentRes.ok) throw new Error(`Students request failed: ${studentRes.status}`);
-        if (!facultyAnalyticsRes.ok) throw new Error(`Faculty analytics request failed: ${facultyAnalyticsRes.status}`);
+        const studentData = await studentRes.json();
 
-        const [studentData, facultyAnalytics] = await Promise.all([
-          studentRes.json(),
-          facultyAnalyticsRes.json(),
-        ]);
+        let facultyAnalytics = null;
+        if (isAdmin) {
+          const facultyAnalyticsRes = await apiFetch('/api/faculty/analytics');
+          if (facultyAnalyticsRes.ok) {
+            facultyAnalytics = await facultyAnalyticsRes.json();
+          }
+        }
 
         if (isMounted) {
           setStudentCount(Array.isArray(studentData) ? studentData.length : null);
@@ -57,7 +56,7 @@ const DashboardHome = () => {
     return () => {
       isMounted = false;
     };
-  }, [isStudent]);
+  }, [isStudent, isAdmin]);
 
   if (isStudent) {
     return (

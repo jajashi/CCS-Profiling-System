@@ -28,6 +28,10 @@ function authenticate(req, res, next) {
       id: String(decoded.id),
       role: decoded.role,
       studentId: decoded.studentId != null ? String(decoded.studentId) : null,
+      employeeId:
+        decoded.employeeId != null && String(decoded.employeeId).trim() !== ''
+          ? String(decoded.employeeId).trim()
+          : null,
     };
     return next();
   } catch {

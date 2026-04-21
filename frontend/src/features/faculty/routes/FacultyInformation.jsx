@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiBriefcase, FiEdit2, FiEye, FiInfo, FiPlus, FiSearch, FiUserCheck, FiUsers, FiX, FiPower, FiChevronLeft, FiChevronRight, FiFilter, FiChevronDown, FiChevronUp, FiLoader } from 'react-icons/fi';
+import { FiEdit2, FiEye, FiInfo, FiPlus, FiSearch, FiUserCheck, FiUsers, FiX, FiPower, FiChevronLeft, FiChevronRight, FiFilter, FiChevronDown, FiChevronUp, FiLoader } from 'react-icons/fi';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import FilterDropdown from '../../../components/Elements/FilterDropdown';
 import AddFacultyForm from '../components/AddFacultyForm';
@@ -17,7 +17,7 @@ const CollapsibleSection = ({ title, children, defaultOpen = true }) => {
         onClick={() => setIsOpen(!isOpen)} 
         style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', background: '#f9fbfd', border: 'none', cursor: 'pointer', textAlign: 'left', outline: 'none' }}
       >
-        <span style={{ fontSize: '1rem', fontWeight: 700, color: '#ff5f00' }}>{title}</span>
+        <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--primary)' }}>{title}</span>
         {isOpen ? <FiChevronUp color="#5f6368" /> : <FiChevronDown color="#5f6368" />}
       </button>
       {isOpen && (
@@ -57,7 +57,13 @@ const FACULTY_DIRECTORY_PATH = '/dashboard/faculty/directory';
 const FacultyInformation = () => {
   const navigate = useNavigate();
   const { employeeId: selectedEmployeeId } = useParams();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isFaculty, user } = useAuth();
+
+  const isOwnFacultyProfile =
+    isFaculty &&
+    user?.employeeId &&
+    selectedEmployeeId &&
+    String(selectedEmployeeId).toLowerCase() === String(user.employeeId).toLowerCase();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [query, setQuery] = useState(searchParams.get('search') || '');
@@ -141,7 +147,6 @@ const FacultyInformation = () => {
     return () => clearTimeout(timer);
   }, [query]);
 
-  /** Open add-faculty modal when linked from Faculty Dashboard empty state (?add=1). Runs before URL sync below. */
   useEffect(() => {
     if (!isAdmin || searchParams.get('add') !== '1') return undefined;
     setIsFormOpen(true);
@@ -153,8 +158,8 @@ const FacultyInformation = () => {
     return undefined;
   }, [isAdmin, searchParams, setSearchParams]);
 
-  // When filters change, sync to URL and load data
   useEffect(() => {
+    if (isOwnFacultyProfile) return undefined;
     const params = new URLSearchParams();
     if (debouncedQuery) params.set('search', debouncedQuery);
     if (departmentFilter) params.set('department', departmentFilter);
@@ -164,9 +169,20 @@ const FacultyInformation = () => {
     params.set('page', page);
     params.set('limit', limit);
     setSearchParams(params, { replace: true });
-    
+
     loadFaculty(params.toString());
-  }, [debouncedQuery, departmentFilter, employmentTypeFilter, statusFilter, specializationFilter, page, limit, setSearchParams]);
+    return undefined;
+  }, [
+    isOwnFacultyProfile,
+    debouncedQuery,
+    departmentFilter,
+    employmentTypeFilter,
+    statusFilter,
+    specializationFilter,
+    page,
+    limit,
+    setSearchParams,
+  ]);
 
   const loadFaculty = async (queryString) => {
     try {
@@ -455,19 +471,34 @@ const FacultyInformation = () => {
 
   return (
     <div className="student-directory">
-      <div className="directory-hero faculty-hero">
-        <div className="directory-hero-icon">
-          <FiUserCheck />
+      {isOwnFacultyProfile ? (
+        <div className="profile-hero-student">
+          <div className="profile-hero-content">
+            <div className="profile-hero-text">
+              <h2 className="profile-hero-title">Faculty Profile</h2>
+              <p className="profile-hero-subtitle">
+                View your employment, contact, and qualification records.
+              </p>
+            </div>
+          </div>
         </div>
-        <div>
-          <p className="directory-hero-title">Faculty Information</p>
-          <p className="directory-hero-subtitle">
-            <FiInfo />
-            <span>Manage faculty records and review profile details from one directory.</span>
-          </p>
+      ) : (
+        <div className="directory-hero faculty-hero">
+          <div className="directory-hero-icon">
+            <FiUserCheck />
+          </div>
+          <div>
+            <p className="directory-hero-title">Faculty Information</p>
+            <p className="directory-hero-subtitle">
+              <FiInfo />
+              <span>Manage faculty records and review profile details from one directory.</span>
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
+      {!isOwnFacultyProfile ? (
+        <>
       <div className="table-card">
         <div className="table-toolbar">
           <div className="search-box">
@@ -500,7 +531,7 @@ const FacultyInformation = () => {
               <button
                 type="button"
                 onClick={openCreateForm}
-                className="inline-flex min-h-[44px] min-w-[180px] items-center justify-center whitespace-nowrap rounded-xl bg-[#ff7f00] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#e67300] focus:outline-none focus:ring-2 focus:ring-[#fff3e6]"
+                className="inline-flex min-h-[44px] min-w-[180px] items-center justify-center whitespace-nowrap rounded-xl bg-orange-500 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-100"
                 aria-label="Add new faculty"
                 disabled={loading}
               >
@@ -612,7 +643,7 @@ const FacultyInformation = () => {
               aria-busy="true"
               aria-label="Loading faculty"
             >
-              <FiLoader className="animate-spin text-[#ff7f00]" size={28} />
+              <FiLoader className="animate-spin text-orange-500" size={28} />
             </div>
           ) : null}
 
@@ -723,7 +754,7 @@ const FacultyInformation = () => {
                   <td colSpan="8" className="empty-row text-center py-8">
                     No faculty records found. <br />
                     {isAdmin && (
-                      <button onClick={openCreateForm} className="text-[#ff7f00] underline mt-2 hover:text-[#e67300]">
+                      <button onClick={openCreateForm} className="text-orange-500 underline mt-2 hover:text-orange-600">
                         Click here to add a new faculty member.
                       </button>
                     )}
@@ -755,19 +786,27 @@ const FacultyInformation = () => {
           </button>
         </div>
       )}
+        </>
+      ) : null}
 
       {selectedFaculty ? (
-        <div className="student-modal-backdrop" onClick={goToDirectory}>
+        <div
+          className={isOwnFacultyProfile ? 'student-full-page' : 'student-modal-backdrop'}
+          onClick={() => !isOwnFacultyProfile && goToDirectory()}
+          role={isOwnFacultyProfile ? undefined : 'presentation'}
+        >
           <div className="student-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="breadcrumb-bar">
-              <button className="breadcrumb-link" type="button" onClick={goToDirectory}>
-                Faculty Directory
-              </button>
-              <span className="breadcrumb-separator">/</span>
-              <span className="breadcrumb-current">
-                Profile
-              </span>
-            </div>
+            {!isOwnFacultyProfile ? (
+              <div className="breadcrumb-bar">
+                <button className="breadcrumb-link" type="button" onClick={goToDirectory}>
+                  Faculty Directory
+                </button>
+                <span className="breadcrumb-separator">/</span>
+                <span className="breadcrumb-current">
+                  Profile
+                </span>
+              </div>
+            ) : null}
             <div className="modal-header">
               <div className="profile-header">
                 <img
@@ -797,14 +836,16 @@ const FacultyInformation = () => {
                     <span>Edit Profile</span>
                   </button>
                 ) : null}
-                <button
-                  className="modal-close"
-                  onClick={goToDirectory}
-                  aria-label="Close dialog"
-                  type="button"
-                >
-                  <FiX />
-                </button>
+                {!isOwnFacultyProfile ? (
+                  <button
+                    className="modal-close"
+                    onClick={goToDirectory}
+                    aria-label="Close dialog"
+                    type="button"
+                  >
+                    <FiX />
+                  </button>
+                ) : null}
               </div>
             </div>
 
@@ -943,14 +984,16 @@ const FacultyInformation = () => {
                 )}
               </CollapsibleSection>
 
-              <CollapsibleSection title="Internal Notes">
-                <textarea 
-                  className="readonly-field" 
-                  value={selectedFaculty.internalNotes || 'No internal notes available.'} 
-                  readOnly 
-                  style={{ width: '100%', minHeight: '80px', resize: 'vertical' }}
-                />
-              </CollapsibleSection>
+              {!isOwnFacultyProfile ? (
+                <CollapsibleSection title="Internal Notes">
+                  <textarea
+                    className="readonly-field"
+                    value={selectedFaculty.internalNotes || 'No internal notes available.'}
+                    readOnly
+                    style={{ width: '100%', minHeight: '80px', resize: 'vertical' }}
+                  />
+                </CollapsibleSection>
+              ) : null}
 
               <CollapsibleSection title="Teaching Load Summary">
                 <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '8px', color: '#64748b', textAlign: 'center', fontStyle: 'italic' }}>

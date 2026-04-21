@@ -634,23 +634,120 @@ async function getRoomUtilization(req, res, next) {
   }
 }
 
+async function resolveFacultyForSchedulingUser(req) {
+  const User = mongoose.model('User');
+  const Faculty = mongoose.model('Faculty');
+
+  const user = await User.findById(req.user.id);
+  if (!user || user.role !== 'faculty') {
+    return { ok: false, status: 403, message: 'Access denied: Must be authenticated as a faculty member.' };
+  }
+
+  const fromJwt = req.user.employeeId != null ? String(req.user.employeeId).trim() : '';
+  const fromDb = user.employeeId != null ? String(user.employeeId).trim() : '';
+  const fromUsername = user.username != null ? String(user.username).trim() : '';
+  const lookupKey = fromJwt || fromDb || fromUsername;
+  if (!lookupKey) {
+    return { ok: false, status: 404, message: 'Faculty profile not found for this user.' };
+  }
+  const faculty = await Faculty.findOne({
+    employeeId: new RegExp(`^${escapeRegex(lookupKey)}$`, 'i'),
+  });
+  if (!faculty) {
+    return { ok: false, status: 404, message: 'Faculty profile not found for this user.' };
+  }
+  return { ok: true, faculty };
+}
+
+/**
+ * Unique sections the faculty teaches: from timetable assignments and/or syllabi linked to a section.
+ */
+async function getMyClasses(req, res, next) {
+  try {
+    const { term } = req.query;
+    const resolved = await resolveFacultyForSchedulingUser(req);
+    if (!resolved.ok) {
+      return res.status(resolved.status).json({ message: resolved.message });
+    }
+    const { faculty } = resolved;
+
+    const Section = await resolveSectionModel();
+    if (!Section) {
+      return res.status(503).json({ message: 'Scheduling module is not available.' });
+    }
+
+    const { Syllabus: SyllabusModel } = require('../models/Syllabus');
+
+    const baseQuery = {
+      status: { $in: ['Open', 'Waitlisted', 'Closed'] },
+    };
+    if (term) {
+      baseQuery.term = term;
+    }
+
+    const sectionIdSet = new Set();
+
+    const sectionsWithFaculty = await Section.find({
+      ...baseQuery,
+      schedules: { $elemMatch: { facultyId: faculty._id } },
+    })
+      .select('_id')
+      .lean();
+    sectionsWithFaculty.forEach((s) => sectionIdSet.add(s._id.toString()));
+
+    const syllabiWithSections = await SyllabusModel.find({
+      facultyId: faculty._id,
+      sectionId: { $ne: null },
+    })
+      .select('sectionId _id')
+      .lean();
+
+    const syllabusBySectionId = new Map();
+    for (const syll of syllabiWithSections) {
+      const sid = syll.sectionId.toString();
+      sectionIdSet.add(sid);
+      syllabusBySectionId.set(sid, syll._id.toString());
+    }
+
+    if (sectionIdSet.size === 0) {
+      return res.status(200).json([]);
+    }
+
+    const sectionQuery = {
+      _id: { $in: [...sectionIdSet].map((id) => new mongoose.Types.ObjectId(id)) },
+      ...baseQuery,
+    };
+
+    const sections = await Section.find(sectionQuery)
+      .populate('curriculumId', 'courseCode courseTitle')
+      .sort({ academicYear: -1, term: 1, sectionIdentifier: 1 })
+      .lean();
+
+    const rows = sections.map((sec) => ({
+      sectionId: sec._id.toString(),
+      sectionIdentifier: sec.sectionIdentifier,
+      term: sec.term,
+      academicYear: sec.academicYear,
+      courseCode: sec.curriculumId?.courseCode,
+      courseTitle: sec.curriculumId?.courseTitle,
+      syllabusId: syllabusBySectionId.get(sec._id.toString()) || null,
+      enrolledCount: Array.isArray(sec.enrolledStudentIds) ? sec.enrolledStudentIds.length : 0,
+    }));
+
+    return res.status(200).json(rows);
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function getMySchedule(req, res, next) {
   try {
     const { term } = req.query; // optional term filter
-    const userId = req.user.id;
-    const User = mongoose.model('User');
-    const Faculty = mongoose.model('Faculty');
-
-    const user = await User.findById(userId);
-    if (!user || user.role !== 'faculty') {
-      return res.status(403).json({ message: 'Access denied: Must be authenticated as a faculty member.' });
+    const resolved = await resolveFacultyForSchedulingUser(req);
+    if (!resolved.ok) {
+      return res.status(resolved.status).json({ message: resolved.message });
     }
-
-    // username of a faculty User is their exact employeeId (e.g. 'fac-2025-001')
-    const faculty = await Faculty.findOne({ employeeId: new RegExp(`^${escapeRegex(user.username)}$`, 'i') });
-    if (!faculty) {
-      return res.status(404).json({ message: 'Faculty profile not found for this user.' });
-    }
+    const { faculty } = resolved;
 
     const Section = await resolveSectionModel();
     const query = { status: { $in: ['Open', 'Waitlisted', 'Closed'] } };
@@ -703,13 +800,177 @@ async function getMySchedule(req, res, next) {
   }
 }
 
+async function facultyTeachesSection(facultyMongoId, sectionDoc) {
+  const fid = String(facultyMongoId);
+  const has = Array.isArray(sectionDoc.schedules)
+    && sectionDoc.schedules.some((s) => s.facultyId && String(s.facultyId) === fid);
+  if (has) return true;
+  const { Syllabus: SyllabusModel } = require('../models/Syllabus');
+  const syll = await SyllabusModel.findOne({ sectionId: sectionDoc._id, facultyId: facultyMongoId })
+    .select('_id')
+    .lean();
+  return Boolean(syll);
+}
+
+async function assertStaffCanManageSectionRoster(req, sectionDoc) {
+  if (req.user?.role === 'admin') return { ok: true };
+  if (req.user?.role !== 'faculty') {
+    return { ok: false, status: 403, message: 'Access denied.' };
+  }
+  const resolved = await resolveFacultyForSchedulingUser(req);
+  if (!resolved.ok) return { ok: false, status: resolved.status, message: resolved.message };
+  const teaches = await facultyTeachesSection(resolved.faculty._id, sectionDoc);
+  if (!teaches) {
+    return { ok: false, status: 403, message: 'You are not assigned to this section.' };
+  }
+  return { ok: true };
+}
+
+async function resolveStudentObjectIdsFromBody(ids) {
+  const Student = require('../models/Student');
+  const out = [];
+  const seen = new Set();
+  if (!Array.isArray(ids)) return out;
+  for (const raw of ids) {
+    const s = String(raw ?? '').trim();
+    if (!s) continue;
+    let doc = null;
+    if (mongoose.Types.ObjectId.isValid(s)) {
+      doc = await Student.findById(s);
+    }
+    if (!doc) doc = await Student.findOne({ id: s });
+    if (doc && !seen.has(doc._id.toString())) {
+      seen.add(doc._id.toString());
+      out.push(doc._id);
+    }
+  }
+  return out;
+}
+
+async function getSectionRoster(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid section id.' });
+    }
+    const Section = await resolveSectionModel();
+    if (!Section) return res.status(503).json({ message: 'Scheduling module is not available.' });
+
+    const section = await Section.findById(id).populate('curriculumId', 'courseCode courseTitle').lean();
+    if (!section) return res.status(404).json({ message: 'Section not found.' });
+
+    const gate = await assertStaffCanManageSectionRoster(req, section);
+    if (!gate.ok) return res.status(gate.status).json({ message: gate.message });
+
+    const Student = require('../models/Student');
+    const ids = Array.isArray(section.enrolledStudentIds) ? section.enrolledStudentIds : [];
+    const docs = await Student.find({ _id: { $in: ids } }).lean();
+    const byId = new Map(docs.map((d) => [d._id.toString(), d]));
+    const ordered = ids.map((oid) => byId.get(String(oid))).filter(Boolean);
+
+    return res.status(200).json({
+      section: {
+        sectionId: section._id.toString(),
+        sectionIdentifier: section.sectionIdentifier,
+        term: section.term,
+        academicYear: section.academicYear,
+        courseCode: section.curriculumId?.courseCode,
+        courseTitle: section.curriculumId?.courseTitle,
+      },
+      students: ordered.map((st) => ({
+        _id: st._id.toString(),
+        id: st.id,
+        firstName: st.firstName,
+        lastName: st.lastName,
+        program: st.program,
+        yearLevel: st.yearLevel,
+        email: st.email,
+        status: st.status,
+      })),
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function patchSectionRoster(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid section id.' });
+    }
+    const Section = await resolveSectionModel();
+    if (!Section) return res.status(503).json({ message: 'Scheduling module is not available.' });
+
+    const section = await Section.findById(id);
+    if (!section) return res.status(404).json({ message: 'Section not found.' });
+    if (section.status === 'Archived') {
+      return res.status(400).json({ message: 'Cannot modify roster for an archived section.' });
+    }
+
+    const gate = await assertStaffCanManageSectionRoster(req, section);
+    if (!gate.ok) return res.status(gate.status).json({ message: gate.message });
+
+    const add = req.body?.add;
+    const remove = req.body?.remove;
+    if (!Array.isArray(add) && !Array.isArray(remove)) {
+      return res.status(400).json({ message: 'Provide add and/or remove as arrays of student ids.' });
+    }
+
+    const addIds = await resolveStudentObjectIdsFromBody(Array.isArray(add) ? add : []);
+    const removeIds = await resolveStudentObjectIdsFromBody(Array.isArray(remove) ? remove : []);
+
+    const set = new Set((section.enrolledStudentIds || []).map((x) => x.toString()));
+    for (const r of removeIds) set.delete(r.toString());
+    for (const a of addIds) set.add(a.toString());
+
+    section.enrolledStudentIds = [...set].map((s) => new mongoose.Types.ObjectId(s));
+    section.currentEnrollmentCount = section.enrolledStudentIds.length;
+    await section.save();
+
+    const populated = await Section.findById(id).populate('curriculumId', 'courseCode courseTitle').lean();
+    const Student = require('../models/Student');
+    const ids2 = populated.enrolledStudentIds || [];
+    const docs = await Student.find({ _id: { $in: ids2 } }).lean();
+    const byId = new Map(docs.map((d) => [d._id.toString(), d]));
+    const ordered = ids2.map((oid) => byId.get(String(oid))).filter(Boolean);
+
+    return res.status(200).json({
+      section: {
+        sectionId: populated._id.toString(),
+        sectionIdentifier: populated.sectionIdentifier,
+        term: populated.term,
+        academicYear: populated.academicYear,
+        courseCode: populated.curriculumId?.courseCode,
+        courseTitle: populated.curriculumId?.courseTitle,
+        enrolledCount: ordered.length,
+      },
+      students: ordered.map((st) => ({
+        _id: st._id.toString(),
+        id: st.id,
+        firstName: st.firstName,
+        lastName: st.lastName,
+        program: st.program,
+        yearLevel: st.yearLevel,
+        email: st.email,
+        status: st.status,
+      })),
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   listSections,
   createSection,
   updateSectionResources,
   getScheduleMatrix,
   getRoomUtilization,
+  getMyClasses,
   getMySchedule,
+  getSectionRoster,
+  patchSectionRoster,
   listTimeBlocks,
   createTimeBlock,
   updateTimeBlock,

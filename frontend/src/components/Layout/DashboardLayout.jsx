@@ -7,10 +7,12 @@ import ConflictAlertModal from '../Elements/ConflictAlertModal';
 import './DashboardLayout.css';
 
 const DashboardLayout = () => {
-  const { isStudent } = useAuth();
-  
+  const { isStudent, isFaculty } = useAuth();
+
+  const layoutClass = isStudent ? 'student-layout' : isFaculty ? 'faculty-layout' : 'admin-layout';
+
   return (
-    <div className={`dashboard-container ${isStudent ? 'student-layout' : 'admin-layout'}`}>
+    <div className={`dashboard-container ${layoutClass}`}>
       <Sidebar />
       <div className="dashboard-main">
         <TopBar />

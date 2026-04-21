@@ -19,6 +19,7 @@ import EventCreationPage from './features/events/routes/EventCreationPage';
 import EventApprovalPage from './features/events/routes/EventApprovalPage';
 import EventDetailPage from './features/events/routes/EventDetailPage';
 import GlobalCalendarPage from './features/events/routes/GlobalCalendarPage';
+import FacultyMyClassesPage from './features/faculty/routes/FacultyMyClassesPage';
 import { useAuth } from './providers/AuthContext';
 
 // Protected Route Wrapper
@@ -52,6 +53,21 @@ const NonStudentRoute = ({ children }) => {
   return children;
 };
 
+/** Faculty-only pages (e.g. class management); admins use other scheduling tools. */
+const FacultyOnlyRoute = ({ children }) => {
+  const { isAuthenticated, isFaculty, isStudent } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  if (isStudent) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  if (!isFaculty) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+};
+
 /** Students may not use the full directory index; send them to their profile. */
 const StudentDirectoryRoute = ({ children }) => {
   const { isAuthenticated, isStudent, user } = useAuth();
@@ -77,6 +93,67 @@ const StudentProfileRoute = ({ children }) => {
   return children;
 };
 
+/** Faculty may not browse the full directory index; open their own profile. */
+const FacultyDirectoryRoute = ({ children }) => {
+  const { isAuthenticated, isFaculty, user } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  if (isFaculty && user?.employeeId) {
+    return (
+      <Navigate
+        to={`/dashboard/faculty/directory/${encodeURIComponent(user.employeeId)}`}
+        replace
+      />
+    );
+  }
+  return children;
+};
+
+/** Faculty may only open their own faculty profile URL. */
+const FacultyProfileRoute = ({ children }) => {
+  const { employeeId } = useParams();
+  const { isAuthenticated, isFaculty, user } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  if (
+    isFaculty &&
+    user?.employeeId &&
+    String(employeeId || '').toLowerCase() !== String(user.employeeId).toLowerCase()
+  ) {
+    return (
+      <Navigate
+        to={`/dashboard/faculty/directory/${encodeURIComponent(user.employeeId)}`}
+        replace
+      />
+    );
+  }
+  return children;
+};
+
+/** Legacy /faculty/profile → own directory URL for faculty, or full directory for admin. */
+const FacultyProfileIndexRedirect = () => {
+  const { isFaculty, user } = useAuth();
+  if (isFaculty && user?.employeeId) {
+    return (
+      <Navigate
+        to={`/dashboard/faculty/directory/${encodeURIComponent(user.employeeId)}`}
+        replace
+      />
+    );
+  }
+  return <Navigate to="/dashboard/faculty/directory" replace />;
+};
+
+function DashboardIndex() {
+  const { isFaculty } = useAuth();
+  if (isFaculty) {
+    return <Navigate to="/dashboard/faculty/classes" replace />;
+  }
+  return <DashboardHome />;
+}
+
 function App() {
   return (
     <Routes>
@@ -89,7 +166,7 @@ function App() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<DashboardHome />} />
+        <Route index element={<DashboardIndex />} />
         <Route path="student-info" element={<StudentDirectoryRoute><StudentInformation /></StudentDirectoryRoute>} />
         <Route path="student-info/:id" element={<StudentProfileRoute><StudentInformation /></StudentProfileRoute>} />
         
@@ -101,8 +178,26 @@ function App() {
             </AdminRoute>
           )}
         />
-        <Route path="faculty/directory" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />
-        <Route path="faculty/directory/:employeeId" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />
+        <Route
+          path="faculty/directory"
+          element={(
+            <NonStudentRoute>
+              <FacultyDirectoryRoute>
+                <FacultyInformation />
+              </FacultyDirectoryRoute>
+            </NonStudentRoute>
+          )}
+        />
+        <Route
+          path="faculty/directory/:employeeId"
+          element={(
+            <NonStudentRoute>
+              <FacultyProfileRoute>
+                <FacultyInformation />
+              </FacultyProfileRoute>
+            </NonStudentRoute>
+          )}
+        />
         <Route
           path="faculty/specializations"
           element={(
@@ -111,11 +206,45 @@ function App() {
             </AdminRoute>
           )}
         />
-        <Route path="faculty/profile" element={<Navigate to="/dashboard/faculty/directory" replace />} />
-        <Route path="faculty/profile/:employeeId" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />
-        <Route path="faculty-info" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />
-        <Route path="faculty-info/:employeeId" element={<NonStudentRoute><FacultyInformation /></NonStudentRoute>} />
-        
+        <Route path="faculty/profile" element={<FacultyProfileIndexRedirect />} />
+        <Route
+          path="faculty/profile/:employeeId"
+          element={(
+            <NonStudentRoute>
+              <FacultyProfileRoute>
+                <FacultyInformation />
+              </FacultyProfileRoute>
+            </NonStudentRoute>
+          )}
+        />
+        <Route
+          path="faculty-info"
+          element={(
+            <NonStudentRoute>
+              <FacultyDirectoryRoute>
+                <FacultyInformation />
+              </FacultyDirectoryRoute>
+            </NonStudentRoute>
+          )}
+        />
+        <Route
+          path="faculty-info/:employeeId"
+          element={(
+            <NonStudentRoute>
+              <FacultyProfileRoute>
+                <FacultyInformation />
+              </FacultyProfileRoute>
+            </NonStudentRoute>
+          )}
+        />
+        <Route
+          path="faculty/classes"
+          element={(
+            <FacultyOnlyRoute>
+              <FacultyMyClassesPage />
+            </FacultyOnlyRoute>
+          )}
+        />
         <Route
           path="reports"
           element={(

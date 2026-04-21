@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FiArchive, FiBookOpen, FiEdit2, FiEye, FiPlus, FiRotateCcw, FiSearch, FiX } from 'react-icons/fi';
 import { apiFetch } from '../../../lib/api';
+import { readFacultyCache, writeFacultyCache } from '../../../lib/facultyPortalCache';
 import { useAuth } from '../../../providers/AuthContext';
 import CurriculumYearPicker from '../components/CurriculumYearPicker';
 import '../../students/routes/StudentInformation.css';
@@ -12,6 +13,10 @@ const PROGRAM_OPTIONS = ['IT', 'CS', 'General'];
 const STATUS_OPTIONS = ['Active', 'Archived', 'All'];
 const MAX_COURSE_CODE_LEN = 8;
 const PAGE_SIZE = 50;
+
+function curriculaCacheKey(programFilter, statusFilter) {
+  return `curricula:${programFilter}:${statusFilter}`;
+}
 
 const CURRENT_YEAR = new Date().getFullYear();
 const CURRICULUM_YEAR_MIN = 2000;
@@ -250,8 +255,15 @@ function CurriculumFormModal({ mode, initialData, onClose, onSaved, options }) {
 
 export default function CurriculaManagement() {
   const { isAdmin } = useAuth();
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState(() => {
+    const c = readFacultyCache(curriculaCacheKey('All', 'Active'));
+    return !isAdmin && c?.rows && Array.isArray(c.rows) ? c.rows : [];
+  });
+  const [loading, setLoading] = useState(() => {
+    if (isAdmin) return true;
+    const c = readFacultyCache(curriculaCacheKey('All', 'Active'));
+    return !c?.rows;
+  });
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [programFilter, setProgramFilter] = useState('All');
@@ -277,8 +289,16 @@ export default function CurriculaManagement() {
   }, []);
 
   const loadCurricula = useCallback(async () => {
-    setLoading(true);
-    setError('');
+    const cacheKey = !isAdmin ? curriculaCacheKey(programFilter, statusFilter) : null;
+    const cached = cacheKey ? readFacultyCache(cacheKey) : null;
+    if (cached?.rows) {
+      setRows(cached.rows);
+      setLoading(false);
+      setError('');
+    } else {
+      setLoading(true);
+      setError('');
+    }
     try {
       const params = new URLSearchParams();
       if (statusFilter && statusFilter !== 'All') params.set('status', statusFilter);
@@ -288,21 +308,31 @@ export default function CurriculaManagement() {
       const res = await apiFetch(`/api/curricula${queryString ? `?${queryString}` : ''}`);
       const data = await res.json().catch(() => []);
       if (!res.ok) {
-        setError(data?.message || `Could not load curricula (${res.status}).`);
-        setRows([]);
+        if (cacheKey && cached?.rows) {
+          setError('');
+        } else {
+          setError(data?.message || `Could not load curricula (${res.status}).`);
+          setRows([]);
+        }
         return;
       }
-      setRows(Array.isArray(data) ? data : []);
+      const nextRows = Array.isArray(data) ? data : [];
+      setRows(nextRows);
+      if (cacheKey) writeFacultyCache(cacheKey, { rows: nextRows });
     } catch {
-      setError('Network error. Please try again.');
-      setRows([]);
+      if (!cacheKey || !cached?.rows) {
+        setError('Network error. Please try again.');
+        setRows([]);
+      }
     } finally {
       setLoading(false);
     }
-  }, [programFilter, statusFilter]);
+  }, [isAdmin, programFilter, statusFilter]);
 
   useEffect(() => { loadCurricula(); }, [loadCurricula]);
-  useEffect(() => { loadActiveCodes(); }, [loadActiveCodes]);
+  useEffect(() => {
+    if (isAdmin) loadActiveCodes();
+  }, [isAdmin, loadActiveCodes]);
   useEffect(() => { setPage(1); }, [search, programFilter, statusFilter]);
 
   const filteredRows = useMemo(() => {
@@ -404,7 +434,11 @@ export default function CurriculaManagement() {
         <div>
           <p className="directory-hero-title">Curriculum catalog</p>
           <p className="directory-hero-subtitle">
-            <span>Manage course frameworks for IT, CS, and institution-wide General subjects.</span>
+            <span>
+              {isAdmin
+                ? 'Manage course frameworks for IT, CS, and institution-wide General subjects.'
+                : 'Browse course frameworks for IT, CS, and institution-wide General subjects. Editing is limited to administrators.'}
+            </span>
           </p>
         </div>
       </div>
@@ -426,10 +460,12 @@ export default function CurriculaManagement() {
                 </span>
               </div>
             ) : null}
-            <button type="button" className="spec-btn-primary" onClick={() => { setViewRow(null); setFormModal({ mode: 'create', data: emptyForm() }); }}>
-              <FiPlus />
-              <span>Add curriculum</span>
-            </button>
+            {isAdmin ? (
+              <button type="button" className="spec-btn-primary" onClick={() => { setViewRow(null); setFormModal({ mode: 'create', data: emptyForm() }); }}>
+                <FiPlus />
+                <span>Add curriculum</span>
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -493,31 +529,35 @@ export default function CurriculaManagement() {
                         <button type="button" className="action-btn view" title="View curriculum" aria-label="View curriculum" onClick={() => setViewRow(row)}>
                           <FiEye />
                         </button>
-                        <button type="button" className="action-btn edit" title="Edit curriculum" aria-label="Edit curriculum" onClick={() => openEdit(row)}>
-                          <FiEdit2 />
-                        </button>
-                        {archived && isAdmin ? (
-                          <button
-                            type="button"
-                            className="action-btn toggle curriculum-restore-btn"
-                            onClick={() => handleRestore(row)}
-                            disabled={restoreSubmittingId === row._id}
-                            title="Restore curriculum"
-                            aria-label="Restore curriculum"
-                          >
-                            <FiRotateCcw />
-                          </button>
+                        {isAdmin ? (
+                          <>
+                            <button type="button" className="action-btn edit" title="Edit curriculum" aria-label="Edit curriculum" onClick={() => openEdit(row)}>
+                              <FiEdit2 />
+                            </button>
+                            {archived ? (
+                              <button
+                                type="button"
+                                className="action-btn toggle curriculum-restore-btn"
+                                onClick={() => handleRestore(row)}
+                                disabled={restoreSubmittingId === row._id}
+                                title="Restore curriculum"
+                                aria-label="Restore curriculum"
+                              >
+                                <FiRotateCcw />
+                              </button>
+                            ) : null}
+                            <button
+                              type="button"
+                              className="action-btn delete"
+                              onClick={() => openArchiveConfirm(row)}
+                              disabled={archived}
+                              title={archived ? 'Already archived' : 'Archive curriculum'}
+                              aria-label="Archive curriculum"
+                            >
+                              <FiArchive />
+                            </button>
+                          </>
                         ) : null}
-                        <button
-                          type="button"
-                          className="action-btn delete"
-                          onClick={() => openArchiveConfirm(row)}
-                          disabled={archived}
-                          title={archived ? 'Already archived' : 'Archive curriculum'}
-                          aria-label="Archive curriculum"
-                        >
-                          <FiArchive />
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -543,37 +583,41 @@ export default function CurriculaManagement() {
                 </p>
               </div>
               <div className="flex items-start gap-2">
-                <button
-                  type="button"
-                  className="modal-edit-btn"
-                  onClick={() => {
-                    const r = viewRow;
-                    openEdit(r);
-                  }}
-                >
-                  <FiEdit2 />
-                  <span>Edit</span>
-                </button>
-                {viewRow.status === 'Archived' && isAdmin ? (
-                  <button
-                    type="button"
-                    className="modal-edit-btn"
-                    onClick={() => handleRestore(viewRow)}
-                    disabled={restoreSubmittingId === viewRow._id}
-                  >
-                    <FiRotateCcw />
-                    <span>Restore</span>
-                  </button>
-                ) : null}
-                {viewRow.status !== 'Archived' ? (
-                  <button
-                    type="button"
-                    className="modal-edit-btn modal-delete-btn"
-                    onClick={() => openArchiveConfirm(viewRow)}
-                  >
-                    <FiArchive />
-                    <span>Archive</span>
-                  </button>
+                {isAdmin ? (
+                  <>
+                    <button
+                      type="button"
+                      className="modal-edit-btn"
+                      onClick={() => {
+                        const r = viewRow;
+                        openEdit(r);
+                      }}
+                    >
+                      <FiEdit2 />
+                      <span>Edit</span>
+                    </button>
+                    {viewRow.status === 'Archived' ? (
+                      <button
+                        type="button"
+                        className="modal-edit-btn"
+                        onClick={() => handleRestore(viewRow)}
+                        disabled={restoreSubmittingId === viewRow._id}
+                      >
+                        <FiRotateCcw />
+                        <span>Restore</span>
+                      </button>
+                    ) : null}
+                    {viewRow.status !== 'Archived' ? (
+                      <button
+                        type="button"
+                        className="modal-edit-btn modal-delete-btn"
+                        onClick={() => openArchiveConfirm(viewRow)}
+                      >
+                        <FiArchive />
+                        <span>Archive</span>
+                      </button>
+                    ) : null}
+                  </>
                 ) : null}
                 <button type="button" className="modal-close" onClick={() => setViewRow(null)} aria-label="Close">
                   <FiX />
@@ -645,7 +689,7 @@ export default function CurriculaManagement() {
         </div>
       ) : null}
 
-      {formModal ? <CurriculumFormModal mode={formModal.mode} initialData={formModal.data} options={activeCodes} onClose={() => setFormModal(null)} onSaved={handleSaved} /> : null}
+      {formModal && isAdmin ? <CurriculumFormModal mode={formModal.mode} initialData={formModal.data} options={activeCodes} onClose={() => setFormModal(null)} onSaved={handleSaved} /> : null}
       {deleteTarget ? (
         <div className="spec-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="curriculum-delete-title">
           <div className="spec-modal">

@@ -21,14 +21,32 @@ const login = async (req, res, next) => {
       return res.status(401).json({ message: 'Invalid password' });
     }
 
+    const trimmedStudentId =
+      user.studentId != null && String(user.studentId).trim() !== ''
+        ? String(user.studentId).trim()
+        : null;
+
+    let facultyEmployeeId = null;
+    if (user.role === 'faculty') {
+      const fromField = user.employeeId != null ? String(user.employeeId).trim() : '';
+      if (fromField) {
+        facultyEmployeeId = fromField;
+      } else {
+        const u = String(user.username || '').trim();
+        const m = u.match(/^(FAC)-(\d{4})-(\d{3})$/i);
+        if (m) {
+          facultyEmployeeId = `${m[1].toUpperCase()}-${m[2]}-${m[3]}`;
+        }
+      }
+    }
+
     const secret = getJwtSecret();
     const token = jwt.sign(
       {
         id: user._id.toString(),
         role: user.role,
-        ...(user.studentId != null && String(user.studentId).trim() !== ''
-          ? { studentId: String(user.studentId).trim() }
-          : {}),
+        ...(trimmedStudentId ? { studentId: trimmedStudentId } : {}),
+        ...(facultyEmployeeId ? { employeeId: facultyEmployeeId } : {}),
       },
       secret,
       { expiresIn: '24h' },
@@ -42,7 +60,8 @@ const login = async (req, res, next) => {
         username: user.username,
         name: user.name,
         role: user.role,
-        studentId: user.studentId
+        studentId: user.studentId,
+        ...(facultyEmployeeId ? { employeeId: facultyEmployeeId } : {}),
       }
     });
   } catch (err) {

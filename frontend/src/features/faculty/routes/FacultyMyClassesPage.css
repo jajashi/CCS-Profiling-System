@@ -1,0 +1,311 @@
+/* Match instruction pages (e.g. .syllabi-page) — full content width */
+.faculty-my-classes {
+  max-width: 1240px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.faculty-my-classes__muted {
+  color: var(--text-muted, #64748b);
+  margin: 0;
+}
+
+.faculty-my-classes__loading {
+  margin-top: 0.5rem;
+}
+
+.faculty-my-classes__skeleton-cards {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  margin-bottom: 1rem;
+}
+
+.faculty-my-classes__skeleton-card {
+  height: 132px;
+  border-radius: 14px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e8eef4 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: faculty-my-classes-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes faculty-my-classes-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.faculty-my-classes__error-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.faculty-my-classes__retry {
+  padding: 0.4rem 0.9rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #fff;
+  background: var(--primary);
+  border: none;
+  border-radius: var(--radius, 8px);
+  cursor: pointer;
+}
+
+.faculty-my-classes__retry:hover {
+  filter: brightness(1.05);
+}
+
+.faculty-my-classes__link--muted {
+  color: var(--text-muted, #64748b);
+  font-weight: 600;
+}
+
+.faculty-my-classes__link--muted:hover {
+  color: var(--primary);
+}
+
+.faculty-my-classes__error {
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.faculty-my-classes__empty-panel {
+  max-width: 520px;
+  margin: 2rem auto 0;
+  padding: 2rem 1.75rem 1.75rem;
+  text-align: center;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.faculty-my-classes__empty-visual {
+  width: 4rem;
+  height: 4rem;
+  margin: 0 auto 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%);
+  color: #94a3b8;
+}
+
+.faculty-my-classes__empty-visual svg {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.faculty-my-classes__empty-heading {
+  margin: 0 0 0.65rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+}
+
+.faculty-my-classes__empty-text {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--text-muted, #64748b);
+  text-align: left;
+}
+
+.faculty-my-classes__empty-meta {
+  margin: 1.25rem 0 0;
+  font-size: 0.8125rem;
+  color: #94a3b8;
+}
+
+.faculty-my-classes__pill {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: ui-monospace, monospace;
+  color: var(--text-muted, #64748b);
+  background: #f8fafc;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.faculty-my-classes__details {
+  margin-top: 1.35rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #f1f5f9;
+  text-align: left;
+}
+
+.faculty-my-classes__summary {
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted, #64748b);
+  list-style: none;
+}
+
+.faculty-my-classes__summary::-webkit-details-marker {
+  display: none;
+}
+
+.faculty-my-classes__summary::before {
+  content: '';
+  display: inline-block;
+  width: 0.35rem;
+  height: 0.35rem;
+  margin-right: 0.55rem;
+  border-right: 2px solid #94a3b8;
+  border-bottom: 2px solid #94a3b8;
+  transform: rotate(-45deg);
+  vertical-align: 0.15rem;
+  transition: transform 0.15s ease;
+}
+
+.faculty-my-classes__details[open] .faculty-my-classes__summary::before {
+  transform: rotate(45deg);
+  margin-bottom: 0.1rem;
+}
+
+.faculty-my-classes__ideas--tight {
+  margin: 0.75rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.875rem;
+  color: var(--text-muted, #64748b);
+  line-height: 1.55;
+}
+
+.faculty-my-classes__ideas--tight li {
+  margin-bottom: 0.5rem;
+}
+
+.faculty-my-classes__cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.faculty-my-classes__card {
+  border-radius: 14px;
+  padding: 1.15rem 1.25rem;
+  background: var(--surface, #fff);
+  border: 1px solid #e8edf3;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.faculty-my-classes__card:hover {
+  border-color: #e2e8f0;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.faculty-my-classes__card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.faculty-my-classes__code {
+  font-weight: 700;
+  color: var(--primary);
+  font-size: 0.95rem;
+}
+
+.faculty-my-classes__section {
+  font-size: 0.75rem;
+  color: var(--text-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.faculty-my-classes__card-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-main, #0f172a);
+}
+
+.faculty-my-classes__meta {
+  margin: 0 0 0.85rem;
+  font-size: 0.8125rem;
+  color: var(--text-muted, #64748b);
+}
+
+.faculty-my-classes__card-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+}
+
+.faculty-my-classes__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.faculty-my-classes__link:hover {
+  text-decoration: underline;
+}
+
+.faculty-my-classes__link--button {
+  font: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
+.faculty-my-classes__footnote {
+  margin: 1.5rem 0 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-color, #e2e8f0);
+  font-size: 0.8125rem;
+  color: var(--text-muted, #94a3b8);
+  line-height: 1.5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.5rem;
+}
+
+.faculty-my-classes__inline-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+  color: var(--text-muted, #64748b);
+  text-decoration: none;
+}
+
+.faculty-my-classes__inline-link:hover {
+  color: var(--primary);
+}
+
+.faculty-my-classes__footnote-sep {
+  color: #cbd5e1;
+}
+
+.faculty-my-classes__footnote-hint {
+  flex: 1 1 12rem;
+  min-width: 0;
+}

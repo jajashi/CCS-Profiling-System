@@ -16,6 +16,26 @@
   box-shadow: 0 4px 10px rgba(249, 115, 22, 0.3);
 }
 
+/* --- FACULTY PORTAL LAYOUT (CCS orange; aligned with body.theme-faculty tokens) --- */
+.faculty-layout {
+  --bg-color: #fffaf5;
+}
+
+.faculty-layout .nav-link.active {
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+  box-shadow: 0 10px 20px rgba(249, 115, 22, 0.18);
+}
+
+.faculty-layout .user-avatar {
+  background: linear-gradient(135deg, var(--primary), #fb923c);
+  box-shadow: 0 4px 10px rgba(249, 115, 22, 0.28);
+}
+
+.faculty-layout .nav-group-toggle--within:not(.active) {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
 /* General Layout adjustments */
 .dashboard-container {
   display: flex;
@@ -120,7 +140,7 @@
 .nav-link.active {
   background: var(--primary);
   color: white;
-  box-shadow: 0 4px 12px rgba(255, 127, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.22);
 }
 
 .nav-icon {
@@ -182,6 +202,24 @@
 .sidebar-footer {
   padding: 1rem;
   border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.sidebar-footer-link {
+  width: 100%;
+  color: var(--text-main, #0f172a);
+  border-radius: var(--radius, 8px);
+}
+
+.sidebar-footer-link:hover {
+  background: #f8fafc;
+}
+
+.sidebar-footer-link.active {
+  background: var(--primary-light);
+  color: var(--primary);
 }
 
 .logout-btn {

@@ -59,6 +59,11 @@ const sectionSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    /** Students officially enrolled in this course section (scheduling), distinct from cohort `Student.section`. */
+    enrolledStudentIds: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Student' }],
+      default: [],
+    },
     schedules: {
       type: [scheduleSchema],
       default: [],

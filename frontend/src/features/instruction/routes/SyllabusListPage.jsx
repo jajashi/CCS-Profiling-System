@@ -3,7 +3,10 @@ import toast from 'react-hot-toast';
 import { FiArchive, FiBookOpen, FiEdit2, FiEye, FiLayers, FiPlus, FiSearch } from 'react-icons/fi';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../../lib/api';
+import { readFacultyCache, writeFacultyCache } from '../../../lib/facultyPortalCache';
 import { useAuth } from '../../../providers/AuthContext';
+
+const SYLLABI_FACULTY_CACHE_KEY = 'syllabi:faculty';
 import AddEditSyllabusModal from '../components/AddEditSyllabusModal';
 import SyllabusQuickViewModal from '../components/SyllabusQuickViewModal';
 import '../../students/routes/StudentInformation.css';
@@ -43,9 +46,16 @@ function SyllabusSkeletonRows() {
 export default function SyllabusListPage() {
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
-  const [rows, setRows] = useState([]);
+  const [rows, setRows] = useState(() => {
+    const c = readFacultyCache(SYLLABI_FACULTY_CACHE_KEY);
+    return !isAdmin && c?.rows && Array.isArray(c.rows) ? c.rows : [];
+  });
   const [facultyOptions, setFacultyOptions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => {
+    if (isAdmin) return true;
+    const c = readFacultyCache(SYLLABI_FACULTY_CACHE_KEY);
+    return !c?.rows;
+  });
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [termFilter, setTermFilter] = useState('');
@@ -59,46 +69,71 @@ export default function SyllabusListPage() {
   const [previewSyllabusId, setPreviewSyllabusId] = useState('');
 
   const loadData = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const [syllabiRes, facultyRes] = await Promise.all([
-        apiFetch('/api/syllabi'),
-        apiFetch('/api/faculty?status=Active'),
-      ]);
-
-      const syllabiData = await syllabiRes.json().catch(() => []);
-      const facultyData = await facultyRes.json().catch(() => []);
-
-      if (!syllabiRes.ok) {
-        throw new Error(syllabiData?.message || `Could not load syllabi (${syllabiRes.status}).`);
-      }
-
-      if (!facultyRes.ok) {
-        throw new Error(facultyData?.message || `Could not load active faculty (${facultyRes.status}).`);
-      }
-
-      const nextRows = Array.isArray(syllabiData) ? syllabiData : [];
-      const nextFacultyOptions = Array.isArray(facultyData)
-        ? facultyData
-            .filter((member) => String(member.status || '') === 'Active')
-            .map((member) => ({
-              value: member._id,
-              label: `${buildFacultyName(member)}${member.employeeId ? ` (${member.employeeId})` : ''}`,
-            }))
-            .sort((a, b) => a.label.localeCompare(b.label))
-        : [];
-
-      setRows(nextRows);
-      setFacultyOptions(nextFacultyOptions);
-    } catch (err) {
-      setRows([]);
+    const facultyOnly = !isAdmin;
+    const facultyCached = facultyOnly ? readFacultyCache(SYLLABI_FACULTY_CACHE_KEY) : null;
+    if (facultyOnly && facultyCached?.rows) {
+      setRows(facultyCached.rows);
       setFacultyOptions([]);
-      setError(err instanceof Error ? err.message : 'Network error. Please try again.');
+      setLoading(false);
+      setError('');
+    } else {
+      setLoading(true);
+      setError('');
+    }
+    try {
+      if (isAdmin) {
+        const [syllabiRes, facultyRes] = await Promise.all([
+          apiFetch('/api/syllabi'),
+          apiFetch('/api/faculty?status=Active'),
+        ]);
+
+        const syllabiData = await syllabiRes.json().catch(() => []);
+        const facultyData = await facultyRes.json().catch(() => []);
+
+        if (!syllabiRes.ok) {
+          throw new Error(syllabiData?.message || `Could not load syllabi (${syllabiRes.status}).`);
+        }
+
+        if (!facultyRes.ok) {
+          throw new Error(facultyData?.message || `Could not load active faculty (${facultyRes.status}).`);
+        }
+
+        const nextRows = Array.isArray(syllabiData) ? syllabiData : [];
+        const nextFacultyOptions = Array.isArray(facultyData)
+          ? facultyData
+              .filter((member) => String(member.status || '') === 'Active')
+              .map((member) => ({
+                value: member._id,
+                label: `${buildFacultyName(member)}${member.employeeId ? ` (${member.employeeId})` : ''}`,
+              }))
+              .sort((a, b) => a.label.localeCompare(b.label))
+          : [];
+
+        setRows(nextRows);
+        setFacultyOptions(nextFacultyOptions);
+      } else {
+        const syllabiRes = await apiFetch('/api/syllabi');
+        const syllabiData = await syllabiRes.json().catch(() => []);
+        if (!syllabiRes.ok) {
+          throw new Error(syllabiData?.message || `Could not load syllabi (${syllabiRes.status}).`);
+        }
+        const nextRows = Array.isArray(syllabiData) ? syllabiData : [];
+        setRows(nextRows);
+        setFacultyOptions([]);
+        writeFacultyCache(SYLLABI_FACULTY_CACHE_KEY, { rows: nextRows });
+      }
+    } catch (err) {
+      if (facultyOnly && facultyCached?.rows) {
+        /* keep cached rows visible */
+      } else {
+        setRows([]);
+        setFacultyOptions([]);
+        setError(err instanceof Error ? err.message : 'Network error. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
     loadData();
@@ -182,7 +217,11 @@ export default function SyllabusListPage() {
         <div>
           <p className="directory-hero-title">Syllabus library</p>
           <p className="directory-hero-subtitle">
-            <span>Review course syllabi, filter by term or faculty, and open a clean print-friendly document view.</span>
+            <span>
+              {isAdmin
+                ? 'Review course syllabi, filter by term or faculty, and open a clean print-friendly document view.'
+                : 'Browse syllabi and open a clean print-friendly document view. Editing is limited to administrators.'}
+            </span>
           </p>
         </div>
       </div>
@@ -191,7 +230,11 @@ export default function SyllabusListPage() {
         <div className="spec-toolbar syllabus-toolbar">
           <div className="spec-toolbar-meta">
             <h2 className="spec-toolbar-title">Syllabi list</h2>
-            <p className="spec-toolbar-sub">Find draft and active syllabi quickly, with archived entries hidden by default.</p>
+            <p className="spec-toolbar-sub">
+              {isAdmin
+                ? 'Find draft and active syllabi quickly, with archived entries hidden by default.'
+                : 'View draft and active syllabi; archived entries are hidden unless you show them below.'}
+            </p>
           </div>
           <div className="spec-toolbar-right">
             {!loading ? (
@@ -201,10 +244,12 @@ export default function SyllabusListPage() {
               </div>
             ) : null}
             <div className="syllabus-toolbar-actions">
-              <button type="button" className="spec-btn-primary" onClick={openCreateModal}>
-                <FiPlus />
-                <span>Add Syllabus</span>
-              </button>
+              {isAdmin ? (
+                <button type="button" className="spec-btn-primary" onClick={openCreateModal}>
+                  <FiPlus />
+                  <span>Add Syllabus</span>
+                </button>
+              ) : null}
               <label className="syllabus-archive-toggle">
                 <input
                   type="checkbox"
@@ -239,10 +284,12 @@ export default function SyllabusListPage() {
             <option value="">All Statuses</option>
             {STATUS_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
           </select>
-          <select className="filter-select curriculum-select" value={facultyFilter} onChange={(event) => setFacultyFilter(event.target.value)} disabled={loading}>
-            <option value="">All Active Faculty</option>
-            {facultyOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
+          {isAdmin ? (
+            <select className="filter-select curriculum-select" value={facultyFilter} onChange={(event) => setFacultyFilter(event.target.value)} disabled={loading}>
+              <option value="">All Active Faculty</option>
+              {facultyOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+          ) : null}
         </div>
 
         {!loading ? (
@@ -293,7 +340,7 @@ export default function SyllabusListPage() {
                     <td>{getSectionValue(row.sectionId, 'academicYear') || '-'}</td>
                     <td><span className={`status-badge status-${String(row.status || '').toLowerCase()}`}>{row.status || '-'}</span></td>
                     <td className="spec-td-actions">
-                      <div className="action-buttons">
+                      <div className="action-buttons" onClick={(e) => e.stopPropagation()}>
                         <Link
                           to={`/dashboard/instruction/syllabi/${row._id}`}
                           className="action-btn view"
@@ -312,25 +359,29 @@ export default function SyllabusListPage() {
                           <FiLayers />
                           <span>Preview</span>
                         </button>
-                        <button type="button" className="action-btn edit" onClick={() => openEditModal(row._id)} title="Edit syllabus" aria-label="Edit syllabus">
-                          <FiEdit2 />
-                        </button>
-                        <button
-                          type="button"
-                          className="action-btn delete"
-                          onClick={() => handleArchive(row)}
-                          disabled={archiveDisabled || archiveSubmittingId === row._id}
-                          title={
-                            archived
-                              ? 'Already archived'
-                              : !isAdmin && String(row.status || '') === 'Active'
-                                ? 'Only admins can archive active syllabi'
-                                : 'Archive syllabus'
-                          }
-                          aria-label={archiveSubmittingId === row._id ? 'Archiving' : 'Archive syllabus'}
-                        >
-                          <FiArchive />
-                        </button>
+                        {isAdmin ? (
+                          <>
+                            <button type="button" className="action-btn edit" onClick={() => openEditModal(row._id)} title="Edit syllabus" aria-label="Edit syllabus">
+                              <FiEdit2 />
+                            </button>
+                            <button
+                              type="button"
+                              className="action-btn delete"
+                              onClick={() => handleArchive(row)}
+                              disabled={archiveDisabled || archiveSubmittingId === row._id}
+                              title={
+                                archived
+                                  ? 'Already archived'
+                                  : !isAdmin && String(row.status || '') === 'Active'
+                                    ? 'Only admins can archive active syllabi'
+                                    : 'Archive syllabus'
+                              }
+                              aria-label={archiveSubmittingId === row._id ? 'Archiving' : 'Archive syllabus'}
+                            >
+                              <FiArchive />
+                            </button>
+                          </>
+                        ) : null}
                       </div>
                     </td>
                   </tr>
@@ -341,12 +392,14 @@ export default function SyllabusListPage() {
         </div>
       </div>
 
-      <AddEditSyllabusModal
-        isOpen={isFormOpen}
-        onClose={closeModal}
-        editSyllabusId={editingSyllabusId || null}
-        onSuccess={loadData}
-      />
+      {isAdmin ? (
+        <AddEditSyllabusModal
+          isOpen={isFormOpen}
+          onClose={closeModal}
+          editSyllabusId={editingSyllabusId || null}
+          onSuccess={loadData}
+        />
+      ) : null}
 
       <SyllabusQuickViewModal
         syllabusId={previewSyllabusId}

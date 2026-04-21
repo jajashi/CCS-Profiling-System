@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FiArrowLeft, FiBookOpen, FiLoader, FiPrinter, FiRefreshCw } from 'react-icons/fi';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '../../../lib/api';
+import { useAuth } from '../../../providers/AuthContext';
 import '../../students/routes/StudentInformation.css';
 import '../../faculty/routes/SpecializationManagement.css';
 import './SyllabusPages.css';
@@ -56,6 +57,7 @@ function DetailSkeleton() {
 
 export default function SyllabusDetailPage() {
   const { id } = useParams();
+  const { isAdmin } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -102,6 +104,7 @@ export default function SyllabusDetailPage() {
 
   const syllabusInstructorId = data?.facultyId?._id ?? data?.facultyId ?? '';
   const isArchivedSyllabus = String(data?.status || '') === 'Archived';
+  const canManageLessons = isAdmin && !isArchivedSyllabus;
 
   const patchLesson = useCallback(
     async (lessonId, body) => {
@@ -334,15 +337,15 @@ export default function SyllabusDetailPage() {
                       <th>Time Allocation (Lecture / Lab minutes)</th>
                       <th>Status</th>
                       <th>Delivered At</th>
-                      {isArchivedSyllabus ? null : (
+                      {canManageLessons ? (
                         <th className="syllabus-weekly-actions-col syllabus-no-print">Actions</th>
-                      )}
+                      ) : null}
                     </tr>
                   </thead>
                   <tbody>
                     {!weeklyLessons.length ? (
                       <tr>
-                        <td colSpan={isArchivedSyllabus ? 5 : 6} className="spec-empty">No weekly lessons available.</td>
+                        <td colSpan={canManageLessons ? 6 : 5} className="spec-empty">No weekly lessons available.</td>
                       </tr>
                     ) : weeklyLessons.map((lesson) => {
                       const lessonKey = String(lesson._id || lesson.weekNumber);
@@ -362,7 +365,7 @@ export default function SyllabusDetailPage() {
                             </span>
                           </td>
                           <td>{isDelivered ? formatDeliveredAt(lesson.deliveredAt) : '—'}</td>
-                          {isArchivedSyllabus ? null : (
+                          {canManageLessons ? (
                             <td className="syllabus-weekly-actions-cell syllabus-no-print">
                               <div className="syllabus-lesson-actions">
                                 {rowBusy ? (
@@ -399,7 +402,7 @@ export default function SyllabusDetailPage() {
                                 </span>
                               ) : null}
                             </td>
-                          )}
+                          ) : null}
                         </tr>
                       );
                     })}
