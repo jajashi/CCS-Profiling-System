@@ -1,0 +1,145 @@
+.event-creation-form-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 2rem;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.event-creation-form-container h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 1.5rem;
+}
+
+.error-message {
+  padding: 0.75rem;
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.success-message {
+  padding: 0.75rem;
+  background-color: #d1fae5;
+  color: #047857;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.event-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.event-form label {
+  display: flex;
+  flex-direction: column;
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.event-form input[type="text"],
+.event-form input[type="date"],
+.event-form input[type="time"],
+.event-form input[type="url"],
+.event-form select {
+  margin-top: 0.5rem;
+  padding: 0.625rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.time-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.time-row label {
+  flex: 1;
+}
+
+.checkbox-label {
+  display: flex;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.organizers-section {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+
+.organizers-section h3 {
+  font-size: 1.125rem;
+  margin-bottom: 1rem;
+}
+
+.organizer-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.organizer-row input {
+  flex: 1;
+}
+
+.btn-remove {
+  background-color: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0 0.75rem;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-remove:hover {
+  background-color: #dc2626;
+}
+
+.btn-add {
+  background-color: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.btn-add:hover {
+  background-color: #e5e7eb;
+}
+
+.btn-submit {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  padding: 0.75rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 1rem;
+  transition: background-color 0.2s;
+}
+
+.btn-submit:hover {
+  background-color: #1d4ed8;
+}
