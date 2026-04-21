@@ -20,12 +20,15 @@ export default function EventCreationForm() {
       roles: [],
       programs: [],
       yearLevels: []
-    }
+    },
+    attachments: []
   });
 
+  const [files, setFiles] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     // Fetch rooms
@@ -47,6 +50,10 @@ export default function EventCreationForm() {
     };
     fetchRooms();
   }, []);
+
+  const handleFileChange = (e) => {
+    setFiles(Array.from(e.target.files));
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked, options } = e.target;
@@ -94,11 +101,39 @@ export default function EventCreationForm() {
     e.preventDefault();
     setError(null);
     setSuccess(false);
+    setUploading(true);
 
     try {
-      const payload = { ...formData, schedule: { date: formData.date, startTime: formData.startTime, endTime: formData.endTime } };
-      
+      let uploadedAttachments = [];
       const token = localStorage.getItem('token');
+
+      // 1. Upload files first
+      if (files.length > 0) {
+        const formDataUpload = new FormData();
+        files.forEach(f => formDataUpload.append('attachments', f));
+        
+        const uploadRes = await fetch(`${apiUrl}/api/events/upload`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formDataUpload
+        });
+        
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) {
+          throw new Error(uploadData.message || 'File upload failed');
+        }
+        uploadedAttachments = uploadData.files;
+      }
+
+      // 2. Submit event data
+      const payload = { 
+        ...formData, 
+        attachments: uploadedAttachments,
+        schedule: { date: formData.date, startTime: formData.startTime, endTime: formData.endTime } 
+      };
+      
       const res = await fetch(`${apiUrl}/api/events`, {
         method: 'POST',
         headers: {
@@ -124,11 +159,15 @@ export default function EventCreationForm() {
           type: '', title: '', date: '', startTime: '', endTime: '',
           isVirtual: false, meetingUrl: '', roomId: '',
           organizers: [{ userId: user?._id || '', role: 'Lead Organizer' }],
-          targetGroups: { roles: [], programs: [], yearLevels: [] }
+          targetGroups: { roles: [], programs: [], yearLevels: [] },
+          attachments: []
         });
+        setFiles([]);
       }
     } catch (err) {
       setError(err.message || 'Error communicating with the server.');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -253,7 +292,21 @@ export default function EventCreationForm() {
           <button type="button" onClick={addOrganizer} className="btn-add">Add Organizer</button>
         </div>
 
-        <button type="submit" className="btn-submit">{buttonText}</button>
+        <div className="organizers-section">
+          <h3>Attachments</h3>
+          <p style={{fontSize: '0.85rem', color: '#6b7280', margin: '-0.5rem 0 1rem 0'}}>Max 5MB per file. Only .pdf, .jpg, .png</p>
+          <input 
+            type="file" 
+            multiple 
+            accept=".pdf,.jpg,.jpeg,.png"
+            onChange={handleFileChange}
+            style={{padding: '0.5rem', border: '1px dashed #d1d5db', width: '100%'}}
+          />
+        </div>
+
+        <button type="submit" className="btn-submit" disabled={uploading}>
+          {uploading ? 'Uploading & Processing...' : buttonText}
+        </button>
       </form>
     </div>
   );

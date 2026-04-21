@@ -15,7 +15,8 @@ const createEvent = async (req, res) => {
       roomId,
       title,
       organizers,
-      targetGroups
+      targetGroups,
+      attachments
     } = req.body;
 
     // Validate schedule
@@ -94,7 +95,8 @@ const createEvent = async (req, res) => {
       roomId: !isVirtual ? roomId : undefined,
       title,
       organizers,
-      targetGroups
+      targetGroups,
+      attachments
     });
 
     await newEvent.save();
