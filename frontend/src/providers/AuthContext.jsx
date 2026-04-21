@@ -21,6 +21,15 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
+    const handleExpired = () => {
+      logout();
+    };
+    
+    window.addEventListener('auth_expired', handleExpired);
+    return () => window.removeEventListener('auth_expired', handleExpired);
+  }, []);
+
+  useEffect(() => {
     // Clear any previous theme classes
     document.body.classList.remove('theme-admin', 'theme-faculty', 'theme-student');
     

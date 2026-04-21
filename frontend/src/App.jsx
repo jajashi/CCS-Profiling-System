@@ -12,7 +12,9 @@ import SyllabusListPage from './features/instruction/routes/SyllabusListPage';
 import SyllabusDetailPage from './features/instruction/routes/SyllabusDetailPage';
 import TimeBlocksPage from './features/scheduling/routes/TimeBlocksPage';
 import RoomsPage from './features/scheduling/routes/RoomsPage';
+import SectionsPage from './features/scheduling/routes/SectionsPage';
 import MySchedulePage from './features/scheduling/routes/MySchedulePage';
+import SchedulingDashboard from './features/scheduling/routes/SchedulingDashboard';
 import EventCreationPage from './features/events/routes/EventCreationPage';
 import EventApprovalPage from './features/events/routes/EventApprovalPage';
 import EventDetailPage from './features/events/routes/EventDetailPage';
@@ -136,7 +138,9 @@ function App() {
         >
           <Route index element={<TimeBlocksPage />} />
           <Route path="rooms" element={<RoomsPage />} />
+          <Route path="sections" element={<SectionsPage />} />
           <Route path="my-schedule" element={<MySchedulePage />} />
+          <Route path="overview" element={<AdminRoute><SchedulingDashboard /></AdminRoute>} />
         </Route>
         <Route path="events" element={<NonStudentRoute><EventCreationPage /></NonStudentRoute>} />
         <Route path="events/approval" element={<AdminRoute><EventApprovalPage /></AdminRoute>} />

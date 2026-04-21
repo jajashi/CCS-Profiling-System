@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Curriculum = require('../models/Curriculum');
 const TimeBlock = require('../models/TimeBlock');
+const Room = require('../models/Room');
 
 const DAY_ENUM = TimeBlock.DAY_ENUM || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const STATUS_ENUM = TimeBlock.STATUS_ENUM || ['Active', 'Archived'];
@@ -560,7 +561,10 @@ async function getRoomUtilization(req, res, next) {
 
     const Section = await resolveSectionModel();
 
-    // Aggregation pipeline for calculating total hours per room
+    // Get all active rooms first to ensure we account for empty ones
+    const allActiveRooms = await Room.find({ status: 'Active' }).lean();
+
+    // Aggregation pipeline for calculating total hours per room from sections
     const pipeline = [
       {
         $match: {
@@ -600,36 +604,31 @@ async function getRoomUtilization(req, res, next) {
             }
           }
         }
-      },
-      {
-        $lookup: {
-          from: 'rooms',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'roomInfo'
-        }
-      },
-      { $unwind: { path: '$roomInfo', preserveNullAndEmptyArrays: true } },
-      {
-        $project: {
-          roomId: '$_id',
-          roomName: '$roomInfo.name',
-          roomType: '$roomInfo.roomType',
-          maximumCapacity: '$roomInfo.maximumCapacity',
-          totalScheduledHours: { $divide: ['$totalMinutes', 60] },
-          utilizationPercentage: {
-             // Default theoretical max: 60 hours per week
-             $multiply: [{ $divide: ['$totalMinutes', 3600] }, 100]
-          },
-          schedules: 1,
-        }
-      },
-      { $sort: { utilizationPercentage: -1 } }
+      }
     ];
 
     const utilizationData = await Section.aggregate(pipeline);
 
-    return res.status(200).json(utilizationData);
+    // Merge everything into the list of all active rooms
+    const result = allActiveRooms.map((room) => {
+      const stats = utilizationData.find((u) => String(u._id) === String(room._id));
+      const totalMinutes = stats ? stats.totalMinutes : 0;
+      
+      return {
+        roomId: room._id,
+        roomName: room.name,
+        roomType: room.type,
+        maximumCapacity: room.maximumCapacity,
+        totalScheduledHours: totalMinutes / 60,
+        utilizationPercentage: (totalMinutes / 3600) * 100, // 60 hrs theoretical max
+        schedules: stats ? stats.schedules : [],
+      };
+    });
+
+    // Sort by utilization percentage descending
+    result.sort((a, b) => b.utilizationPercentage - a.utilizationPercentage);
+
+    return res.status(200).json(result);
   } catch (err) {
     return next(err);
   }

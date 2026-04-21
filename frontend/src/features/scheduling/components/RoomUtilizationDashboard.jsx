@@ -12,12 +12,19 @@ export default function RoomUtilizationDashboard({ term, academicYear }) {
     setLoading(true);
 
     apiFetch(`/api/scheduling/room-utilization?term=${encodeURIComponent(term)}&academicYear=${encodeURIComponent(academicYear)}`)
-      .then(res => res.json())
-      .then(result => {
-        setData(result);
-        calculateEmptyRooms(result);
+      .then(async res => {
+        if (!res.ok) throw new Error('API Request Failed');
+        return res.json();
       })
-      .catch(err => console.error(err))
+      .then(result => {
+        const arr = Array.isArray(result) ? result : [];
+        setData(arr);
+        calculateEmptyRooms(arr);
+      })
+      .catch(err => {
+        console.error("Utilization fetch err", err);
+        setData([]);
+      })
       .finally(() => setLoading(false));
 
     // Optional: Refresh empty rooms every minute

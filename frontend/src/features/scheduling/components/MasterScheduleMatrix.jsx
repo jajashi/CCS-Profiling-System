@@ -13,11 +13,17 @@ export default function MasterScheduleMatrix({ term, academicYear }) {
     if (!term || !academicYear) return;
     setLoading(true);
     apiFetch(`/api/scheduling/matrix?term=${encodeURIComponent(term)}&academicYear=${encodeURIComponent(academicYear)}`)
-      .then(r => r.json())
-      .then(data => {
-        setEvents(data || []);
+      .then(async r => {
+        if (!r.ok) throw new Error('API Request Failed');
+        return r.json();
       })
-      .catch(err => console.error("Matrix fetch err", err))
+      .then(data => {
+        setEvents(Array.isArray(data) ? data : []);
+      })
+      .catch(err => {
+        console.error("Matrix fetch err", err);
+        setEvents([]);
+      })
       .finally(() => setLoading(false));
   }, [term, academicYear]);
 

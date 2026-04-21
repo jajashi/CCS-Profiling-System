@@ -244,6 +244,28 @@ const Sidebar = () => {
                         <span className="nav-text">Room registry</span>
                       </NavLink>
                     </li>
+                    <li className="nav-subitem">
+                      <NavLink
+                        to="/dashboard/scheduling/sections"
+                        end
+                        className={({ isActive }) => (isActive ? 'nav-link nav-sublink active' : 'nav-link nav-sublink')}
+                      >
+                        <span className="nav-icon nav-sublink-icon"><FiLayers /></span>
+                        <span className="nav-text">Manage Sections</span>
+                      </NavLink>
+                    </li>
+                    {isAdmin ? (
+                      <li className="nav-subitem">
+                        <NavLink
+                          to="/dashboard/scheduling/overview"
+                          end
+                          className={({ isActive }) => (isActive ? 'nav-link nav-sublink active' : 'nav-link nav-sublink')}
+                        >
+                          <span className="nav-icon nav-sublink-icon"><FiLayers /></span>
+                          <span className="nav-text">Overview Matrix</span>
+                        </NavLink>
+                      </li>
+                    ) : null}
                   </ul>
                 ) : null}
               </li>

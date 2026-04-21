@@ -52,6 +52,11 @@ export const apiFetch = async (path, options = {}) => {
   };
   const response = await fetch(apiUrl(path), { ...options, headers });
   
+  if (response.status === 401) {
+    // If the token expires from older sessions, emit a global logout signal
+    window.dispatchEvent(new CustomEvent('auth_expired'));
+  }
+
   if (response.status === 409) {
     try {
       const errorData = await response.clone().json();
