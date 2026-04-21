@@ -8,6 +8,7 @@ const curriculumSchema = new mongoose.Schema(
       unique: true,
       uppercase: true,
       trim: true,
+      maxlength: 8,
     },
     courseTitle: {
       type: String,
@@ -16,7 +17,7 @@ const curriculumSchema = new mongoose.Schema(
     },
     curriculumYear: {
       type: String,
-      default: '',
+      required: true,
       trim: true,
     },
     description: {

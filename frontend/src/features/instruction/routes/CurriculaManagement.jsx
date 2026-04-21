@@ -2,20 +2,39 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FiArchive, FiBookOpen, FiEdit2, FiEye, FiPlus, FiRotateCcw, FiSearch, FiX } from 'react-icons/fi';
 import { apiFetch } from '../../../lib/api';
+import { useAuth } from '../../../providers/AuthContext';
+import CurriculumYearPicker from '../components/CurriculumYearPicker';
 import '../../students/routes/StudentInformation.css';
 import '../../faculty/routes/SpecializationManagement.css';
 import './CurriculaManagement.css';
 
 const PROGRAM_OPTIONS = ['IT', 'CS', 'General'];
 const STATUS_OPTIONS = ['Active', 'Archived', 'All'];
-const COURSE_CODE_REGEX = /^[A-Z]{2,4}\d{3}$/;
+const MAX_COURSE_CODE_LEN = 8;
 const PAGE_SIZE = 50;
+
+const CURRENT_YEAR = new Date().getFullYear();
+const CURRICULUM_YEAR_MIN = 2000;
+const CURRICULUM_YEAR_MAX = CURRENT_YEAR + 15;
+
+/** Map legacy free-text values (e.g. "2024–2025") to a year in the picker range. */
+function normalizeCurriculumYearForPicker(raw) {
+  const s = String(raw ?? '').trim();
+  const m = s.match(/\b(19|20)\d{2}\b/);
+  if (m) {
+    const y = parseInt(m[0], 10);
+    if (y >= CURRICULUM_YEAR_MIN && y <= CURRICULUM_YEAR_MAX) return String(y);
+    if (y < CURRICULUM_YEAR_MIN) return String(CURRICULUM_YEAR_MIN);
+    if (y > CURRICULUM_YEAR_MAX) return String(CURRICULUM_YEAR_MAX);
+  }
+  return String(CURRENT_YEAR);
+}
 
 function emptyForm() {
   return {
     courseCode: '',
     courseTitle: '',
-    curriculumYear: '',
+    curriculumYear: String(CURRENT_YEAR),
     description: '',
     program: 'IT',
     creditUnits: 3,
@@ -30,28 +49,30 @@ function CurriculumFormModal({ mode, initialData, onClose, onSaved, options }) {
   const [form, setForm] = useState(() => (initialData ? { ...initialData } : emptyForm()));
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState('');
-  const [prereqQuery, setPrereqQuery] = useState('');
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
     setForm(initialData ? { ...initialData } : emptyForm());
     setErrors({});
     setApiError('');
-    setPrereqQuery('');
   }, [initialData]);
 
   const prerequisiteOptions = useMemo(() => {
     const currentCode = String(form.courseCode || '').trim().toUpperCase();
-    return options
-      .filter((code) => code !== currentCode)
-      .filter((code) => code.toLowerCase().includes(prereqQuery.toLowerCase()));
-  }, [options, form.courseCode, prereqQuery]);
+    return options.filter((code) => code !== currentCode);
+  }, [options, form.courseCode]);
 
   const validate = () => {
     const nextErrors = {};
     const code = String(form.courseCode || '').trim().toUpperCase();
-    if (!COURSE_CODE_REGEX.test(code)) nextErrors.courseCode = 'Course code must match format like CS101 or ITC201.';
+    if (!code) nextErrors.courseCode = 'Course code is required.';
+    else if (code.length > MAX_COURSE_CODE_LEN) nextErrors.courseCode = `Course code must be at most ${MAX_COURSE_CODE_LEN} characters.`;
     if (!String(form.courseTitle || '').trim()) nextErrors.courseTitle = 'Course title is required.';
+    const cy = String(form.curriculumYear || '').trim();
+    if (!cy) nextErrors.curriculumYear = 'Curriculum year is required.';
+    else if (!/^\d{4}$/.test(cy) || Number(cy) < CURRICULUM_YEAR_MIN || Number(cy) > CURRICULUM_YEAR_MAX) {
+      nextErrors.curriculumYear = `Curriculum year must be between ${CURRICULUM_YEAR_MIN} and ${CURRICULUM_YEAR_MAX}.`;
+    }
     if (!PROGRAM_OPTIONS.includes(form.program)) nextErrors.program = 'Program must be IT, CS, or General.';
     const creditUnits = Number(form.creditUnits);
     if (!Number.isFinite(creditUnits) || creditUnits < 1 || creditUnits > 6) nextErrors.creditUnits = 'Credit units must be between 1 and 6.';
@@ -104,6 +125,7 @@ function CurriculumFormModal({ mode, initialData, onClose, onSaved, options }) {
         const message = data?.message || `Request failed (${res.status}).`;
         setApiError(message);
         if (res.status === 409 && /courseCode/i.test(message)) setErrors((prev) => ({ ...prev, courseCode: message }));
+        if (res.status === 400 && /curriculumYear/i.test(message)) setErrors((prev) => ({ ...prev, curriculumYear: message }));
         return;
       }
       onSaved(data);
@@ -132,7 +154,7 @@ function CurriculumFormModal({ mode, initialData, onClose, onSaved, options }) {
         <form onSubmit={handleSubmit} className="curriculum-modal-form">
           <div className="spec-modal-body curriculum-form-grid">
             <label className="spec-field-label" htmlFor="courseCode">Course code</label>
-            <input id="courseCode" className="spec-field-input" value={form.courseCode} onChange={(e) => setForm((prev) => ({ ...prev, courseCode: e.target.value.toUpperCase() }))} disabled={submitting} />
+            <input id="courseCode" className="spec-field-input" maxLength={MAX_COURSE_CODE_LEN} value={form.courseCode} onChange={(e) => setForm((prev) => ({ ...prev, courseCode: e.target.value.toUpperCase().slice(0, MAX_COURSE_CODE_LEN) }))} disabled={submitting} />
             {errors.courseCode ? <p className="spec-field-error">{errors.courseCode}</p> : null}
 
             <label className="spec-field-label" htmlFor="courseTitle">Course title</label>
@@ -145,16 +167,22 @@ function CurriculumFormModal({ mode, initialData, onClose, onSaved, options }) {
             </select>
             {errors.program ? <p className="spec-field-error">{errors.program}</p> : null}
 
-            <label className="spec-field-label" htmlFor="curriculumYear">Curriculum year (catalog)</label>
-            <input
+            <label className="spec-field-label" htmlFor="curriculumYear">
+              Curriculum year (catalog){' '}
+              <span className="curriculum-required-mark" title="Required">*</span>
+            </label>
+            <CurriculumYearPicker
               id="curriculumYear"
-              className="spec-field-input"
-              placeholder="e.g. 2024–2025 or AY 2024"
-              value={form.curriculumYear ?? ''}
-              onChange={(e) => setForm((prev) => ({ ...prev, curriculumYear: e.target.value }))}
+              value={form.curriculumYear}
+              onChange={(v) => setForm((prev) => ({ ...prev, curriculumYear: v }))}
               disabled={submitting}
+              minYear={CURRICULUM_YEAR_MIN}
+              maxYear={CURRICULUM_YEAR_MAX}
+              todayYear={CURRENT_YEAR}
+              error={Boolean(errors.curriculumYear)}
             />
-            <p className="spec-field-hint">Which catalog or revision year this course definition applies to (optional).</p>
+            {errors.curriculumYear ? <p className="spec-field-error">{errors.curriculumYear}</p> : null}
+            <p className="spec-field-hint">Catalog or revision year for this course definition.</p>
 
             <div className="curriculum-three-col">
               <div>
@@ -177,16 +205,20 @@ function CurriculumFormModal({ mode, initialData, onClose, onSaved, options }) {
             <label className="spec-field-label" htmlFor="description">Description (optional)</label>
             <textarea id="description" className="spec-field-textarea" value={form.description} onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))} rows={3} disabled={submitting} />
 
-            <label className="spec-field-label" htmlFor="prereq-search">Prerequisites</label>
-            <input id="prereq-search" className="spec-field-input curriculum-prereq-search" placeholder="Search active course codes" value={prereqQuery} onChange={(e) => setPrereqQuery(e.target.value)} disabled={submitting} />
-            <div className={`curriculum-prereq-box ${prerequisiteOptions.length === 0 ? 'curriculum-prereq-box--empty' : ''}`}>
+            <span className="spec-field-label" id="curriculum-prereq-label">Prerequisites</span>
+            <div
+              id="curriculum-prerequisites-list"
+              className={`curriculum-prereq-box ${prerequisiteOptions.length === 0 ? 'curriculum-prereq-box--empty' : ''}`}
+              role="group"
+              aria-labelledby="curriculum-prereq-label"
+            >
               {prerequisiteOptions.map((code) => (
                 <label key={code} className="curriculum-prereq-option">
                   <input type="checkbox" checked={form.prerequisites.includes(code)} onChange={() => togglePrerequisite(code)} disabled={submitting} />
                   <span>{code}</span>
                 </label>
               ))}
-              {prerequisiteOptions.length === 0 ? <p className="curriculum-muted">No matching active course codes yet.</p> : null}
+              {prerequisiteOptions.length === 0 ? <p className="curriculum-muted">No other active course codes available.</p> : null}
             </div>
 
             <label className="spec-field-label">Course learning outcomes (CLOs)</label>
@@ -217,6 +249,7 @@ function CurriculumFormModal({ mode, initialData, onClose, onSaved, options }) {
 }
 
 export default function CurriculaManagement() {
+  const { isAdmin } = useAuth();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -297,7 +330,7 @@ export default function CurriculaManagement() {
         _id: row._id,
         courseCode: row.courseCode || '',
         courseTitle: row.courseTitle || '',
-        curriculumYear: row.curriculumYear || '',
+        curriculumYear: normalizeCurriculumYearForPicker(row.curriculumYear),
         description: row.description || '',
         program: row.program || 'IT',
         creditUnits: row.creditUnits ?? 1,
@@ -344,7 +377,7 @@ export default function CurriculaManagement() {
   };
 
   const handleRestore = async (row) => {
-    if (!row?._id) return;
+    if (!isAdmin || !row?._id) return;
     setViewRow(null);
     setRestoreSubmittingId(row._id);
     try {
@@ -463,7 +496,7 @@ export default function CurriculaManagement() {
                         <button type="button" className="action-btn edit" title="Edit curriculum" aria-label="Edit curriculum" onClick={() => openEdit(row)}>
                           <FiEdit2 />
                         </button>
-                        {archived ? (
+                        {archived && isAdmin ? (
                           <button
                             type="button"
                             className="action-btn toggle curriculum-restore-btn"
@@ -521,7 +554,7 @@ export default function CurriculaManagement() {
                   <FiEdit2 />
                   <span>Edit</span>
                 </button>
-                {viewRow.status === 'Archived' ? (
+                {viewRow.status === 'Archived' && isAdmin ? (
                   <button
                     type="button"
                     className="modal-edit-btn"

@@ -1,0 +1,180 @@
+.curriculum-year-picker {
+  position: relative;
+  width: 100%;
+}
+
+.curriculum-year-picker__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 0.95rem;
+  color: #334155;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.curriculum-year-picker__trigger:hover:not(:disabled) {
+  border-color: #94a3b8;
+}
+
+.curriculum-year-picker__trigger:focus-visible {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+.curriculum-year-picker__trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.curriculum-year-picker__trigger--error {
+  border-color: #dc2626;
+}
+
+.curriculum-year-picker__trigger-text {
+  font-weight: 500;
+}
+
+.curriculum-year-picker__trigger[data-has-value='false']:not(:disabled) .curriculum-year-picker__trigger-text {
+  color: #94a3b8;
+}
+
+.curriculum-year-picker__trigger[data-has-value='true']:not(:disabled) .curriculum-year-picker__trigger-text {
+  color: #1e293b;
+}
+
+.curriculum-year-picker__trigger-icon {
+  flex-shrink: 0;
+  color: #94a3b8;
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.curriculum-year-picker__popover {
+  min-width: 260px;
+  padding: 0;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.12), 0 2px 10px rgba(15, 23, 42, 0.06);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+.curriculum-year-picker__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  padding: 0.55rem 0.5rem;
+  border-bottom: 1px solid #e8eef4;
+}
+
+.curriculum-year-picker__nav {
+  display: flex;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.curriculum-year-picker__nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.curriculum-year-picker__nav-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.curriculum-year-picker__nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.curriculum-year-picker__focus-year {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  min-width: 3.25rem;
+  text-align: center;
+}
+
+.curriculum-year-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.35rem;
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid #e8eef4;
+}
+
+.curriculum-year-picker__cell {
+  min-height: 2.5rem;
+  padding: 0.35rem;
+  border: none;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: #1e293b;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.curriculum-year-picker__cell:hover:not(:disabled):not(.curriculum-year-picker__cell--selected) {
+  background: #f1f5f9;
+}
+
+.curriculum-year-picker__cell--selected {
+  background: #2563eb;
+  color: #fff;
+  font-weight: 700;
+}
+
+.curriculum-year-picker__cell:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.curriculum-year-picker__footer {
+  padding: 0.5rem 0.75rem 0.65rem;
+  display: flex;
+  justify-content: center;
+}
+
+.curriculum-year-picker__today {
+  border: none;
+  background: none;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #2563eb;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.12s ease;
+}
+
+.curriculum-year-picker__today:hover:not(:disabled) {
+  background: #eff6ff;
+}
+
+.curriculum-year-picker__today:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

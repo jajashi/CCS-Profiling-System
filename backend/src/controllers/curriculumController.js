@@ -10,6 +10,32 @@ function normalizeStringArray(values) {
   return values.map((value) => normalizeString(value)).filter(Boolean);
 }
 
+const MAX_COURSE_CODE_LEN = 8;
+const CURRICULUM_YEAR_MIN = 2000;
+const CURRICULUM_YEAR_MAX = new Date().getFullYear() + 15;
+
+function validateCourseCode(code) {
+  if (!code || code.length > MAX_COURSE_CODE_LEN) {
+    return `courseCode is required and must be at most ${MAX_COURSE_CODE_LEN} characters.`;
+  }
+  return null;
+}
+
+function validateCurriculumYear(value) {
+  const s = normalizeString(value);
+  if (!s) {
+    return 'curriculumYear is required.';
+  }
+  if (!/^\d{4}$/.test(s)) {
+    return 'curriculumYear must be a four-digit year.';
+  }
+  const y = parseInt(s, 10);
+  if (y < CURRICULUM_YEAR_MIN || y > CURRICULUM_YEAR_MAX) {
+    return `curriculumYear must be between ${CURRICULUM_YEAR_MIN} and ${CURRICULUM_YEAR_MAX}.`;
+  }
+  return null;
+}
+
 function parseNonNegativeNumber(value, fallback = 0) {
   if (value == null || value === '') return fallback;
   const parsed = Number(value);
@@ -71,8 +97,16 @@ async function createCurriculum(req, res, next) {
     };
 
     // Basic validation
-    if (!data.courseCode || !data.courseTitle || !data.program) {
-      return res.status(400).json({ message: 'courseCode, courseTitle, and program are required.' });
+    const codeErr = validateCourseCode(data.courseCode);
+    if (codeErr) {
+      return res.status(400).json({ message: codeErr });
+    }
+    if (!data.courseTitle || !data.program) {
+      return res.status(400).json({ message: 'courseTitle and program are required.' });
+    }
+    const yearErr = validateCurriculumYear(data.curriculumYear);
+    if (yearErr) {
+      return res.status(400).json({ message: yearErr });
     }
 
     const created = await Curriculum.create(data);
@@ -94,9 +128,23 @@ async function updateCurriculum(req, res, next) {
 
     const payload = req.body || {};
     const data = {};
-    if (payload.courseCode != null) data.courseCode = normalizeString(payload.courseCode).toUpperCase();
+    if (payload.courseCode != null) {
+      const nextCode = normalizeString(payload.courseCode).toUpperCase();
+      const err = validateCourseCode(nextCode);
+      if (err) {
+        return res.status(400).json({ message: err });
+      }
+      data.courseCode = nextCode;
+    }
     if (payload.courseTitle != null) data.courseTitle = normalizeString(payload.courseTitle);
-    if (payload.curriculumYear != null) data.curriculumYear = normalizeString(payload.curriculumYear);
+    if (payload.curriculumYear != null) {
+      const cy = normalizeString(payload.curriculumYear);
+      const yearErr = validateCurriculumYear(cy);
+      if (yearErr) {
+        return res.status(400).json({ message: yearErr });
+      }
+      data.curriculumYear = cy;
+    }
     if (payload.description != null) data.description = normalizeString(payload.description);
     if (payload.program != null) data.program = normalizeString(payload.program);
     if (payload.creditUnits != null) data.creditUnits = parseNonNegativeNumber(payload.creditUnits);
@@ -145,10 +193,36 @@ async function archiveCurriculum(req, res, next) {
   }
 }
 
+async function restoreCurriculum(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid curriculum id.' });
+    }
+
+    const curriculum = await Curriculum.findById(id);
+    if (!curriculum) {
+      return res.status(404).json({ message: 'Curriculum not found.' });
+    }
+
+    if (curriculum.status !== 'Archived') {
+      return res.status(400).json({ message: 'Only archived curricula can be restored.' });
+    }
+
+    curriculum.status = 'Active';
+    await curriculum.save();
+
+    return res.status(200).json({ message: 'Curriculum restored successfully.', curriculum });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   getCurricula,
   getCurriculumById,
   createCurriculum,
   updateCurriculum,
   archiveCurriculum,
+  restoreCurriculum,
 };
