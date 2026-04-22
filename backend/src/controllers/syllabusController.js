@@ -341,7 +341,7 @@ async function getSyllabi(req, res, next) {
 
     const Section = await resolveSectionModel();
     const syllabi = await Syllabus.find(query)
-      .populate(buildListPopulateOptions(Boolean(Section)))
+      .populate(buildListPopulateOptions(true))
       .sort({ updatedAt: -1, createdAt: -1 });
 
     return res.status(200).json(syllabi.map((row) => row.toJSON()));

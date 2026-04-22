@@ -56,6 +56,28 @@ const waitlistEntrySchema = new mongoose.Schema({
   }
 }, { _id: false });
 
+const feedbackSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  rating: {
+    type: Number,
+    required: true,
+    min: 1,
+    max: 5
+  },
+  comment: {
+    type: String,
+    default: ''
+  },
+  submittedAt: {
+    type: Date,
+    default: Date.now
+  }
+}, { _id: false });
+
 const eventSchema = new mongoose.Schema({
   type: {
     type: String,
@@ -123,6 +145,28 @@ const eventSchema = new mongoose.Schema({
   },
   cancelReason: {
     type: String
+  },
+  feedbackEnabled: {
+    type: Boolean,
+    default: false
+  },
+  feedback: {
+    type: [feedbackSchema],
+    default: []
+  },
+  certificatesGenerated: {
+    type: Boolean,
+    default: false
+  },
+  certificatesGeneratedAt: {
+    type: Date
+  },
+  attendanceLocked: {
+    type: Boolean,
+    default: false
+  },
+  attendanceLockedAt: {
+    type: Date
   }
 }, {
   timestamps: true

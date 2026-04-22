@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../../lib/api';
 import { useAuth } from '../../../providers/AuthContext';
-import { FiCalendar, FiMapPin, FiUsers, FiExternalLink, FiCheck, FiX, FiClock, FiUser, FiEdit2, FiEye, FiClipboard } from 'react-icons/fi';
+import { FiCalendar, FiMapPin, FiUsers, FiExternalLink, FiCheck, FiX, FiClock, FiUser, FiEdit2, FiEye, FiClipboard, FiBarChart2 } from 'react-icons/fi';
 import './EventDetailPage.css';
 
 export default function EventDetailPage() {
@@ -24,6 +24,22 @@ export default function EventDetailPage() {
   };
 
   const canAccessAttendance = isAdmin || isOrganizer(event, user);
+
+  // Check if event has started
+  const hasEventStarted = () => {
+    if (!event?.schedule?.startTime) return false;
+    return new Date(event.schedule.startTime) <= new Date();
+  };
+
+  // Check if event has ended
+  const hasEventEnded = () => {
+    if (!event?.schedule?.endTime) return false;
+    return new Date(event.schedule.endTime) <= new Date();
+  };
+
+  const isRegistrationOpen = () => {
+    return !hasEventStarted() && !event?.rsvpClosed;
+  };
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -82,10 +98,6 @@ export default function EventDetailPage() {
     return event?.schedule?.startTime && new Date(event.schedule.startTime) <= new Date();
   };
 
-  const isRegistrationOpen = () => {
-    return event && !event.rsvpClosed && !isEventStarted();
-  };
-
   const handleRSVP = async () => {
     if (!isRegistrationOpen()) return;
     
@@ -140,6 +152,11 @@ export default function EventDetailPage() {
   };
 
   const getRSVPButton = () => {
+    // Hide all RSVP controls if event has started
+    if (hasEventStarted()) {
+      return null;
+    }
+
     if (rsvpStatus === 'registered') {
       return (
         <button className="rsvp-btn rsvp-btn-cancel" onClick={() => setShowCancelConfirm(true)}>
@@ -209,18 +226,35 @@ export default function EventDetailPage() {
         <h1>{event.title}</h1>
         <div className="event-meta">
           <span className={`event-status status-${event.status}`}>
-            {event.status === 'published' ? 'Published' : 
+            {event.status === 'published' ? 'Published' :
              event.status === 'pending_approval' ? 'Pending Approval' : 'Draft'}
           </span>
+          {hasEventStarted() && (
+            <span className="event-status status-in-progress">
+              Event In Progress
+            </span>
+          )}
           <span className="event-type">{event.type}</span>
           {canAccessAttendance && (
-            <button 
-              className="attendance-tracker-btn"
-              onClick={() => navigate(`/dashboard/events/${id}/attendance`)}
-            >
-              <FiClipboard />
-              <span>Attendance Tracker</span>
-            </button>
+            <>
+              {hasEventStarted() && (
+                <button
+                  className="attendance-tracker-btn"
+                  onClick={() => navigate(`/dashboard/events/${id}/attendance`)}
+                >
+                  <FiClipboard />
+                  <span>Attendance Tracker</span>
+                </button>
+              )}
+              <button
+                className="attendance-tracker-btn"
+                onClick={() => navigate(`/dashboard/events/${id}/report`)}
+                style={{ marginLeft: '0.5rem' }}
+              >
+                <FiBarChart2 />
+                <span>Report Dashboard</span>
+              </button>
+            </>
           )}
         </div>
       </div>

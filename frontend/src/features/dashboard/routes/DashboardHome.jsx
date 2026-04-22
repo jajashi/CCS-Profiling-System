@@ -20,7 +20,7 @@ const DashboardHome = () => {
 
     (async () => {
       try {
-        const studentRes = await apiFetch('/api/students');
+        const studentRes = await apiFetch('/api/students?limit=1');
         if (!studentRes.ok) throw new Error(`Students request failed: ${studentRes.status}`);
         const studentData = await studentRes.json();
 
@@ -33,7 +33,9 @@ const DashboardHome = () => {
         }
 
         if (isMounted) {
-          setStudentCount(Array.isArray(studentData) ? studentData.length : null);
+          // Handle paginated response
+          const total = studentData.pagination?.total;
+          setStudentCount(typeof total === 'number' ? total : (Array.isArray(studentData) ? studentData.length : null));
           if (facultyAnalytics && typeof facultyAnalytics.totalFaculty === 'number') {
             setTotalFacultyCount(facultyAnalytics.totalFaculty);
             setActiveFacultyCount(

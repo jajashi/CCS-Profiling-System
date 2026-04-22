@@ -26,11 +26,13 @@ export default function RoomUtilizationDashboard({ term, academicYear }) {
         setData([]);
       })
       .finally(() => setLoading(false));
+  }, [term, academicYear]);
 
-    // Optional: Refresh empty rooms every minute
+  // Refresh empty rooms every minute
+  useEffect(() => {
     const interval = setInterval(() => calculateEmptyRooms(data), 60000);
     return () => clearInterval(interval);
-  }, [term, academicYear, data]);
+  }, [data]);
 
   const calculateEmptyRooms = (utilData) => {
     if (!utilData || utilData.length === 0) return;

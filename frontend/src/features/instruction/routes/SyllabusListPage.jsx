@@ -62,7 +62,7 @@ export default function SyllabusListPage() {
   const [academicYearFilter, setAcademicYearFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [facultyFilter, setFacultyFilter] = useState('');
-  const [showArchived, setShowArchived] = useState(false);
+  const [showArchived, setShowArchived] = useState(true);
   const [archiveSubmittingId, setArchiveSubmittingId] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSyllabusId, setEditingSyllabusId] = useState('');

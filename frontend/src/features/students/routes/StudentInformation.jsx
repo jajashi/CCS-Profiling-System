@@ -262,6 +262,7 @@ const StudentInformation = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 1, hasNext: false, hasPrev: false });
   const [programFilter, setProgramFilter] = useState("");
   const [skillFilter, setSkillFilter] = useState([]);
   const [yearLevelFilter, setYearLevelFilter] = useState("");
@@ -336,12 +337,14 @@ const StudentInformation = () => {
     { value: 'None', label: 'None' },
   ];
 
-  const fetchStudents = useCallback(async (filters = {}) => {
+  const fetchStudents = useCallback(async (filters = {}, page = 1, limit = 50) => {
     setIsFetching(true);
     setStudentLoadError('');
 
     try {
       const params = new URLSearchParams();
+      params.set("page", page);
+      params.set("limit", limit);
       if (filters.search) params.set("search", filters.search);
       if (filters.program) params.set("program", filters.program);
       if (filters.skill && filters.skill.length > 0) {
@@ -354,15 +357,14 @@ const StudentInformation = () => {
       if (filters.gender) params.set("gender", filters.gender);
       if (filters.violation) params.set("violation", filters.violation);
 
-      const queryString = params.toString();
-      const url = `/api/students${queryString ? `?${queryString}` : ""}`;
-
+      const url = `/api/students?${params.toString()}`;
       console.log("[fetchStudents] Fetching:", url);
 
       const res = await apiFetch(url);
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
       const data = await res.json();
-      setStudents(Array.isArray(data) ? data : []);
+      setStudents(Array.isArray(data.students) ? data.students : []);
+      setPagination(data.pagination || { page: 1, limit: 50, total: 0, totalPages: 1, hasNext: false, hasPrev: false });
     } catch (err) {
       console.error("[fetchStudents] Error:", err);
       setStudentLoadError(
@@ -412,7 +414,7 @@ const StudentInformation = () => {
       scholarship: scholarshipFilter,
       gender: genderFilter,
       violation: violationFilter,
-    });
+    }, 1);
   }, [
     debouncedQuery,
     programFilter,
@@ -987,6 +989,29 @@ const StudentInformation = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {pagination.totalPages > 1 && (
+          <div className="pagination-controls">
+            <button
+              className="pagination-btn"
+              onClick={() => fetchStudents({ search: debouncedQuery, program: programFilter, skill: skillFilter, yearLevel: yearLevelFilter, section: sectionFilter, status: statusFilter, scholarship: scholarshipFilter, gender: genderFilter, violation: violationFilter }, pagination.page - 1, pagination.limit)}
+              disabled={!pagination.hasPrev || isFetching}
+            >
+              Previous
+            </button>
+            <span className="pagination-info">
+              Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
+            </span>
+            <button
+              className="pagination-btn"
+              onClick={() => fetchStudents({ search: debouncedQuery, program: programFilter, skill: skillFilter, yearLevel: yearLevelFilter, section: sectionFilter, status: statusFilter, scholarship: scholarshipFilter, gender: genderFilter, violation: violationFilter }, pagination.page + 1, pagination.limit)}
+              disabled={!pagination.hasNext || isFetching}
+            >
+              Next
+            </button>
+          </div>
+        )}
         </div>
       )}
 

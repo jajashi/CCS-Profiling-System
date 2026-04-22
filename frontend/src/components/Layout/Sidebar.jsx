@@ -13,6 +13,7 @@ import {
   FiChevronDown,
   FiChevronUp,
   FiUserCheck,
+  FiAward,
   FiUser,
   FiClock,
   FiGrid,
@@ -335,7 +336,7 @@ const Sidebar = () => {
                         className={({ isActive }) => (isActive ? 'nav-link nav-sublink active' : 'nav-link nav-sublink')}
                       >
                         <span className="nav-icon nav-sublink-icon"><FiLayers /></span>
-                        <span className="nav-text">Overview Matrix</span>
+                        <span className="nav-text">Scheduling Matrix</span>
                       </NavLink>
                     </li>
                   </ul>
@@ -371,6 +372,17 @@ const Sidebar = () => {
                     <span className="nav-text">List Events</span>
                   </NavLink>
                 </li>
+                {isStudent ? (
+                  <li className="nav-subitem">
+                    <NavLink
+                      to="/dashboard/my-events"
+                      className={({ isActive }) => (isActive ? 'nav-link nav-sublink active' : 'nav-link nav-sublink')}
+                    >
+                      <span className="nav-icon nav-sublink-icon"><FiAward /></span>
+                      <span className="nav-text">My Events</span>
+                    </NavLink>
+                  </li>
+                ) : null}
                 {!isStudent ? (
                   <li className="nav-subitem">
                     <NavLink
@@ -386,15 +398,7 @@ const Sidebar = () => {
             ) : null}
           </li>
           
-          {isAdmin ? (
-            <li className="nav-item">
-              <NavLink to="/dashboard/reports" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
-                <span className="nav-icon"><FiBarChart2 /></span>
-                <span className="nav-text">Reports</span>
-              </NavLink>
-            </li>
-          ) : null}
-        </ul>
+                  </ul>
       </nav>
 
       <div className="sidebar-footer">

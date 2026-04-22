@@ -375,6 +375,8 @@ function generateRandomStudent(index) {
   };
 }
 
+const SEED_STUDENT_COUNT = 1000;
+
 // Generate 1,000 students
 const SEEDED_STUDENTS = Array.from({ length: SEED_STUDENT_COUNT }, (_, index) => generateRandomStudent(index));
 

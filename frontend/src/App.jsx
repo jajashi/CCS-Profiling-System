@@ -20,6 +20,8 @@ import EventListPage from './features/events/routes/EventListPage';
 import EventApprovalPage from './features/events/routes/EventApprovalPage';
 import EventDetailPage from './features/events/routes/EventDetailPage';
 import EventAttendancePage from './features/events/routes/EventAttendancePage';
+import EventReportDashboard from './features/events/routes/EventReportDashboard';
+import MyEventsPage from './features/events/routes/MyEventsPage';
 import GlobalCalendarPage from './features/events/routes/GlobalCalendarPage';
 import AttendanceTrackerPage from './features/events/routes/AttendanceTrackerPage';
 import FacultyMyClassesPage from './features/faculty/routes/FacultyMyClassesPage';
@@ -281,6 +283,8 @@ function App() {
         <Route path="events/:id" element={<EventDetailPage />} />
         <Route path="events/:id/attendance" element={<ProtectedRoute><EventAttendancePage /></ProtectedRoute>} />
         <Route path="events/:id/attendees/:userId" element={<ProtectedRoute><AttendanceTrackerPage /></ProtectedRoute>} />
+        <Route path="events/:id/report" element={<EventReportDashboard />} />
+        <Route path="my-events" element={<MyEventsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

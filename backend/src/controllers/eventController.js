@@ -387,7 +387,7 @@ const rsvpToEvent = async (req, res) => {
     // Enhanced validation with automatic closure
     const validation = validateEventForRSVP(event);
     if (!validation.canRSVP) {
-      return res.status(validation.errorCode).json({ 
+      return res.status(validation.errorCode || 403).json({
         message: validation.error,
         isClosed: true
       });
@@ -628,28 +628,31 @@ const autoCloseStartedEventRsvps = async () => {
 // Enhanced RSVP validation with automatic closure
 const validateEventForRSVP = (event) => {
   const now = new Date();
-  
-  // Auto-close if event has started
+
+  // Auto-close if event has started - return 403 Forbidden
   if (eventHasStarted(event)) {
     return {
       canRSVP: false,
       error: 'Event has already started. Registration is closed.',
+      errorCode: 403,
       isClosed: true
     };
   }
-  
+
   // Check if registration is already closed
   if (event.rsvpClosed) {
     return {
       canRSVP: false,
       error: 'Registration is closed for this event.',
+      errorCode: 403,
       isClosed: true
     };
   }
-  
+
   return {
     canRSVP: true,
     error: null,
+    errorCode: null,
     isClosed: false
   };
 };
@@ -738,6 +741,317 @@ const deleteEvent = async (req, res) => {
   }
 };
 
+const getEventAnalytics = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const event = await Event.findById(id);
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found.' });
+    }
+
+    // Calculate analytics manually to avoid aggregation issues
+    const totalRsvps = event.attendees?.length || 0;
+    const totalWaitlisted = event.waitlist?.length || 0;
+    const attended = event.attendees?.filter(a => a.attended).length || 0;
+    const notAttended = totalRsvps - attended;
+    
+    // Calculate waitlist conversions (waitlist users who ended up attending)
+    const attendedUserIds = new Set(event.attendees?.filter(a => a.attended).map(a => String(a.userId)));
+    const waitlistConversions = event.waitlist?.filter(w => attendedUserIds.has(String(w.userId))).length || 0;
+    
+    // Calculate rates
+    const noShowRate = totalRsvps > 0 ? (notAttended / totalRsvps) * 100 : 0;
+    const attendanceRate = totalRsvps > 0 ? (attended / totalRsvps) * 100 : 0;
+    const waitlistConversionRate = totalWaitlisted > 0 
+      ? (waitlistConversions / totalWaitlisted) * 100 
+      : 0;
+    
+    // Calculate feedback stats
+    const feedbackCount = event.feedback?.length || 0;
+    const averageRating = feedbackCount > 0 
+      ? event.feedback.reduce((sum, f) => sum + f.rating, 0) / feedbackCount 
+      : null;
+
+    res.json({
+      eventId: event._id,
+      title: event.title,
+      totalRsvps,
+      totalWaitlisted,
+      attended,
+      notAttended,
+      attendanceRate: Math.round(attendanceRate * 100) / 100,
+      noShowRate: Math.round(noShowRate * 100) / 100,
+      waitlistConversions,
+      waitlistConversionRate: Math.round(waitlistConversionRate * 100) / 100,
+      feedbackCount,
+      averageRating: averageRating ? Math.round(averageRating * 100) / 100 : null,
+      startTime: event.schedule?.startTime,
+      endTime: event.schedule?.endTime,
+      certificatesGenerated: event.certificatesGenerated
+    });
+  } catch (error) {
+    console.error('Error fetching event analytics:', error);
+    res.status(500).json({ message: 'Server error fetching event analytics.' });
+  }
+};
+
+const submitFeedback = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rating, comment } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required.' });
+    }
+
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ message: 'Rating must be between 1 and 5.' });
+    }
+
+    const event = await Event.findById(id);
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found.' });
+    }
+
+    // Check if feedback is enabled for this event
+    if (!event.feedbackEnabled) {
+      return res.status(403).json({ message: 'Feedback collection is not enabled for this event.' });
+    }
+
+    // Check if event has ended
+    const now = new Date();
+    if (!event.schedule?.endTime || new Date(event.schedule.endTime) > now) {
+      return res.status(403).json({ message: 'Feedback can only be submitted after the event has ended.' });
+    }
+
+    // Check if user attended the event
+    const attendee = event.attendees?.find(a => String(a.userId) === String(userId));
+    if (!attendee || !attendee.attended) {
+      return res.status(403).json({ message: 'Only attendees can submit feedback for this event.' });
+    }
+
+    // Check if user has already submitted feedback
+    const existingFeedback = event.feedback?.find(f => String(f.userId) === String(userId));
+    if (existingFeedback) {
+      return res.status(409).json({ message: 'You have already submitted feedback for this event.' });
+    }
+
+    // Add feedback to event
+    await Event.findByIdAndUpdate(id, {
+      $push: {
+        feedback: {
+          userId,
+          rating,
+          comment: comment || '',
+          submittedAt: now
+        }
+      }
+    });
+
+    res.json({ message: 'Feedback submitted successfully.' });
+  } catch (error) {
+    console.error('Error submitting feedback:', error);
+    res.status(500).json({ message: 'Server error submitting feedback.' });
+  }
+};
+
+const generateCertificates = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { generateEventCertificates } = require('../services/certificateService');
+
+    const event = await Event.findById(id);
+
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found.' });
+    }
+
+    // Check if event has ended
+    const now = new Date();
+    if (!event.schedule?.endTime || new Date(event.schedule.endTime) > now) {
+      return res.status(403).json({ message: 'Certificates can only be generated after the event has ended.' });
+    }
+
+    // Check if certificates are already generated
+    if (event.certificatesGenerated) {
+      return res.status(409).json({ message: 'Certificates have already been generated for this event.' });
+    }
+
+    // Generate certificates
+    const certificates = await generateEventCertificates(id);
+
+    res.json({
+      message: `Successfully generated ${certificates.length} certificates`,
+      certificatesGenerated: certificates.length,
+      certificates: certificates.map(c => ({
+        userId: c.userId,
+        userName: c.userName
+      }))
+    });
+  } catch (error) {
+    console.error('Error generating certificates:', error);
+    res.status(500).json({ message: error.message || 'Server error generating certificates.' });
+  }
+};
+
+const downloadBulkCertificates = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const archiver = require('archiver');
+    const path = require('path');
+    const fs = require('fs');
+
+    const event = await Event.findById(id);
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found.' });
+    }
+
+    // Check if certificates have been generated
+    if (!event.certificatesGenerated) {
+      return res.status(403).json({ message: 'Certificates have not been generated yet.' });
+    }
+
+    const certDir = path.join(__dirname, '../../certificates', id);
+    
+    if (!fs.existsSync(certDir)) {
+      return res.status(404).json({ message: 'Certificate files not found.' });
+    }
+
+    // Create zip archive
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    const output = fs.createWriteStream(path.join(__dirname, `../../certificates/${id}_certificates.zip`));
+
+    archive.on('error', (err) => {
+      throw err;
+    });
+
+    archive.pipe(output);
+
+    // Add all certificate files to archive
+    const files = fs.readdirSync(certDir);
+    files.forEach(file => {
+      const filePath = path.join(certDir, file);
+      if (fs.statSync(filePath).isFile()) {
+        archive.file(filePath, { name: file });
+      }
+    });
+
+    await archive.finalize();
+
+    // Send the zip file
+    res.download(path.join(__dirname, `../../certificates/${id}_certificates.zip`), `event_${id}_certificates.zip`);
+  } catch (error) {
+    console.error('Error downloading bulk certificates:', error);
+    res.status(500).json({ message: 'Server error downloading certificates.' });
+  }
+};
+
+const downloadUserCertificate = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+    const path = require('path');
+    const fs = require('fs');
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required.' });
+    }
+
+    const event = await Event.findById(id).populate('organizers.userId');
+
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found.' });
+    }
+
+    // Check if certificates have been generated
+    if (!event.certificatesGenerated) {
+      return res.status(403).json({ message: 'Certificates have not been generated yet.' });
+    }
+
+    // Check if user attended the event
+    const attendee = event.attendees?.find(a => String(a.userId) === String(userId));
+    if (!attendee || !attendee.attended) {
+      return res.status(403).json({ message: 'You did not attend this event.' });
+    }
+
+    // Get user details
+    const User = require('../models/User');
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    const certDir = path.join(__dirname, '../../certificates', id);
+    const fileName = `${user.name.replace(/\s+/g, '_')}_${id}.pdf`;
+    const filePath = path.join(certDir, fileName);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: 'Certificate file not found.' });
+    }
+
+    res.download(filePath, fileName);
+  } catch (error) {
+    console.error('Error downloading user certificate:', error);
+    res.status(500).json({ message: 'Server error downloading certificate.' });
+  }
+};
+
+const getUserEventHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const requestingUserId = req.user?.id;
+
+    if (!requestingUserId) {
+      return res.status(401).json({ message: 'Authentication required.' });
+    }
+
+    // Check if the requesting user is the same as the user whose history is being requested
+    // or if they're an admin
+    if (String(requestingUserId) !== String(id) && req.user?.role !== 'admin') {
+      return res.status(403).json({ message: 'You can only view your own event history.' });
+    }
+
+    // Find all events where the user has attended
+    const events = await Event.find({
+      'attendees.userId': id,
+      'attendees.attended': true
+    }).populate('roomId', 'name capacity')
+      .populate('organizers.userId', 'name')
+      .sort({ 'schedule.date': -1 });
+
+    const eventHistory = events.map(event => {
+      const attendee = event.attendees.find(a => String(a.userId) === String(id));
+      return {
+        eventId: event._id,
+        title: event.title,
+        type: event.type,
+        status: event.status,
+        date: event.schedule.date,
+        startTime: event.schedule.startTime,
+        endTime: event.schedule.endTime,
+        location: event.isVirtual ? 'Virtual' : event.roomId?.name || 'TBD',
+        certificateAvailable: event.certificatesGenerated,
+        certificateGeneratedAt: event.certificatesGeneratedAt,
+        attended: attendee?.attended || false,
+        organizer: event.organizers?.[0]?.userId?.name || 'Unknown'
+      };
+    });
+
+    res.json({
+      userId: id,
+      totalEventsAttended: eventHistory.length,
+      events: eventHistory
+    });
+  } catch (error) {
+    console.error('Error fetching user event history:', error);
+    res.status(500).json({ message: 'Server error fetching event history.' });
+  }
+};
+
 module.exports = {
   createEvent,
   getEvents,
@@ -748,5 +1062,11 @@ module.exports = {
   autoCloseStartedEventRsvps,
   updateEvent,
   deleteEvent,
-  updateEventStatus
+  updateEventStatus,
+  getEventAnalytics,
+  submitFeedback,
+  generateCertificates,
+  downloadBulkCertificates,
+  downloadUserCertificate,
+  getUserEventHistory
 }

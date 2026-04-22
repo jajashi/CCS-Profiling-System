@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import './EventCreationForm.css';
 import { useAuth } from '../../../providers/AuthContext';
 import { apiFetch, apiUrl } from '../../../lib/api';
@@ -20,7 +21,8 @@ export default function EventCreationForm() {
       programs: [],
       yearLevels: []
     },
-    attachments: []
+    attachments: [],
+    feedbackEnabled: false
   });
 
   const [files, setFiles] = useState([]);
@@ -149,13 +151,15 @@ export default function EventCreationForm() {
           setError(data.message || 'Failed to create event');
         }
       } else {
+        toast.success('Event created successfully!');
         setSuccess(true);
         setFormData({
           type: '', title: '', date: '', startTime: '', endTime: '',
           isVirtual: false, meetingUrl: '', roomId: '',
           organizers: [{ userId: user?._id || '', role: 'Lead Organizer' }],
           targetGroups: { roles: [], programs: [], yearLevels: [] },
-          attachments: []
+          attachments: [],
+          feedbackEnabled: false
         });
         setFiles([]);
       }
@@ -297,6 +301,16 @@ export default function EventCreationForm() {
             onChange={handleFileChange}
             style={{padding: '0.5rem', border: '1px dashed #d1d5db', width: '100%'}}
           />
+        </div>
+
+        <div className="organizers-section">
+          <label className="checkbox-label">
+            <input type="checkbox" name="feedbackEnabled" checked={formData.feedbackEnabled} onChange={handleChange} />
+            Enable Post-Event Feedback Collection
+          </label>
+          <p style={{fontSize: '0.85rem', color: '#6b7280', margin: '-0.5rem 0 1rem 0'}}>
+            If enabled, verified attendees will be able to submit feedback after the event ends.
+          </p>
         </div>
 
         <button type="submit" className="btn-submit" disabled={uploading}>

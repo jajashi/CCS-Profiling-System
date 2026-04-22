@@ -45,7 +45,13 @@ const {
   updateAttendance,
   updateEvent,
   deleteEvent,
-  updateEventStatus
+  updateEventStatus,
+  getEventAnalytics,
+  submitFeedback,
+  generateCertificates,
+  downloadBulkCertificates,
+  downloadUserCertificate,
+  getUserEventHistory
 } = require('../controllers/eventController');
 const { authenticate, requireRoles } = require('../middleware/authMiddleware');
 
@@ -90,5 +96,13 @@ router.post('/:id/unrsvp', requireRoles('student', 'faculty'), cancelRsvp);
 router.patch('/:id/attendees/:userId', requireRoles('admin', 'faculty'), updateAttendance);
 
 router.patch('/:id/status', requireRoles('admin', 'faculty'), updateEventStatus);
+router.get('/:id/analytics', requireRoles('admin', 'faculty'), getEventAnalytics);
+router.post('/:id/feedback', submitFeedback);
+router.post('/:id/certificates', requireRoles('admin', 'faculty'), generateCertificates);
+router.get('/:id/certificates/bulk', requireRoles('admin', 'faculty'), downloadBulkCertificates);
+router.get('/:id/certificates/me', downloadUserCertificate);
+
+// User routes
+router.get('/user/:id/events', getUserEventHistory);
 
 module.exports = router;

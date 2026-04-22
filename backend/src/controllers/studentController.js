@@ -97,8 +97,31 @@ async function getStudents(req, res, next) {
       }
     }
 
-    const students = await Student.find(filter);
-    res.status(200).json(students.map((doc) => doc.toJSON()));
+    // Pagination parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    // Get total count for pagination metadata
+    const total = await Student.countDocuments(filter);
+
+    // Fetch paginated students
+    const students = await Student.find(filter)
+      .skip(skip)
+      .limit(limit)
+      .sort({ id: 1 });
+
+    res.status(200).json({
+      students: students.map((doc) => doc.toJSON()),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page < Math.ceil(total / limit),
+        hasPrev: page > 1
+      }
+    });
   } catch (err) {
     next(err);
   }
