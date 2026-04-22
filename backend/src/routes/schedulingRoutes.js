@@ -35,7 +35,7 @@ router.post('/timeblocks', authenticate, requireRoles('admin', 'faculty'), creat
 router.put('/timeblocks/:id', authenticate, requireRoles('admin', 'faculty'), updateTimeBlock);
 router.delete('/timeblocks/:id', authenticate, requireRoles('admin', 'faculty'), archiveTimeBlock);
 
-router.get('/rooms', authenticate, requireRoles('admin', 'faculty'), listRooms);
+router.get('/rooms', authenticate, listRooms);
 router.post('/rooms', authenticate, requireRoles('admin', 'faculty'), createRoom);
 router.put('/rooms/:id', authenticate, requireRoles('admin', 'faculty'), updateRoom);
 

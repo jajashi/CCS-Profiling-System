@@ -40,6 +40,9 @@ const {
   createEvent,
   getEvents,
   getEventById,
+  rsvpToEvent,
+  cancelRsvp,
+  updateAttendance,
   updateEvent,
   deleteEvent,
   updateEventStatus
@@ -80,6 +83,11 @@ router.route('/:id')
   .get(getEventById)
   .patch(updateEvent)
   .delete(deleteEvent);
+
+router.post('/:id/rsvp', requireRoles('student', 'faculty'), rsvpToEvent);
+router.delete('/:id/rsvp', requireRoles('student', 'faculty'), cancelRsvp);
+router.post('/:id/unrsvp', requireRoles('student', 'faculty'), cancelRsvp);
+router.patch('/:id/attendees/:userId', requireRoles('admin', 'faculty'), updateAttendance);
 
 router.patch('/:id/status', requireRoles('admin', 'faculty'), updateEventStatus);
 

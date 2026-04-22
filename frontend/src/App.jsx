@@ -16,9 +16,12 @@ import SectionsPage from './features/scheduling/routes/SectionsPage';
 import MySchedulePage from './features/scheduling/routes/MySchedulePage';
 import SchedulingDashboard from './features/scheduling/routes/SchedulingDashboard';
 import EventCreationPage from './features/events/routes/EventCreationPage';
+import EventListPage from './features/events/routes/EventListPage';
 import EventApprovalPage from './features/events/routes/EventApprovalPage';
 import EventDetailPage from './features/events/routes/EventDetailPage';
+import EventAttendancePage from './features/events/routes/EventAttendancePage';
 import GlobalCalendarPage from './features/events/routes/GlobalCalendarPage';
+import AttendanceTrackerPage from './features/events/routes/AttendanceTrackerPage';
 import FacultyMyClassesPage from './features/faculty/routes/FacultyMyClassesPage';
 import { useAuth } from './providers/AuthContext';
 
@@ -271,10 +274,13 @@ function App() {
           <Route path="my-schedule" element={<MySchedulePage />} />
           <Route path="overview" element={<AdminRoute><SchedulingDashboard /></AdminRoute>} />
         </Route>
-        <Route path="events" element={<NonStudentRoute><EventCreationPage /></NonStudentRoute>} />
+        <Route path="events" element={<ProtectedRoute><EventListPage /></ProtectedRoute>} />
+        <Route path="events/create" element={<NonStudentRoute><EventCreationPage /></NonStudentRoute>} />
         <Route path="events/approval" element={<AdminRoute><EventApprovalPage /></AdminRoute>} />
         <Route path="events/calendar" element={<GlobalCalendarPage />} />
         <Route path="events/:id" element={<EventDetailPage />} />
+        <Route path="events/:id/attendance" element={<ProtectedRoute><EventAttendancePage /></ProtectedRoute>} />
+        <Route path="events/:id/attendees/:userId" element={<ProtectedRoute><AttendanceTrackerPage /></ProtectedRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import './EventCreationForm.css';
 import { useAuth } from '../../../providers/AuthContext';
-// Optionally fetch rooms
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import { apiFetch, apiUrl } from '../../../lib/api';
 
 export default function EventCreationForm() {
   const { user } = useAuth();
@@ -34,12 +33,8 @@ export default function EventCreationForm() {
     // Fetch rooms
     const fetchRooms = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`${apiUrl}/api/scheduling/rooms`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const res = await apiFetch('/api/scheduling/rooms');
+        
         if (res.ok) {
           const data = await res.json();
           setRooms(data);
@@ -105,18 +100,14 @@ export default function EventCreationForm() {
 
     try {
       let uploadedAttachments = [];
-      const token = localStorage.getItem('token');
 
       // 1. Upload files first
       if (files.length > 0) {
         const formDataUpload = new FormData();
         files.forEach(f => formDataUpload.append('attachments', f));
         
-        const uploadRes = await fetch(`${apiUrl}/api/events/upload`, {
+        const uploadRes = await apiFetch('/api/events/upload', {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
           body: formDataUpload
         });
         
@@ -139,11 +130,10 @@ export default function EventCreationForm() {
         schedule: { date: localStartTime.toISOString(), startTime: localStartTime.toISOString(), endTime: localEndTime.toISOString() } 
       };
       
-      const res = await fetch(`${apiUrl}/api/events`, {
+      const res = await apiFetch('/api/events', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
       });

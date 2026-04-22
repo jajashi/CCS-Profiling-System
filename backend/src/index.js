@@ -12,6 +12,7 @@ const curriculumRoutes = require('./routes/curriculumRoutes');
 const syllabusRoutes = require('./routes/syllabusRoutes');
 const schedulingRoutes = require('./routes/schedulingRoutes');
 const eventRoutes = require('./routes/eventRoutes');
+const { startRsvpAutoCloseJob } = require('./jobs/rsvpAutoCloseJob');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -74,6 +75,7 @@ async function start() {
     app.listen(PORT, () => {
       console.log(`Server listening on port ${PORT}`);
     });
+    startRsvpAutoCloseJob();
   } catch (err) {
     console.error('Failed to start server:', err.message);
     process.exit(1);

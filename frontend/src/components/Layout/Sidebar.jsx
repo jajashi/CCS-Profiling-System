@@ -25,6 +25,7 @@ const FACULTY_CLASSES_PATH = '/dashboard/faculty/classes';
 const INSTRUCTION_PREFIX = '/dashboard/instruction';
 const SCHEDULING_PREFIX = '/dashboard/scheduling';
 const MY_SCHEDULE_PATH = '/dashboard/scheduling/my-schedule';
+const EVENTS_PREFIX = '/dashboard/events';
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -43,17 +44,31 @@ const Sidebar = () => {
   const [schedulingNavOpen, setSchedulingNavOpen] = useState(() =>
     location.pathname.startsWith(SCHEDULING_PREFIX),
   );
+  const [eventsNavOpen, setEventsNavOpen] = useState(() =>
+    location.pathname.startsWith(EVENTS_PREFIX),
+  );
 
   useEffect(() => {
     const p = location.pathname;
     if (p.startsWith(FACULTY_PREFIX)) {
       setFacultyNavOpen(true);
+    } else {
+      setFacultyNavOpen(false);
     }
-    if (location.pathname.startsWith(INSTRUCTION_PREFIX)) {
+    if (p.startsWith(INSTRUCTION_PREFIX)) {
       setInstructionNavOpen(true);
+    } else {
+      setInstructionNavOpen(false);
     }
-    if (location.pathname.startsWith(SCHEDULING_PREFIX)) {
+    if (p.startsWith(SCHEDULING_PREFIX)) {
       setSchedulingNavOpen(true);
+    } else {
+      setSchedulingNavOpen(false);
+    }
+    if (p.startsWith(EVENTS_PREFIX)) {
+      setEventsNavOpen(true);
+    } else {
+      setEventsNavOpen(false);
     }
   }, [location.pathname]);
 
@@ -326,15 +341,50 @@ const Sidebar = () => {
                   </ul>
                 ) : null}
               </li>
-
-              <li className="nav-item">
-                <NavLink to="/dashboard/events" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
-                  <span className="nav-icon"><FiStar /></span>
-                  <span className="nav-text">Events</span>
-                </NavLink>
-              </li>
             </>
           )}
+
+          <li className={`nav-item nav-group${eventsNavOpen ? ' nav-group--open' : ''}`}>
+            <button
+              type="button"
+              className={`nav-link nav-group-toggle${location.pathname.startsWith(EVENTS_PREFIX) ? ' nav-group-toggle--within' : ''}`}
+              aria-expanded={eventsNavOpen}
+              aria-controls="sidebar-events-subnav"
+              id="sidebar-events-trigger"
+              onClick={() => setEventsNavOpen((open) => !open)}
+            >
+              <span className="nav-icon"><FiStar /></span>
+              <span className="nav-text">Events</span>
+              <span className="nav-group-chevron" aria-hidden>
+                {eventsNavOpen ? <FiChevronUp /> : <FiChevronDown />}
+              </span>
+            </button>
+            {eventsNavOpen ? (
+              <ul className="nav-sublist" id="sidebar-events-subnav" role="list">
+                <li className="nav-subitem">
+                  <NavLink
+                    to="/dashboard/events"
+                    end
+                    className={({ isActive }) => (isActive ? 'nav-link nav-sublink active' : 'nav-link nav-sublink')}
+                  >
+                    <span className="nav-icon nav-sublink-icon"><FiGrid /></span>
+                    <span className="nav-text">List Events</span>
+                  </NavLink>
+                </li>
+                {!isStudent ? (
+                  <li className="nav-subitem">
+                    <NavLink
+                      to="/dashboard/events/create"
+                      className={({ isActive }) => (isActive ? 'nav-link nav-sublink active' : 'nav-link nav-sublink')}
+                    >
+                      <span className="nav-icon nav-sublink-icon"><FiCalendar /></span>
+                      <span className="nav-text">Create Event</span>
+                    </NavLink>
+                  </li>
+                ) : null}
+              </ul>
+            ) : null}
+          </li>
           
           {isAdmin ? (
             <li className="nav-item">

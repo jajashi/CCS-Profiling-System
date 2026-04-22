@@ -27,6 +27,35 @@ const scheduleSchema = new mongoose.Schema({
   }
 }, { _id: false });
 
+const attendeeSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  rsvpStatus: {
+    type: String,
+    enum: ['registered', 'waitlisted'],
+    default: 'registered'
+  },
+  attended: {
+    type: Boolean,
+    default: false
+  }
+}, { _id: false });
+
+const waitlistEntrySchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  addedAt: {
+    type: Date,
+    default: Date.now
+  }
+}, { _id: false });
+
 const eventSchema = new mongoose.Schema({
   type: {
     type: String,
@@ -74,6 +103,21 @@ const eventSchema = new mongoose.Schema({
     type: String
   }],
   organizers: [organizerSchema],
+  attendees: {
+    type: [attendeeSchema],
+    default: []
+  },
+  waitlist: {
+    type: [waitlistEntrySchema],
+    default: []
+  },
+  rsvpClosed: {
+    type: Boolean,
+    default: false
+  },
+  rsvpClosedAt: {
+    type: Date
+  },
   cancelledAt: {
     type: Date
   },
@@ -83,5 +127,7 @@ const eventSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+eventSchema.index({ 'schedule.startTime': 1, rsvpClosed: 1 });
 
 module.exports = mongoose.model('Event', eventSchema);

@@ -1,9 +1,101 @@
+const mongoose = require('mongoose');
 const Event = require('../models/Event');
 const Room = require('../models/Room');
 const Section = require('../models/Section');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const Student = require('../models/Student');
+
+const RSVP_CLOSED_MESSAGE = 'Registration is already closed for this event.';
+
+const toObjectId = (id) => {
+  try {
+    return new mongoose.Types.ObjectId(id);
+  } catch {
+    return null;
+  }
+};
+
+const eventHasStarted = (event) => {
+  if (!event?.schedule?.startTime) return false;
+  return new Date(event.schedule.startTime).getTime() <= Date.now();
+};
+
+const isRegistrationClosed = (event) => {
+  if (!event) return true;
+  if (event.rsvpClosed) return true;
+  return eventHasStarted(event);
+};
+
+const buildTargetingMeta = async (user) => {
+  if (!user) return { role: null, program: null, yearLevel: null };
+  if (user.role !== 'student' || !user.studentId) {
+    return { role: user.role || null, program: null, yearLevel: null };
+  }
+
+  const student = await Student.findOne({ id: user.studentId }).lean();
+  return {
+    role: user.role || null,
+    program: student?.program || null,
+    yearLevel: student?.yearLevel || null
+  };
+};
+
+const isUserInTargetGroups = (event, targetingMeta) => {
+  const roles = event?.targetGroups?.roles || [];
+  const programs = event?.targetGroups?.programs || [];
+  const yearLevels = event?.targetGroups?.yearLevels || [];
+  const hasTargeting = roles.length > 0 || programs.length > 0 || yearLevels.length > 0;
+  if (!hasTargeting) return true;
+
+  const roleMatch = targetingMeta.role ? roles.includes(targetingMeta.role) : false;
+  const programMatch = targetingMeta.program ? programs.includes(targetingMeta.program) : false;
+  const yearMatch = targetingMeta.yearLevel ? yearLevels.includes(targetingMeta.yearLevel) : false;
+  return roleMatch || programMatch || yearMatch;
+};
+
+const canUserAccessEvent = (event, user, targetingMeta) => {
+  if (!event || !user) return false;
+  const isOrganizer = (event.organizers || []).some(
+    (org) => String(org.userId) === String(user.id || user._id)
+  );
+  if (user.role === 'admin' || isOrganizer) return true;
+  return isUserInTargetGroups(event, targetingMeta);
+};
+
+const computeCapacity = (event) => {
+  if (event?.isVirtual) return Number.POSITIVE_INFINITY;
+  const roomCapacity = Number(event?.roomId?.maximumCapacity);
+  if (!Number.isFinite(roomCapacity) || roomCapacity < 1) return 0;
+  return roomCapacity;
+};
+
+const mapEventWithViewerState = (event, viewerId) => {
+  const eventDoc = typeof event.toObject === 'function' ? event.toObject() : event;
+  const attendees = eventDoc.attendees || [];
+  const waitlist = eventDoc.waitlist || [];
+  const registeredCount = attendees.filter((a) => a.rsvpStatus === 'registered').length;
+  const capacity = computeCapacity(eventDoc);
+  const isFull = Number.isFinite(capacity) ? registeredCount >= capacity : false;
+
+  const viewerAttendee = attendees.find((a) => String(a.userId?._id || a.userId) === String(viewerId || ''));
+  const viewerWaitlistIndex = waitlist.findIndex(
+    (w) => String(w.userId?._id || w.userId) === String(viewerId || '')
+  );
+
+  return {
+    ...eventDoc,
+    registration: {
+      isClosed: isRegistrationClosed(eventDoc),
+      registeredCount,
+      capacity: Number.isFinite(capacity) ? capacity : null,
+      isFull,
+      isRegistered: Boolean(viewerAttendee),
+      isWaitlisted: viewerWaitlistIndex >= 0,
+      waitlistPosition: viewerWaitlistIndex >= 0 ? viewerWaitlistIndex + 1 : null
+    }
+  };
+};
 
 const createEvent = async (req, res) => {
   try {
@@ -19,6 +111,55 @@ const createEvent = async (req, res) => {
       attachments,
       timezone
     } = req.body;
+
+    // Convert faculty/student IDs to User ObjectIds for organizers
+    let processedOrganizers = organizers;
+    if (organizers && Array.isArray(organizers)) {
+      processedOrganizers = [];
+      for (const organizer of organizers) {
+        if (organizer.userId) {
+          const trimmedId = organizer.userId.trim();
+          let user = null;
+          
+          // Try to find user by employeeId (faculty) first
+          user = await User.findOne({ employeeId: trimmedId });
+          
+          // If not found, try studentId
+          if (!user) {
+            user = await User.findOne({ studentId: trimmedId });
+          }
+          
+          // If still not found, try username (case insensitive)
+          if (!user) {
+            user = await User.findOne({ username: trimmedId.toLowerCase() });
+          }
+          
+          // If still not found, try name (case insensitive)
+          if (!user) {
+            user = await User.findOne({ name: { $regex: new RegExp(`^${trimmedId}$`, 'i') } });
+          }
+          
+          // If still not found, try treating as ObjectId directly
+          if (!user) {
+            const objectId = toObjectId(trimmedId);
+            if (objectId) {
+              user = await User.findById(objectId);
+            }
+          }
+          
+          if (user) {
+            processedOrganizers.push({
+              userId: user._id,
+              role: organizer.role
+            });
+          } else {
+            return res.status(400).json({ 
+              message: `Invalid organizer userId: ${organizer.userId}. User not found.` 
+            });
+          }
+        }
+      }
+    }
 
     // Validate schedule
     if (!schedule || !schedule.date || !schedule.startTime || !schedule.endTime) {
@@ -102,9 +243,12 @@ const createEvent = async (req, res) => {
       meetingUrl: isVirtual ? meetingUrl : undefined,
       roomId: !isVirtual ? roomId : undefined,
       title,
-      organizers,
+      organizers: processedOrganizers,
       targetGroups,
-      attachments
+      attachments,
+      attendees: [],
+      waitlist: [],
+      rsvpClosed: false
     });
 
     await newEvent.save();
@@ -170,44 +314,31 @@ const dispatchEventNotifications = async (event) => {
 
 const getEvents = async (req, res) => {
   try {
-    const userRole = req.user?.role;
-    const userStudentId = req.user?.studentId;
-    
-    let studentProgram = null;
-    let studentYear = null;
-    if (userStudentId) {
-      const student = await Student.findOne({ id: userStudentId });
-      if (student) {
-        studentProgram = student.program;
-        studentYear = student.yearLevel;
-      }
-    }
+    const targetingMeta = await buildTargetingMeta(req.user);
+    const events = await Event.find()
+      .populate('roomId')
+      .populate('organizers.userId', 'name username role');
 
-    // Build the query to filter by targetGroups
-    // Events must be 'published' OR I am an organizer OR I am admin/faculty
-    // For now purely enforcing ACC-4.2
-    
-    const events = await Event.find().populate('roomId');
-    
-    // Filter events server-side based on user match
-    const filteredEvents = events.filter(e => {
-      // Basic visibility: admins/faculty see all or if I am an organizer
-      const isOrganizer = e.organizers.some(org => org.userId.toString() === req.user?._id.toString());
-      if (isOrganizer || userRole === 'admin' || userRole === 'faculty') return true;
-      if (e.status !== 'published') return false; // Students only see published
-      
-      const { roles, programs, yearLevels } = e.targetGroups || {};
-      const hasTargeting = (roles && roles.length > 0) || (programs && programs.length > 0) || (yearLevels && yearLevels.length > 0);
-      
-      if (!hasTargeting) return true; // generic audience
-      
-      let matched = false;
-      if (roles && roles.includes(userRole)) matched = true;
-      if (programs && programs.includes(studentProgram)) matched = true;
-      if (yearLevels && yearLevels.includes(studentYear)) matched = true;
-      
-      return matched;
-    });
+    const filteredEvents = events
+      .filter((event) => {
+        // Check if user is an organizer
+        const isOrganizer = (event.organizers || []).some(
+          (org) => String(org.userId?._id || org.userId) === String(req.user?.id || '')
+        );
+        
+        // Admins and faculty can see all events they're eligible for
+        if (req.user?.role === 'admin' || req.user?.role === 'faculty') {
+          return canUserAccessEvent(event, req.user, targetingMeta);
+        }
+        
+        // For students and student_leaders, show events they're organizing OR targeted for
+        if (isOrganizer || canUserAccessEvent(event, req.user, targetingMeta)) {
+          return true;
+        }
+        
+        return false;
+      })
+      .map((event) => mapEventWithViewerState(event, req.user?.id));
 
     res.json(filteredEvents);
   } catch (error) {
@@ -218,12 +349,309 @@ const getEvents = async (req, res) => {
 
 const getEventById = async (req, res) => {
   try {
-    const event = await Event.findById(req.params.id).populate('roomId');
+    const event = await Event.findById(req.params.id)
+      .populate('roomId')
+      .populate('organizers.userId', 'name username role')
+      .populate('attendees.userId', 'name username role')
+      .populate('waitlist.userId', 'name username role');
     if (!event) return res.status(404).json({ message: 'Event not found.' });
-    res.json(event);
+
+    const targetingMeta = await buildTargetingMeta(req.user);
+    if (!canUserAccessEvent(event, req.user, targetingMeta)) {
+      return res.status(403).json({ message: 'You are not allowed to access this event.' });
+    }
+
+    res.json(mapEventWithViewerState(event, req.user?.id));
   } catch (error) {
     res.status(500).json({ message: 'Server error fetching event.' });
   }
+};
+
+const rsvpToEvent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required.' });
+    }
+
+    const event = await Event.findById(id)
+      .populate('roomId')
+      .populate('organizers.userId', 'name username role');
+
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found.' });
+    }
+
+    // Enhanced validation with automatic closure
+    const validation = validateEventForRSVP(event);
+    if (!validation.canRSVP) {
+      return res.status(validation.errorCode).json({ 
+        message: validation.error,
+        isClosed: true
+      });
+    }
+
+    // Check if user is in target groups
+    const targetingMeta = await buildTargetingMeta(req.user);
+    if (!isUserInTargetGroups(event, targetingMeta)) {
+      return res.status(403).json({ message: 'You are not eligible to register for this event.' });
+    }
+
+    // Check if user is already registered or waitlisted
+    const existingAttendee = event.attendees?.find(
+      attendee => String(attendee.userId) === String(userId)
+    );
+    const existingWaitlist = event.waitlist?.find(
+      entry => String(entry.userId) === String(userId)
+    );
+
+    if (existingAttendee || existingWaitlist) {
+      return res.status(409).json({ message: 'You are already registered for this event.' });
+    }
+
+    // Check capacity and handle waitlist
+    const currentAttendees = event.attendees.filter(attendee => !attendee.rsvpStatus || attendee.rsvpStatus === 'registered');
+    const roomCapacity = event.roomId?.maximumCapacity;
+    const isAtCapacity = roomCapacity && currentAttendees.length >= roomCapacity;
+
+    let updates = {};
+
+    if (isAtCapacity) {
+      // Add to waitlist if at capacity
+      updates.$push = {
+        waitlist: {
+          userId: userId,
+          addedAt: new Date()
+        }
+      };
+    } else {
+      // Add to attendees if not at capacity
+      updates.$push = {
+        attendees: {
+          userId: userId,
+          rsvpStatus: 'registered',
+          attended: false
+        }
+      };
+    }
+
+    const updatedEvent = await Event.findByIdAndUpdate(
+      id,
+      updates,
+      { new: true, runValidators: false }
+    );
+
+    if (!updatedEvent) {
+      return res.status(500).json({ message: 'Failed to process RSVP.' });
+    }
+
+    res.status(201).json({
+      message: isAtCapacity ? 'You have been added to the waitlist.' : 'Successfully registered for the event.',
+      data: {
+        eventId: updatedEvent._id,
+        isWaitlisted: isAtCapacity,
+        waitlistPosition: isAtCapacity ? event.waitlist.length : null
+      }
+    });
+
+  } catch (error) {
+    console.error('RSVP error:', error);
+    res.status(500).json({ message: 'Server error processing RSVP.' });
+  }
+};
+
+const cancelRsvp = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id).populate('roomId');
+    if (!event) return res.status(404).json({ message: 'Event not found.' });
+    if (isRegistrationClosed(event)) {
+      return res.status(403).json({ message: RSVP_CLOSED_MESSAGE });
+    }
+
+    const userId = toObjectId(req.user?.id);
+    if (!userId) return res.status(401).json({ message: 'Authentication required.' });
+
+    const isAttendee = (event.attendees || []).some((a) => String(a.userId) === String(userId));
+    const isWaitlisted = (event.waitlist || []).some((w) => String(w.userId) === String(userId));
+    if (!isAttendee && !isWaitlisted) {
+      return res.status(404).json({ message: 'No RSVP or waitlist entry found for this user.' });
+    }
+
+    const eventId = toObjectId(req.params.id);
+    if (!eventId) return res.status(400).json({ message: 'Invalid event id.' });
+
+    const updatedEvent = await Event.findOneAndUpdate(
+      {
+        _id: eventId,
+        rsvpClosed: { $ne: true },
+        'schedule.startTime': { $gt: new Date() }
+      },
+      {
+        $pull: {
+          attendees: { userId },
+          waitlist: { userId }
+        }
+      },
+      { new: true }
+    )
+      .populate('roomId')
+      .populate('organizers.userId', 'name username role')
+      .populate('attendees.userId', 'name username role')
+      .populate('waitlist.userId', 'name username role');
+
+    if (!updatedEvent) {
+      return res.status(409).json({ message: 'Cancellation failed. Please retry.' });
+    }
+
+    let promotedUserId = null;
+    if (isAttendee) {
+      let promotionApplied = false;
+      while (!promotionApplied) {
+        const latest = await Event.findById(eventId).select('waitlist').lean();
+        const candidate = latest?.waitlist?.[0]?.userId;
+        if (!candidate) break;
+
+        const promoted = await Event.findOneAndUpdate(
+          {
+            _id: eventId,
+            'waitlist.0.userId': candidate,
+            rsvpClosed: { $ne: true },
+            'schedule.startTime': { $gt: new Date() }
+          },
+          {
+            $push: { attendees: { userId: candidate, rsvpStatus: 'registered', attended: false } },
+            $pop: { waitlist: -1 }
+          },
+          { new: true }
+        );
+
+        if (promoted) {
+          promotedUserId = candidate;
+          promotionApplied = true;
+        }
+      }
+    }
+
+    if (promotedUserId) {
+      await Notification.create({
+        userId: promotedUserId,
+        title: `Spot Opened: ${updatedEvent.title}`,
+        message: `You were promoted from waitlist to registered for ${updatedEvent.title}.`,
+        link: `/dashboard/events/${updatedEvent._id}`
+      });
+    }
+
+    const refreshedEvent = await Event.findById(eventId)
+      .populate('roomId')
+      .populate('organizers.userId', 'name username role')
+      .populate('attendees.userId', 'name username role')
+      .populate('waitlist.userId', 'name username role');
+
+    return res.status(200).json({
+      message: 'RSVP cancelled successfully.',
+      event: mapEventWithViewerState(refreshedEvent, req.user.id)
+    });
+  } catch (error) {
+    console.error('Error cancelling RSVP:', error);
+    return res.status(500).json({ message: 'Server error while cancelling RSVP.' });
+  }
+};
+
+const updateAttendance = async (req, res) => {
+  try {
+    const { attended } = req.body;
+    if (typeof attended !== 'boolean') {
+      return res.status(400).json({ message: '`attended` must be a boolean.' });
+    }
+
+    const eventId = toObjectId(req.params.id);
+    const attendeeUserId = toObjectId(req.params.userId);
+    if (!eventId || !attendeeUserId) {
+      return res.status(400).json({ message: 'Invalid id supplied.' });
+    }
+
+    const event = await Event.findOneAndUpdate(
+      {
+        _id: eventId,
+        'attendees.userId': attendeeUserId
+      },
+      {
+        $set: {
+          'attendees.$.attended': attended
+        }
+      },
+      { new: true }
+    )
+      .populate('roomId')
+      .populate('organizers.userId', 'name username role')
+      .populate('attendees.userId', 'name username role')
+      .populate('waitlist.userId', 'name username role');
+
+    if (!event) {
+      return res.status(404).json({ message: 'Event or attendee not found.' });
+    }
+
+    return res.status(200).json({
+      message: attended ? 'Marked present.' : 'Marked absent.',
+      event: mapEventWithViewerState(event, req.user?.id)
+    });
+  } catch (error) {
+    console.error('Error updating attendance:', error);
+    return res.status(500).json({ message: 'Server error while updating attendance.' });
+  }
+};
+
+const autoCloseStartedEventRsvps = async () => {
+  const now = new Date();
+  try {
+    const result = await Event.updateMany(
+      {
+        rsvpClosed: { $ne: true },
+        'schedule.startTime': { $lte: now }
+      },
+      {
+        $set: {
+          rsvpClosed: true,
+          rsvpClosedAt: now
+        }
+      }
+    );
+    return result.modifiedCount || 0;
+  } catch (error) {
+    console.error('Error while auto-closing RSVP windows:', error);
+    return 0;
+  }
+};
+
+// Enhanced RSVP validation with automatic closure
+const validateEventForRSVP = (event) => {
+  const now = new Date();
+  
+  // Auto-close if event has started
+  if (eventHasStarted(event)) {
+    return {
+      canRSVP: false,
+      error: 'Event has already started. Registration is closed.',
+      isClosed: true
+    };
+  }
+  
+  // Check if registration is already closed
+  if (event.rsvpClosed) {
+    return {
+      canRSVP: false,
+      error: 'Registration is closed for this event.',
+      isClosed: true
+    };
+  }
+  
+  return {
+    canRSVP: true,
+    error: null,
+    isClosed: false
+  };
 };
 
 const updateEvent = async (req, res) => {
@@ -314,7 +742,11 @@ module.exports = {
   createEvent,
   getEvents,
   getEventById,
+  rsvpToEvent,
+  cancelRsvp,
+  updateAttendance,
+  autoCloseStartedEventRsvps,
   updateEvent,
   deleteEvent,
   updateEventStatus
-};
+}
