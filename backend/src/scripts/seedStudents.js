@@ -317,13 +317,66 @@ const MOCK_STUDENTS = [
   },
 ];
 
-const SEED_STUDENT_COUNT = 10;
+// Helper function to generate random student data
+function generateRandomStudent(index) {
+  const firstNames = ["Juan", "Maria", "Jose", "Ana", "Pedro", "Sofia", "Miguel", "Isabella", "Carlos", "Gabriela", 
+                      "Antonio", "Carmen", "Francisco", "Rosa", "Luis", "Teresa", "Javier", "Patricia", "Manuel", "Elena",
+                      "Roberto", "Laura", "Diego", "Valeria", "Ricardo", "Natalia", "Alberto", "Daniela", "Fernando", "Paula",
+                      "Santiago", "Clara", "Eduardo", "Sara", "Alejandro", "Lucia", "Pablo", "Marta", "Jorge", "Beatriz"];
+  const lastNames = ["Garcia", "Rodriguez", "Lopez", "Martinez", "Gonzalez", "Perez", "Sanchez", "Ramirez", "Cruz", "Flores",
+                     "Torres", "Rivera", "Morales", "Reyes", "Jimenez", "Mendoza", "Castillo", "Vargas", "Diaz", "Hernandez",
+                     "Gutierrez", "Silva", "Molina", "Alvarez", "Ortiz", "Gomez", "Guerrero", "Santos", "Cortez", "Luna"];
+  const middleInitials = ["A.", "B.", "C.", "D.", "E.", "F.", "G.", "H.", "I.", "J.", "K.", "L.", "M.", "N.", "O.", "P.", "Q.", "R.", "S.", "T."];
+  const programs = ["BSCS", "BSIT", "BSCS", "BSIT"]; // 50/50 split
+  const yearLevels = ["1", "2", "3", "4"];
+  const sections = {
+    "BSCS": ["CS1A", "CS1B", "CS1C", "CS2A", "CS2B", "CS2C", "CS3A", "CS3B", "CS3C", "CS4A", "CS4B", "CS4C"],
+    "BSIT": ["IT1A", "IT1B", "IT1C", "IT2A", "IT2B", "IT2C", "IT3A", "IT3B", "IT3C", "IT4A", "IT4B", "IT4C"]
+  };
+  const statuses = ["Enrolled", "Enrolled", "Enrolled", "On Leave", "Graduating"]; // Most are enrolled
+  const scholarships = ["None", "None", "None", "None", "Dean's Lister", "Academic Scholar", "CHED Scholar", "Full Scholar"];
+  const skills = [
+    ["Programming", "Web Development"], ["UI/UX Design", "Graphic Arts"], ["Data Analysis", "Communication"],
+    ["Leadership", "Problem Solving"], ["Database Management", "Programming"], ["Mobile Development", "Web Design"],
+    ["Machine Learning", "Python"], ["Network Security", "System Administration"], ["Project Management", "Agile"],
+    ["Creative Writing", "Content Creation"], ["Digital Marketing", "Social Media"], ["Game Development", "3D Modeling"],
+    ["Cloud Computing", "DevOps"], ["Blockchain", "Cryptocurrency"], ["IoT", "Embedded Systems"]
+  ];
 
-// Deterministic seed IDs so re-running seed updates the same records (2201001 …).
-const SEEDED_STUDENTS = MOCK_STUDENTS.slice(0, SEED_STUDENT_COUNT).map((student, index) => ({
-  ...student,
-  id: `${SEED_ID_PREFIX}${String(SEED_ID_START + index).padStart(3, "0")}`,
-}));
+  const firstName = firstNames[index % firstNames.length];
+  const lastName = lastNames[Math.floor(index / firstNames.length) % lastNames.length];
+  const middleName = middleInitials[index % middleInitials.length];
+  const program = programs[index % programs.length];
+  const yearLevel = yearLevels[index % yearLevels.length];
+  const section = sections[program][Math.floor(index / 4) % sections[program].length];
+  const status = statuses[index % statuses.length];
+  const scholarship = scholarships[index % scholarships.length];
+  const selectedSkills = skills[index % skills.length];
+
+  return {
+    id: `${SEED_ID_PREFIX}${String(SEED_ID_START + index).padStart(3, "0")}`,
+    firstName: firstName,
+    middleName: middleName,
+    lastName: lastName,
+    gender: index % 2 === 0 ? "Male" : "Female",
+    dob: `${2000 + (index % 8)}-${String((index % 12) + 1).padStart(2, "0")}-${String((index % 28) + 1).padStart(2, "0")}`,
+    program: program,
+    yearLevel: yearLevel,
+    section: section,
+    status: status,
+    scholarship: scholarship,
+    email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}${index}@ccs.edu`,
+    contact: `0917555${String(10000 + index).slice(1)}`,
+    dateEnrolled: `${2020 + (index % 5)}-08-${String(15 + (index % 15)).padStart(2, "0")}`,
+    guardian: `${index % 2 === 0 ? "Maria" : "Jose"} ${lastName}`,
+    guardianContact: `0917555${String(20000 + index).slice(1)}`,
+    violation: index % 10 === 0 ? "Warning (late)" : index % 25 === 0 ? "Academic probation" : "None",
+    skills: selectedSkills,
+  };
+}
+
+// Generate 1,000 students
+const SEEDED_STUDENTS = Array.from({ length: SEED_STUDENT_COUNT }, (_, index) => generateRandomStudent(index));
 
 async function run() {
   const uri = process.env.MONGODB_URI;

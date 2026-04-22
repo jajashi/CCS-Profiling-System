@@ -2,18 +2,28 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../../lib/api';
 import { useAuth } from '../../../providers/AuthContext';
-import { FiCalendar, FiMapPin, FiUsers, FiExternalLink, FiCheck, FiX, FiClock, FiUser, FiEdit2, FiEye } from 'react-icons/fi';
+import { FiCalendar, FiMapPin, FiUsers, FiExternalLink, FiCheck, FiX, FiClock, FiUser, FiEdit2, FiEye, FiClipboard } from 'react-icons/fi';
 import './EventDetailPage.css';
 
 export default function EventDetailPage() {
   const { id } = useParams();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [rsvpStatus, setRsvpStatus] = useState(null);
   const [error, setError] = useState(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
+  // Check if user is an organizer
+  const isOrganizer = (event, user) => {
+    if (!event || !user) return false;
+    return (event.organizers || []).some(
+      (org) => String(org.userId?._id || org.userId) === String(user.id || user._id)
+    );
+  };
+
+  const canAccessAttendance = isAdmin || isOrganizer(event, user);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -26,8 +36,8 @@ export default function EventDetailPage() {
           setEvent(data);
           
           // Check if user is already registered or waitlisted
-          const attendee = data.attendees?.find(a => String(a.userId) === String(user?.id));
-          const waitlisted = data.waitlist?.find(w => String(w.userId) === String(user?.id));
+          const attendee = data.attendees?.find(a => String(a.userId?._id || a.userId) === String(user?.id || user?._id));
+          const waitlisted = data.waitlist?.find(w => String(w.userId?._id || w.userId) === String(user?.id || user?._id));
           
           if (attendee) {
             setRsvpStatus('registered');
@@ -141,7 +151,7 @@ export default function EventDetailPage() {
       return (
         <button className="rsvp-btn rsvp-btn-waitlisted" disabled>
           <FiClock />
-          <span>You are #{event.waitlist?.findIndex(w => String(w.userId) === String(user?.id)) + 1} on waitlist</span>
+          <span>You are #{event.waitlist?.findIndex(w => String(w.userId?._id || w.userId) === String(user?.id || user?._id)) + 1} on waitlist</span>
         </button>
       );
     } else if (!isRegistrationOpen()) {
@@ -194,7 +204,7 @@ export default function EventDetailPage() {
       {/* Header */}
       <div className="event-detail-header">
         <button className="back-btn" onClick={() => navigate('/dashboard/events')}>
-          ← Back to Events
+          Back to Events
         </button>
         <h1>{event.title}</h1>
         <div className="event-meta">
@@ -203,6 +213,15 @@ export default function EventDetailPage() {
              event.status === 'pending_approval' ? 'Pending Approval' : 'Draft'}
           </span>
           <span className="event-type">{event.type}</span>
+          {canAccessAttendance && (
+            <button 
+              className="attendance-tracker-btn"
+              onClick={() => navigate(`/dashboard/events/${id}/attendance`)}
+            >
+              <FiClipboard />
+              <span>Attendance Tracker</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -299,7 +318,7 @@ export default function EventDetailPage() {
                 </span>
                 {rsvpStatus === 'waitlisted' && (
                   <span className="waitlist-position">
-                    You are #{event.waitlist?.findIndex(w => String(w.userId) === String(user?.id)) + 1} on the waitlist
+                    You are #{event.waitlist?.findIndex(w => String(w.userId?._id || w.userId) === String(user?.id || user?._id)) + 1} on the waitlist
                   </span>
                 )}
               </div>
