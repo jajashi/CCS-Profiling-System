@@ -23,13 +23,27 @@ const userSchema = new mongoose.Schema({
     enum: ['admin', 'faculty', 'student'],
     required: true
   },
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
+  mustChangePassword: {
+    type: Boolean,
+    default: false,
+  },
+  isNewAccount: {
+    type: Boolean,
+    default: false,
+  },
   studentId: {
     type: String,
+    unique: true,
     sparse: true 
   },
   /** Links faculty login accounts to Faculty.employeeId (e.g. FAC-2026-001). */
   employeeId: {
     type: String,
+    unique: true,
     sparse: true,
     trim: true,
   },

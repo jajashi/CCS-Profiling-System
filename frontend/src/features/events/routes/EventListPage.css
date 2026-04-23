@@ -1,6 +1,12 @@
 /* Import existing room registry styles */
 @import url('../../scheduling/routes/RoomsPage.css');
 
+.event-registry-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
 .venue-virtual {
   font-weight: 500;
 }

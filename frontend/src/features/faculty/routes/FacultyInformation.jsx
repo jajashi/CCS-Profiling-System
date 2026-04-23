@@ -742,7 +742,14 @@ const FacultyInformation = () => {
                   ))
                 : null}
               {!loading && faculty.map((member) => (
-                <tr key={member.employeeId || member._id} onClick={() => navigate(facultyProfilePath(member.employeeId))} className={member.status === 'Inactive' ? 'grayscale opacity-60' : ''}>
+                <tr
+                  key={member.employeeId || member._id}
+                  onClick={() => navigate(facultyProfilePath(member.employeeId))}
+                  className={[
+                    member.status === 'Inactive' ? 'grayscale opacity-60' : '',
+                    String(selectedEmployeeId || '') === String(member.employeeId || '') ? 'row-selected' : '',
+                  ].filter(Boolean).join(' ')}
+                >
                   <td className="id-cell">
                     <span className="id-badge">{member.employeeId || '-'}</span>
                   </td>

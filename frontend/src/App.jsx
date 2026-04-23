@@ -1,11 +1,13 @@
 import { Routes, Route, Navigate, useParams, Outlet } from 'react-router-dom';
 import LoginPage from './features/auth/routes/LoginPage';
+import ChangePasswordPage from './features/auth/routes/ChangePasswordPage';
 import DashboardLayout from './components/Layout/DashboardLayout';
 import DashboardHome from './features/dashboard/routes/DashboardHome';
 import PlaceholderPage from './features/misc/routes/PlaceholderPage';
 import StudentInformation from './features/students/routes/StudentInformation';
 import FacultyInformation from './features/faculty/routes/FacultyInformation';
 import SpecializationManagement from './features/faculty/routes/SpecializationManagement';
+import AccountManagementPage from './features/accounts/routes/AccountManagementPage';
 import FacultyDashboard from './features/faculty/routes/FacultyDashboard';
 import CurriculaManagement from './features/instruction/routes/CurriculaManagement';
 import SyllabusListPage from './features/instruction/routes/SyllabusListPage';
@@ -31,6 +33,28 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/" replace />;
   }
   return children;
+};
+
+const PasswordReadyRoute = ({ children }) => {
+  const { isAuthenticated, mustChangePassword } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  if (mustChangePassword) {
+    return <Navigate to="/change-password" replace />;
+  }
+  return children;
+};
+
+const ForcePasswordChangeRoute = () => {
+  const { isAuthenticated, mustChangePassword } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  if (!mustChangePassword) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <ChangePasswordPage />;
 };
 
 const AdminRoute = ({ children }) => {
@@ -160,11 +184,14 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<LoginPage />} />
+      <Route path="/change-password" element={<ForcePasswordChangeRoute />} />
       <Route
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <DashboardLayout />
+            <PasswordReadyRoute>
+              <DashboardLayout />
+            </PasswordReadyRoute>
           </ProtectedRoute>
         }
       >
@@ -205,6 +232,14 @@ function App() {
           element={(
             <AdminRoute>
               <SpecializationManagement />
+            </AdminRoute>
+          )}
+        />
+        <Route
+          path="accounts"
+          element={(
+            <AdminRoute>
+              <AccountManagementPage />
             </AdminRoute>
           )}
         />

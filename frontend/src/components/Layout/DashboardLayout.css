@@ -345,3 +345,45 @@
   color: var(--text-main);
   margin-bottom: 0.5rem;
 }
+
+.welcome-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, 0.45);
+  padding: 1rem;
+}
+
+.welcome-modal {
+  width: 100%;
+  max-width: 460px;
+  background: #fff;
+  border: 1px solid #e5edf5;
+  border-radius: 16px;
+  padding: 1.15rem;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.2);
+}
+
+.welcome-modal h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.2rem;
+  color: #0f172a;
+}
+
+.welcome-modal p {
+  margin: 0 0 1rem;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.welcome-modal button {
+  border: none;
+  background: #ff7f00;
+  color: #fff;
+  border-radius: 10px;
+  padding: 0.6rem 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}

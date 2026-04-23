@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { FiHome, FiUsers, FiBriefcase, FiBookOpen, FiCalendar, FiStar, FiLogOut, FiBarChart2, FiLayers, FiChevronDown, FiChevronUp, FiUserCheck, FiAward, FiUser, FiClock, FiGrid, } from 'react-icons/fi';
+import { FiHome, FiUsers, FiBriefcase, FiBookOpen, FiCalendar, FiStar, FiLogOut, FiBarChart2, FiLayers, FiChevronDown, FiChevronUp, FiUserCheck, FiAward, FiUser, FiClock, FiGrid, FiShield, } from 'react-icons/fi';
 import { useAuth } from '../../providers/AuthContext';
 import logoSrc from '../../assets/images/ccs-logo.jpg';
 
@@ -322,6 +322,14 @@ const Sidebar = () => {
               <NavLink to="/dashboard/my-events" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
                 <span className="nav-icon"><FiAward /></span>
                 <span className="nav-text">My Events</span>
+              </NavLink>
+            </li>
+          ) : null}
+          {isAdmin ? (
+            <li className="nav-item">
+              <NavLink to="/dashboard/accounts" end className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                <span className="nav-icon"><FiShield /></span>
+                <span className="nav-text">Account Management</span>
               </NavLink>
             </li>
           ) : null}

@@ -916,7 +916,11 @@ const StudentInformation = () => {
             </thead>
             <tbody>
               {students.map((student) => (
-                <tr key={student.id} onClick={() => handleRowClick(student)}>
+                <tr
+                  key={student.id}
+                  onClick={() => handleRowClick(student)}
+                  className={String(selectedStudentId || '') === String(student.id || '') ? 'row-selected' : ''}
+                >
                   <td className="id-cell">
                     <span className="id-badge">{student.id}</span>
                   </td>
