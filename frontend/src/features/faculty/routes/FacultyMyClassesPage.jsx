@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { FiBookOpen, FiCalendar, FiGrid, FiUsers } from 'react-icons/fi';
 import { apiFetch } from '../../../lib/api';
@@ -135,14 +134,13 @@ export default function FacultyMyClassesPage() {
                     : ''}
                 </p>
                 <div className="faculty-my-classes__card-actions">
-                  <button
-                    type="button"
+                  <Link
+                    to={`/dashboard/faculty/classes/${row.sectionId}/students`}
                     className="faculty-my-classes__link faculty-my-classes__link--button"
-                    onClick={() => toast('Class roster management is under development.')}
                   >
                     <FiUsers aria-hidden />
                     Students
-                  </button>
+                  </Link>
                   {row.syllabusId ? (
                     <Link
                       to={`/dashboard/instruction/syllabi/${row.syllabusId}`}

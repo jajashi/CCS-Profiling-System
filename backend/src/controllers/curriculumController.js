@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Curriculum = require('../models/Curriculum');
+const { logActivity } = require('../services/activityLogService');
 
 function normalizeString(value) {
   return String(value ?? '').trim();
@@ -110,6 +111,12 @@ async function createCurriculum(req, res, next) {
     }
 
     const created = await Curriculum.create(data);
+    await logActivity(req, {
+      action: 'Created curriculum',
+      module: 'Instruction',
+      target: created.courseCode,
+      status: 'Completed',
+    });
     return res.status(201).json(created);
   } catch (err) {
     if (err.code === 11000) {
@@ -159,6 +166,13 @@ async function updateCurriculum(req, res, next) {
       return res.status(404).json({ message: 'Curriculum not found.' });
     }
 
+    await logActivity(req, {
+      action: 'Updated curriculum',
+      module: 'Instruction',
+      target: curriculum.courseCode,
+      status: 'Completed',
+    });
+
     return res.status(200).json(curriculum);
   } catch (err) {
     if (err.code === 11000) {
@@ -186,6 +200,12 @@ async function archiveCurriculum(req, res, next) {
 
     curriculum.status = 'Archived';
     await curriculum.save();
+    await logActivity(req, {
+      action: 'Archived curriculum',
+      module: 'Instruction',
+      target: curriculum.courseCode,
+      status: 'Completed',
+    });
 
     return res.status(200).json({ message: 'Curriculum archived successfully.', curriculum });
   } catch (err) {
@@ -211,6 +231,12 @@ async function restoreCurriculum(req, res, next) {
 
     curriculum.status = 'Active';
     await curriculum.save();
+    await logActivity(req, {
+      action: 'Restored curriculum',
+      module: 'Instruction',
+      target: curriculum.courseCode,
+      status: 'Completed',
+    });
 
     return res.status(200).json({ message: 'Curriculum restored successfully.', curriculum });
   } catch (err) {

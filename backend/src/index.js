@@ -12,6 +12,7 @@ const curriculumRoutes = require('./routes/curriculumRoutes');
 const syllabusRoutes = require('./routes/syllabusRoutes');
 const schedulingRoutes = require('./routes/schedulingRoutes');
 const eventRoutes = require('./routes/eventRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
 const { startRsvpAutoCloseJob } = require('./jobs/rsvpAutoCloseJob');
 
 const app = express();
@@ -51,6 +52,7 @@ app.use('/api/curricula', curriculumRoutes);
 app.use('/api/syllabi', syllabusRoutes);
 app.use('/api/scheduling', schedulingRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Error handler
 app.use((err, _req, res, _next) => {

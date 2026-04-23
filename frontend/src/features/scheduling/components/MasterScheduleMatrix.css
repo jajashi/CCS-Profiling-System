@@ -1,4 +1,6 @@
 .schedule-matrix-container {
+  --matrix-header-height: 42px;
+  --matrix-hour-height: 60px;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -39,7 +41,8 @@
 }
 
 .matrix-header-cell {
-  height: 40px;
+  height: var(--matrix-header-height);
+  min-height: var(--matrix-header-height);
   border-bottom: 2px solid #dee2e6;
   background-color: #f8f9fa;
   display: flex;
@@ -51,6 +54,7 @@
   position: sticky;
   top: 0;
   z-index: 20;
+  box-sizing: border-box;
 }
 
 .matrix-time-col {
@@ -68,14 +72,16 @@
 }
 
 .matrix-time-slot {
-  height: 60px; /* 1 hour = 60px */
+  height: var(--matrix-hour-height); /* 1 hour row height */
+  min-height: var(--matrix-hour-height);
   border-bottom: 1px solid #f1f3f5;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  padding-top: 4px;
+  padding-top: 0;
   font-size: 0.8rem;
   color: #adb5bd;
+  box-sizing: border-box;
 }
 
 .matrix-columns-wrapper {
@@ -96,12 +102,14 @@
 .matrix-events-area {
   position: relative;
   flex: 1;
-  min-height: 900px; /* 15 hours * 60px */
+  min-height: var(--matrix-height, 900px);
 }
 
 .matrix-grid-line {
-  height: 60px;
+  height: var(--matrix-hour-height);
+  min-height: var(--matrix-hour-height);
   border-bottom: 1px dashed #e9ecef;
+  box-sizing: border-box;
 }
 
 .matrix-event {
@@ -111,12 +119,12 @@
   background-color: #e3f2fd;
   border-left: 4px solid #1976d2;
   border-radius: 4px;
-  padding: 4px 6px;
+  padding: 5px 6px;
   overflow: hidden;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   transition: transform 0.2s, box-shadow 0.2s;
   z-index: 10;
 }
@@ -129,17 +137,32 @@
 
 .event-title {
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   color: #0d47a1;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
 .event-sub {
-  font-size: 0.7rem;
+  font-size: 0.66rem;
   color: #1565c0;
-  white-space: nowrap;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
   text-overflow: ellipsis;
   overflow: hidden;
+}
+
+.event-time {
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: #0f3f91;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { FiPlus, FiCalendar, FiBook, FiUser, FiMapPin, FiGrid, FiSettings, FiX, FiTrash2, FiClock, FiSearch } from 'react-icons/fi';
+import { FiPlus, FiCalendar, FiBook, FiUser, FiMapPin, FiGrid, FiSettings, FiX, FiTrash2, FiClock, FiSearch, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { apiFetch } from '../../../lib/api';
 import toast from 'react-hot-toast';
+import '../../students/routes/StudentInformation.css';
 import './SectionsPage.css';
 
 // --- Modals ---
@@ -260,6 +261,7 @@ function AssignResourcesModal({ section, onClose, onUpdated, rooms, faculty, tim
 // --- Main Component ---
 
 export default function SectionsPage() {
+  const PAGE_SIZE = 12;
   const [sections, setSections] = useState([]);
   const [curricula, setCurricula] = useState([]);
   const [rooms, setRooms] = useState([]);
@@ -269,6 +271,11 @@ export default function SectionsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [assignTarget, setAssignTarget] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [termFilter, setTermFilter] = useState('All');
+  const [yearFilter, setYearFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [page, setPage] = useState(1);
+  const [pageInput, setPageInput] = useState('1');
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -297,45 +304,160 @@ export default function SectionsPage() {
     loadData();
   }, [loadData]);
 
+  const termOptions = useMemo(
+    () => ['All', ...new Set(sections.map((s) => String(s.term || '').trim()).filter(Boolean))],
+    [sections],
+  );
+  const yearOptions = useMemo(
+    () => ['All', ...new Set(sections.map((s) => String(s.academicYear || '').trim()).filter(Boolean))],
+    [sections],
+  );
+  const statusOptions = useMemo(
+    () => ['All', ...new Set(sections.map((s) => String(s.status || '').trim()).filter(Boolean))],
+    [sections],
+  );
+
   const filteredSections = useMemo(() => {
-    if (!searchTerm) return sections;
     const q = searchTerm.toLowerCase();
-    return sections.filter(s => 
-      s.sectionIdentifier.toLowerCase().includes(q) ||
-      s.curriculumId?.courseTitle?.toLowerCase().includes(q) ||
-      s.curriculumId?.courseCode?.toLowerCase().includes(q)
-    );
-  }, [sections, searchTerm]);
+    return sections.filter((s) => {
+      const matchesSearch = !q
+        || s.sectionIdentifier.toLowerCase().includes(q)
+        || s.curriculumId?.courseTitle?.toLowerCase().includes(q)
+        || s.curriculumId?.courseCode?.toLowerCase().includes(q);
+      const matchesTerm = termFilter === 'All' || String(s.term || '') === termFilter;
+      const matchesYear = yearFilter === 'All' || String(s.academicYear || '') === yearFilter;
+      const matchesStatus = statusFilter === 'All' || String(s.status || '') === statusFilter;
+      return matchesSearch && matchesTerm && matchesYear && matchesStatus;
+    });
+  }, [sections, searchTerm, termFilter, yearFilter, statusFilter]);
+
+  const totalPages = Math.max(Math.ceil(filteredSections.length / PAGE_SIZE), 1);
+  const paginatedSections = filteredSections.slice((page - 1) * PAGE_SIZE, (page - 1) * PAGE_SIZE + PAGE_SIZE);
+  const hasPrev = page > 1;
+  const hasNext = page < totalPages;
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, termFilter, yearFilter, statusFilter]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  useEffect(() => {
+    setPageInput(String(page || 1));
+  }, [page]);
+
+  const handlePageJump = () => {
+    const parsed = Number.parseInt(String(pageInput || '').trim(), 10);
+    if (!Number.isFinite(parsed)) {
+      setPageInput(String(page || 1));
+      return;
+    }
+    const nextPage = Math.min(Math.max(parsed, 1), Math.max(totalPages || 1, 1));
+    setPageInput(String(nextPage));
+    if (nextPage !== page) {
+      setPage(nextPage);
+    }
+  };
 
   return (
     <div className="sections-page spec-page">
-      <div className="directory-hero">
+      <div className="directory-hero faculty-hero">
         <div className="directory-hero-icon"><FiGrid /></div>
         <div>
-          <h1 className="directory-hero-title">Section Management</h1>
+          <p className="directory-hero-title">Section Management</p>
           <p className="directory-hero-subtitle">Initialize class sections and assign logistical resources (Rooms, Faculty, Times).</p>
         </div>
       </div>
 
-      <div className="spec-toolbar">
-         <div className="search-box">
-            <FiSearch />
-            <input 
-              placeholder="Search sections, courses..." 
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
-         </div>
-         <button className="spec-btn-primary" onClick={() => setShowCreate(true)}>
+      <div className="spec-card">
+        <div className="spec-toolbar">
+          <div className="section-toolbar-filters">
+            <div className="search-box curriculum-search">
+              <FiSearch />
+              <input
+                placeholder="Search sections, courses..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <select className="filter-select curriculum-select" value={termFilter} onChange={(e) => setTermFilter(e.target.value)}>
+              {termOptions.map((option) => (
+                <option key={option} value={option}>{option === 'All' ? 'All Terms' : option}</option>
+              ))}
+            </select>
+            <select className="filter-select curriculum-select" value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
+              {yearOptions.map((option) => (
+                <option key={option} value={option}>{option === 'All' ? 'All Academic Years' : option}</option>
+              ))}
+            </select>
+            <select className="filter-select curriculum-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              {statusOptions.map((option) => (
+                <option key={option} value={option}>{option === 'All' ? 'All Statuses' : option}</option>
+              ))}
+            </select>
+          </div>
+          <button className="spec-btn-primary" onClick={() => setShowCreate(true)}>
             <FiPlus /> New Section
-         </button>
+          </button>
+        </div>
+        {!loading ? (
+          <div className="results-count">
+            <div className="results-count-text">
+              Showing <strong>{filteredSections.length}</strong> section{filteredSections.length === 1 ? '' : 's'}
+            </div>
+            {filteredSections.length > PAGE_SIZE ? (
+              <div className="results-count-pagination" aria-label="Top pagination controls">
+                <button
+                  className="pagination-btn pagination-btn-sm"
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={!hasPrev}
+                  type="button"
+                  aria-label="Previous page"
+                >
+                  <FiChevronLeft />
+                </button>
+                <label className="pagination-input-wrap" aria-label="Page number">
+                  <span className="pagination-input-label">Page</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max={totalPages}
+                    inputMode="numeric"
+                    value={pageInput}
+                    onChange={(e) => setPageInput(e.target.value)}
+                    onBlur={handlePageJump}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handlePageJump();
+                      }
+                    }}
+                    className="pagination-page-input"
+                  />
+                </label>
+                <span className="pagination-info pagination-info-sm">of {totalPages}</span>
+                <button
+                  className="pagination-btn pagination-btn-sm"
+                  onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={!hasNext}
+                  type="button"
+                  aria-label="Next page"
+                >
+                  <FiChevronRight />
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {loading ? (
         <div className="spec-loading">Loading sections architecture...</div>
       ) : (
         <div className="section-grid">
-          {filteredSections.map(section => (
+          {paginatedSections.map(section => (
             <div key={section._id} className="section-card">
               <div className="section-header">
                 <span className="section-id">{section.sectionIdentifier}</span>
@@ -388,6 +510,53 @@ export default function SectionsPage() {
           ))}
         </div>
       )}
+      {!loading && filteredSections.length === 0 ? (
+        <div className="spec-empty section-empty-state">No sections match your filters.</div>
+      ) : null}
+      {filteredSections.length > PAGE_SIZE ? (
+        <div className="pagination-controls">
+          <div className="results-count-pagination" aria-label="Bottom pagination controls">
+            <button
+              className="pagination-btn pagination-btn-sm"
+              onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+              disabled={!hasPrev}
+              type="button"
+              aria-label="Previous page"
+            >
+              <FiChevronLeft />
+            </button>
+            <label className="pagination-input-wrap" aria-label="Page number">
+              <span className="pagination-input-label">Page</span>
+              <input
+                type="number"
+                min="1"
+                max={totalPages}
+                inputMode="numeric"
+                value={pageInput}
+                onChange={(e) => setPageInput(e.target.value)}
+                onBlur={handlePageJump}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handlePageJump();
+                  }
+                }}
+                className="pagination-page-input"
+              />
+            </label>
+            <span className="pagination-info pagination-info-sm">of {totalPages}</span>
+            <button
+              className="pagination-btn pagination-btn-sm"
+              onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={!hasNext}
+              type="button"
+              aria-label="Next page"
+            >
+              <FiChevronRight />
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {showCreate && (
         <CreateSectionModal 

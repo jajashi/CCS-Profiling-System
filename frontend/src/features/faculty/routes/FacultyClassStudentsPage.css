@@ -1,0 +1,123 @@
+.faculty-class-students {
+  max-width: 1240px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.faculty-class-students__toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.25rem 0 1rem;
+  flex-wrap: wrap;
+}
+
+.faculty-class-students__back,
+.faculty-class-students__refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.faculty-class-students__back {
+  color: var(--text-muted, #64748b);
+  text-decoration: none;
+}
+
+.faculty-class-students__back:hover {
+  color: var(--primary);
+}
+
+.faculty-class-students__refresh {
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--border-color, #e2e8f0);
+  background: var(--surface, #fff);
+  color: var(--text-main, #0f172a);
+  cursor: pointer;
+}
+
+.faculty-class-students__refresh:hover {
+  border-color: #cbd5e1;
+}
+
+.faculty-class-students__meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin-bottom: 0.85rem;
+}
+
+.faculty-class-students__meta {
+  margin: 0;
+  color: var(--text-muted, #64748b);
+  font-size: 0.875rem;
+}
+
+.faculty-class-students__search {
+  width: 100%;
+  max-width: 460px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.faculty-class-students__search:focus {
+  outline: 2px solid color-mix(in srgb, var(--primary) 25%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 45%, #cbd5e1);
+}
+
+.faculty-class-students__table-wrap {
+  overflow: auto;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  background: var(--surface, #fff);
+}
+
+.faculty-class-students__table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 840px;
+}
+
+.faculty-class-students__table th,
+.faculty-class-students__table td {
+  text-align: left;
+  padding: 0.7rem 0.8rem;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.875rem;
+}
+
+.faculty-class-students__table th {
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 700;
+}
+
+.faculty-class-students__table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.faculty-class-students__muted {
+  margin: 0;
+  color: var(--text-muted, #64748b);
+}
+
+.faculty-class-students__error-wrap {
+  display: flex;
+  align-items: flex-start;
+}
+
+.faculty-class-students__error {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}

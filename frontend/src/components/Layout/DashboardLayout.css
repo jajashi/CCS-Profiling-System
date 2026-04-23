@@ -209,7 +209,6 @@
 
 .sidebar-footer-link {
   width: 100%;
-  color: var(--text-main, #0f172a);
   border-radius: var(--radius, 8px);
 }
 
@@ -218,6 +217,20 @@
 }
 
 .sidebar-footer-link.active {
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.22);
+}
+
+.nav-link.active .nav-icon,
+.nav-link.active .nav-text,
+.sidebar-footer-link.active .nav-icon,
+.sidebar-footer-link.active .nav-text {
+  color: #ffffff;
+  opacity: 1;
+}
+
+.sidebar-footer-link:hover:not(.active) {
   background: var(--primary-light);
   color: var(--primary);
 }

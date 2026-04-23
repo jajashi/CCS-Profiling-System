@@ -77,6 +77,7 @@ const FacultyInformation = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const [overallTotalRecords, setOverallTotalRecords] = useState(0);
+  const [pageInput, setPageInput] = useState('1');
   const limit = 10;
   
   const [showFilters, setShowFilters] = useState(false);
@@ -146,6 +147,10 @@ const FacultyInformation = () => {
     }, 400);
     return () => clearTimeout(timer);
   }, [query]);
+
+  useEffect(() => {
+    setPageInput(String(page || 1));
+  }, [page]);
 
   useEffect(() => {
     if (!isAdmin || searchParams.get('add') !== '1') return undefined;
@@ -335,6 +340,21 @@ const FacultyInformation = () => {
   const hasSearchOrFilters =
     String(debouncedQuery || '').trim() !== '' || activeFilterCount > 0;
   const matchingFacultyCount = hasSearchOrFilters ? totalRecords : overallTotalRecords;
+  const hasPrev = page > 1;
+  const hasNext = page < totalPages;
+
+  const handlePageJump = () => {
+    const parsed = Number.parseInt(String(pageInput || '').trim(), 10);
+    if (!Number.isFinite(parsed)) {
+      setPageInput(String(page || 1));
+      return;
+    }
+    const nextPage = Math.min(Math.max(parsed, 1), Math.max(totalPages || 1, 1));
+    setPageInput(String(nextPage));
+    if (nextPage !== page) {
+      setPage(nextPage);
+    }
+  };
 
   const nextEmployeeId = useMemo(() => {
     const year = new Date().getUTCFullYear();
@@ -632,8 +652,53 @@ const FacultyInformation = () => {
         ) : null}
 
         <div className="results-count">
-          Showing <strong>{matchingFacultyCount}</strong> out of <strong>{overallTotalRecords}</strong> faculty member
-          {overallTotalRecords !== 1 ? 's' : ''}
+          <div className="results-count-text">
+            Showing <strong>{matchingFacultyCount}</strong> out of <strong>{overallTotalRecords}</strong> faculty member
+            {overallTotalRecords !== 1 ? 's' : ''}
+          </div>
+          {totalPages > 1 ? (
+            <div className="results-count-pagination" aria-label="Top pagination controls">
+              <button
+                className="pagination-btn pagination-btn-sm"
+                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                disabled={!hasPrev || loading}
+                type="button"
+                aria-label="Previous page"
+              >
+                <FiChevronLeft />
+              </button>
+              <label className="pagination-input-wrap" aria-label="Page number">
+                <span className="pagination-input-label">Page</span>
+                <input
+                  type="number"
+                  min="1"
+                  max={totalPages}
+                  inputMode="numeric"
+                  value={pageInput}
+                  onChange={(e) => setPageInput(e.target.value)}
+                  onBlur={handlePageJump}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handlePageJump();
+                    }
+                  }}
+                  className="pagination-page-input"
+                  disabled={loading}
+                />
+              </label>
+              <span className="pagination-info pagination-info-sm">of {totalPages}</span>
+              <button
+                className="pagination-btn pagination-btn-sm"
+                onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+                disabled={!hasNext || loading}
+                type="button"
+                aria-label="Next page"
+              >
+                <FiChevronRight />
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <div className="relative">
@@ -767,25 +832,51 @@ const FacultyInformation = () => {
         </div>
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-4 mt-6">
-          <button
-            onClick={() => setPage(page - 1)}
-            disabled={page === 1 || loading}
-            className="p-2 rounded-lg bg-white border border-gray-200 text-gray-600 disabled:opacity-50 hover:bg-gray-50 flex items-center"
-          >
-            <FiChevronLeft size={20} />
-          </button>
-          <span className="text-sm font-medium text-gray-700">Page {page} of {totalPages}</span>
-          <button
-            onClick={() => setPage(page + 1)}
-            disabled={page === totalPages || loading}
-            className="p-2 rounded-lg bg-white border border-gray-200 text-gray-600 disabled:opacity-50 hover:bg-gray-50 flex items-center"
-          >
-            <FiChevronRight size={20} />
-          </button>
+      {totalPages > 1 ? (
+        <div className="pagination-controls">
+          <div className="results-count-pagination" aria-label="Bottom pagination controls">
+            <button
+              className="pagination-btn pagination-btn-sm"
+              onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+              disabled={!hasPrev || loading}
+              type="button"
+              aria-label="Previous page"
+            >
+              <FiChevronLeft />
+            </button>
+            <label className="pagination-input-wrap" aria-label="Page number">
+              <span className="pagination-input-label">Page</span>
+              <input
+                type="number"
+                min="1"
+                max={totalPages}
+                inputMode="numeric"
+                value={pageInput}
+                onChange={(e) => setPageInput(e.target.value)}
+                onBlur={handlePageJump}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handlePageJump();
+                  }
+                }}
+                className="pagination-page-input"
+                disabled={loading}
+              />
+            </label>
+            <span className="pagination-info pagination-info-sm">of {totalPages}</span>
+            <button
+              className="pagination-btn pagination-btn-sm"
+              onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={!hasNext || loading}
+              type="button"
+              aria-label="Next page"
+            >
+              <FiChevronRight />
+            </button>
+          </div>
         </div>
-      )}
+      ) : null}
         </>
       ) : null}
 

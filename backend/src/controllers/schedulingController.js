@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Curriculum = require('../models/Curriculum');
 const TimeBlock = require('../models/TimeBlock');
 const Room = require('../models/Room');
+const { logActivity } = require('../services/activityLogService');
 
 const DAY_ENUM = TimeBlock.DAY_ENUM || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const STATUS_ENUM = TimeBlock.STATUS_ENUM || ['Active', 'Archived'];
@@ -252,6 +253,12 @@ async function createTimeBlock(req, res, next) {
       'curriculumId',
       'courseCode courseTitle lectureHours labHours status',
     );
+    await logActivity(req, {
+      action: 'Created time block',
+      module: 'Scheduling',
+      target: populated?.label || created.label,
+      status: 'Completed',
+    });
     return res.status(201).json(populated.toJSON());
   } catch (err) {
     if (err && err.name === 'ValidationError') {
@@ -308,6 +315,12 @@ async function updateTimeBlock(req, res, next) {
       'curriculumId',
       'courseCode courseTitle lectureHours labHours status',
     );
+    await logActivity(req, {
+      action: 'Updated time block',
+      module: 'Scheduling',
+      target: populated?.label || existing.label,
+      status: 'Completed',
+    });
     return res.status(200).json(populated.toJSON());
   } catch (err) {
     if (err && err.name === 'ValidationError') {
@@ -334,6 +347,12 @@ async function archiveTimeBlock(req, res, next) {
 
     row.status = 'Archived';
     await row.save();
+    await logActivity(req, {
+      action: 'Archived time block',
+      module: 'Scheduling',
+      target: row.label,
+      status: 'Completed',
+    });
     return res.status(200).json({ message: 'Time block archived.', timeBlock: row.toJSON() });
   } catch (err) {
     return next(err);
@@ -384,6 +403,13 @@ async function createSection(req, res, next) {
       'curriculumId',
       'courseCode courseTitle curriculumYear creditUnits courseLearningOutcomes status'
     );
+
+    await logActivity(req, {
+      action: 'Created section',
+      module: 'Scheduling',
+      target: populated?.sectionIdentifier || newSection.sectionIdentifier,
+      status: 'Completed',
+    });
 
     return res.status(201).json(populated.toJSON());
   } catch (err) {
@@ -496,6 +522,13 @@ async function updateSectionResources(req, res, next) {
       .populate('curriculumId', 'courseCode courseTitle curriculumYear creditUnits courseLearningOutcomes status')
       .populate('schedules.roomId', 'name roomType maximumCapacity status')
       .populate('schedules.facultyId', 'employeeId firstName lastName department status');
+
+    await logActivity(req, {
+      action: 'Updated section resources',
+      module: 'Scheduling',
+      target: populated?.sectionIdentifier || section.sectionIdentifier,
+      status: 'Completed',
+    });
 
     return res.status(200).json(populated.toJSON());
   } catch (err) {
@@ -934,6 +967,14 @@ async function patchSectionRoster(req, res, next) {
     const docs = await Student.find({ _id: { $in: ids2 } }).lean();
     const byId = new Map(docs.map((d) => [d._id.toString(), d]));
     const ordered = ids2.map((oid) => byId.get(String(oid))).filter(Boolean);
+
+    await logActivity(req, {
+      action: 'Updated section roster',
+      module: 'Scheduling',
+      target: populated?.sectionIdentifier || section.sectionIdentifier,
+      status: 'Completed',
+      metadata: { enrolledCount: ordered.length },
+    });
 
     return res.status(200).json({
       section: {

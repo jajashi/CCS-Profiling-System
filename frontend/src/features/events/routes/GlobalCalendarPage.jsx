@@ -54,7 +54,7 @@ export default function GlobalCalendarPage() {
   }, [filterType, events]);
 
   const handleSelectEvent = (event) => {
-    navigate(`/dashboard/events/${event.id}`);
+    navigate('/dashboard/events', { state: { openEventId: event.id } });
   };
 
   return (

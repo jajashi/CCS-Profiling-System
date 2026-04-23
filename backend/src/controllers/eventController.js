@@ -5,6 +5,7 @@ const Section = require('../models/Section');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const Student = require('../models/Student');
+const { logActivity } = require('../services/activityLogService');
 
 const RSVP_CLOSED_MESSAGE = 'Registration is already closed for this event.';
 
@@ -256,6 +257,13 @@ const createEvent = async (req, res) => {
     if (eventStatus === 'published') {
       await dispatchEventNotifications(newEvent);
     }
+
+    await logActivity(req, {
+      action: eventStatus === 'published' ? 'Published event' : 'Created event',
+      module: 'Events',
+      target: newEvent.title,
+      status: eventStatus === 'published' ? 'Published' : 'Pending',
+    });
 
     res.status(201).json(newEvent);
   } catch (error) {
@@ -685,6 +693,13 @@ const updateEvent = async (req, res) => {
 
     const event = await Event.findByIdAndUpdate(req.params.id, updates, { new: true });
     if (!event) return res.status(404).json({ message: 'Event not found.' });
+
+    await logActivity(req, {
+      action: 'Updated event',
+      module: 'Events',
+      target: event.title,
+      status: event.status === 'published' ? 'Published' : 'Completed',
+    });
     
     res.json(event);
   } catch (error) {
@@ -712,6 +727,12 @@ const updateEventStatus = async (req, res) => {
       event.status = 'draft';
       event.cancelReason = cancelReason;
       await event.save();
+      await logActivity(req, {
+        action: 'Rejected event',
+        module: 'Events',
+        target: event.title,
+        status: 'Completed',
+      });
       // Notify creator (mock)
       console.log(`Notification sent to creator: Event rejected. Reason: ${cancelReason}`);
       return res.json({ message: 'Event rejected.', event });
@@ -722,6 +743,12 @@ const updateEventStatus = async (req, res) => {
       await event.save();
       // Trigger calendar and notification pipeline
       await dispatchEventNotifications(event);
+      await logActivity(req, {
+        action: 'Published event',
+        module: 'Events',
+        target: event.title,
+        status: 'Published',
+      });
       console.log('Event published and calendar updated.');
       return res.json({ message: 'Event published successfully.', event });
     }
@@ -735,6 +762,12 @@ const deleteEvent = async (req, res) => {
   try {
     const event = await Event.findByIdAndDelete(req.params.id);
     if (!event) return res.status(404).json({ message: 'Event not found.' });
+    await logActivity(req, {
+      action: 'Deleted event',
+      module: 'Events',
+      target: event.title,
+      status: 'Completed',
+    });
     res.json({ message: 'Event deleted successfully.' });
   } catch (error) {
     res.status(500).json({ message: 'Server error deleting event.' });
@@ -900,9 +933,7 @@ const generateCertificates = async (req, res) => {
 const downloadBulkCertificates = async (req, res) => {
   try {
     const { id } = req.params;
-    const archiver = require('archiver');
-    const path = require('path');
-    const fs = require('fs');
+    const { generateBulkCertificatesPdf } = require('../services/certificateService');
 
     const event = await Event.findById(id);
     
@@ -915,38 +946,14 @@ const downloadBulkCertificates = async (req, res) => {
       return res.status(403).json({ message: 'Certificates have not been generated yet.' });
     }
 
-    const certDir = path.join(__dirname, '../../certificates', id);
-    
-    if (!fs.existsSync(certDir)) {
-      return res.status(404).json({ message: 'Certificate files not found.' });
-    }
+    const pdfBuffer = await generateBulkCertificatesPdf(id);
 
-    // Create zip archive
-    const archive = archiver('zip', { zlib: { level: 9 } });
-    const output = fs.createWriteStream(path.join(__dirname, `../../certificates/${id}_certificates.zip`));
-
-    archive.on('error', (err) => {
-      throw err;
-    });
-
-    archive.pipe(output);
-
-    // Add all certificate files to archive
-    const files = fs.readdirSync(certDir);
-    files.forEach(file => {
-      const filePath = path.join(certDir, file);
-      if (fs.statSync(filePath).isFile()) {
-        archive.file(filePath, { name: file });
-      }
-    });
-
-    await archive.finalize();
-
-    // Send the zip file
-    res.download(path.join(__dirname, `../../certificates/${id}_certificates.zip`), `event_${id}_certificates.zip`);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="event_${id}_certificates.pdf"`);
+    res.send(pdfBuffer);
   } catch (error) {
     console.error('Error downloading bulk certificates:', error);
-    res.status(500).json({ message: 'Server error downloading certificates.' });
+    res.status(500).json({ message: error.message || 'Server error downloading certificates.' });
   }
 };
 

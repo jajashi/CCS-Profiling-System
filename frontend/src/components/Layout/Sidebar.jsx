@@ -1,23 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import {
-  FiHome,
-  FiUsers,
-  FiBriefcase,
-  FiBookOpen,
-  FiCalendar,
-  FiStar,
-  FiLogOut,
-  FiBarChart2,
-  FiLayers,
-  FiChevronDown,
-  FiChevronUp,
-  FiUserCheck,
-  FiAward,
-  FiUser,
-  FiClock,
-  FiGrid,
-} from 'react-icons/fi';
+import { FiHome, FiUsers, FiBriefcase, FiBookOpen, FiCalendar, FiStar, FiLogOut, FiBarChart2, FiLayers, FiChevronDown, FiChevronUp, FiUserCheck, FiAward, FiUser, FiClock, FiGrid, } from 'react-icons/fi';
 import { useAuth } from '../../providers/AuthContext';
 import logoSrc from '../../assets/images/ccs-logo.jpg';
 
@@ -26,7 +9,6 @@ const FACULTY_CLASSES_PATH = '/dashboard/faculty/classes';
 const INSTRUCTION_PREFIX = '/dashboard/instruction';
 const SCHEDULING_PREFIX = '/dashboard/scheduling';
 const MY_SCHEDULE_PATH = '/dashboard/scheduling/my-schedule';
-const EVENTS_PREFIX = '/dashboard/events';
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -36,42 +18,26 @@ const Sidebar = () => {
     isFaculty && user?.employeeId
       ? `/dashboard/faculty/directory/${encodeURIComponent(user.employeeId)}`
       : '/dashboard/faculty/directory';
-  const [facultyNavOpen, setFacultyNavOpen] = useState(() =>
-    location.pathname.startsWith(FACULTY_PREFIX),
-  );
-  const [instructionNavOpen, setInstructionNavOpen] = useState(() =>
-    location.pathname.startsWith(INSTRUCTION_PREFIX),
-  );
-  const [schedulingNavOpen, setSchedulingNavOpen] = useState(() =>
-    location.pathname.startsWith(SCHEDULING_PREFIX),
-  );
-  const [eventsNavOpen, setEventsNavOpen] = useState(() =>
-    location.pathname.startsWith(EVENTS_PREFIX),
-  );
+  const resolveOpenGroup = (pathname) => {
+    if (pathname.startsWith(FACULTY_PREFIX)) return 'faculty';
+    if (pathname.startsWith(INSTRUCTION_PREFIX)) return 'instruction';
+    if (pathname.startsWith(SCHEDULING_PREFIX)) return 'scheduling';
+    return null;
+  };
+  const [openGroup, setOpenGroup] = useState(() => resolveOpenGroup(location.pathname));
 
   useEffect(() => {
     const p = location.pathname;
-    if (p.startsWith(FACULTY_PREFIX)) {
-      setFacultyNavOpen(true);
-    } else {
-      setFacultyNavOpen(false);
-    }
-    if (p.startsWith(INSTRUCTION_PREFIX)) {
-      setInstructionNavOpen(true);
-    } else {
-      setInstructionNavOpen(false);
-    }
-    if (p.startsWith(SCHEDULING_PREFIX)) {
-      setSchedulingNavOpen(true);
-    } else {
-      setSchedulingNavOpen(false);
-    }
-    if (p.startsWith(EVENTS_PREFIX)) {
-      setEventsNavOpen(true);
-    } else {
-      setEventsNavOpen(false);
-    }
+    setOpenGroup(resolveOpenGroup(p));
   }, [location.pathname]);
+
+  const facultyNavOpen = openGroup === 'faculty';
+  const instructionNavOpen = openGroup === 'instruction';
+  const schedulingNavOpen = openGroup === 'scheduling';
+
+  const handleToggleGroup = (groupName) => {
+    setOpenGroup((current) => (current === groupName ? null : groupName));
+  };
 
   const isFacultySectionActive = location.pathname.startsWith(FACULTY_PREFIX);
   const isInstructionSectionActive = location.pathname.startsWith(INSTRUCTION_PREFIX);
@@ -148,7 +114,7 @@ const Sidebar = () => {
                   aria-expanded={instructionNavOpen}
                   aria-controls="sidebar-faculty-instruction-subnav"
                   id="sidebar-faculty-instruction-trigger"
-                  onClick={() => setInstructionNavOpen((open) => !open)}
+                  onClick={() => handleToggleGroup('instruction')}
                 >
                   <span className="nav-icon"><FiBookOpen /></span>
                   <span className="nav-text">Instruction</span>
@@ -198,7 +164,7 @@ const Sidebar = () => {
                   aria-expanded={facultyNavOpen}
                   aria-controls="sidebar-faculty-subnav"
                   id="sidebar-faculty-trigger"
-                  onClick={() => setFacultyNavOpen((open) => !open)}
+                  onClick={() => handleToggleGroup('faculty')}
                 >
                   <span className="nav-icon"><FiBriefcase /></span>
                   <span className="nav-text">Faculty Directory</span>
@@ -248,7 +214,7 @@ const Sidebar = () => {
                   aria-expanded={instructionNavOpen}
                   aria-controls="sidebar-instruction-subnav"
                   id="sidebar-instruction-trigger"
-                  onClick={() => setInstructionNavOpen((open) => !open)}
+                  onClick={() => handleToggleGroup('instruction')}
                 >
                   <span className="nav-icon"><FiBookOpen /></span>
                   <span className="nav-text">Instruction</span>
@@ -289,7 +255,7 @@ const Sidebar = () => {
                   aria-expanded={schedulingNavOpen}
                   aria-controls="sidebar-scheduling-subnav"
                   id="sidebar-scheduling-trigger"
-                  onClick={() => setSchedulingNavOpen((open) => !open)}
+                  onClick={() => handleToggleGroup('scheduling')}
                 >
                   <span className="nav-icon"><FiCalendar /></span>
                   <span className="nav-text">Scheduling</span>
@@ -345,58 +311,20 @@ const Sidebar = () => {
             </>
           )}
 
-          <li className={`nav-item nav-group${eventsNavOpen ? ' nav-group--open' : ''}`}>
-            <button
-              type="button"
-              className={`nav-link nav-group-toggle${location.pathname.startsWith(EVENTS_PREFIX) ? ' nav-group-toggle--within' : ''}`}
-              aria-expanded={eventsNavOpen}
-              aria-controls="sidebar-events-subnav"
-              id="sidebar-events-trigger"
-              onClick={() => setEventsNavOpen((open) => !open)}
-            >
+          <li className="nav-item">
+            <NavLink to="/dashboard/events" end className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
               <span className="nav-icon"><FiStar /></span>
               <span className="nav-text">Events</span>
-              <span className="nav-group-chevron" aria-hidden>
-                {eventsNavOpen ? <FiChevronUp /> : <FiChevronDown />}
-              </span>
-            </button>
-            {eventsNavOpen ? (
-              <ul className="nav-sublist" id="sidebar-events-subnav" role="list">
-                <li className="nav-subitem">
-                  <NavLink
-                    to="/dashboard/events"
-                    end
-                    className={({ isActive }) => (isActive ? 'nav-link nav-sublink active' : 'nav-link nav-sublink')}
-                  >
-                    <span className="nav-icon nav-sublink-icon"><FiGrid /></span>
-                    <span className="nav-text">List Events</span>
-                  </NavLink>
-                </li>
-                {isStudent ? (
-                  <li className="nav-subitem">
-                    <NavLink
-                      to="/dashboard/my-events"
-                      className={({ isActive }) => (isActive ? 'nav-link nav-sublink active' : 'nav-link nav-sublink')}
-                    >
-                      <span className="nav-icon nav-sublink-icon"><FiAward /></span>
-                      <span className="nav-text">My Events</span>
-                    </NavLink>
-                  </li>
-                ) : null}
-                {!isStudent ? (
-                  <li className="nav-subitem">
-                    <NavLink
-                      to="/dashboard/events/create"
-                      className={({ isActive }) => (isActive ? 'nav-link nav-sublink active' : 'nav-link nav-sublink')}
-                    >
-                      <span className="nav-icon nav-sublink-icon"><FiCalendar /></span>
-                      <span className="nav-text">Create Event</span>
-                    </NavLink>
-                  </li>
-                ) : null}
-              </ul>
-            ) : null}
+            </NavLink>
           </li>
+          {isStudent ? (
+            <li className="nav-item">
+              <NavLink to="/dashboard/my-events" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                <span className="nav-icon"><FiAward /></span>
+                <span className="nav-text">My Events</span>
+              </NavLink>
+            </li>
+          ) : null}
           
                   </ul>
       </nav>

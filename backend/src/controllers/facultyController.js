@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Faculty = require('../models/Faculty');
 const Specialization = require('../models/Specialization');
+const { logActivity } = require('../services/activityLogService');
 
 const MOBILE_REGEX = /^09\d{9}$/;
 const DATE_STRING_REGEX = /^\d{4}-\d{2}-\d{2}$/;
@@ -304,6 +305,12 @@ async function createFaculty(req, res, next) {
 
     const created = await Faculty.create(data);
     const populated = await Faculty.findById(created._id).populate('specializations', 'name description');
+    await logActivity(req, {
+      action: 'Created faculty profile',
+      module: 'Faculty Information',
+      target: created.employeeId,
+      status: 'Completed',
+    });
     return res.status(201).json(mapFacultyResponse(populated));
   } catch (err) {
     if (err && err.code === 11000) {
@@ -388,6 +395,13 @@ async function updateFaculty(req, res, next) {
       new: true,
       runValidators: true,
     }).populate('specializations', 'name description');
+
+    await logActivity(req, {
+      action: 'Updated faculty profile',
+      module: 'Faculty Information',
+      target: updated?.employeeId || employeeId,
+      status: 'Completed',
+    });
 
     return res.status(200).json(mapFacultyResponse(updated));
   } catch (err) {

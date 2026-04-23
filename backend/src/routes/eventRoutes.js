@@ -88,7 +88,7 @@ router.route('/')
 router.route('/:id')
   .get(getEventById)
   .patch(updateEvent)
-  .delete(deleteEvent);
+  .delete(requireRoles('admin', 'faculty'), deleteEvent);
 
 router.post('/:id/rsvp', requireRoles('student', 'faculty'), rsvpToEvent);
 router.delete('/:id/rsvp', requireRoles('student', 'faculty'), cancelRsvp);
