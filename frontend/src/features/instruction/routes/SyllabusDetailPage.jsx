@@ -57,7 +57,7 @@ function DetailSkeleton() {
 
 export default function SyllabusDetailPage() {
   const { id } = useParams();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isFaculty, user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -103,8 +103,13 @@ export default function SyllabusDetailPage() {
   }, [weeklyLessons]);
 
   const syllabusInstructorId = data?.facultyId?._id ?? data?.facultyId ?? '';
+  const syllabusEmployeeId = String(data?.facultyId?.employeeId || '').trim().toLowerCase();
+  const currentFacultyEmployeeId = String(user?.employeeId || '').trim().toLowerCase();
+  const isAssignedFaculty = isFaculty && syllabusEmployeeId && currentFacultyEmployeeId
+    ? syllabusEmployeeId === currentFacultyEmployeeId
+    : false;
   const isArchivedSyllabus = String(data?.status || '') === 'Archived';
-  const canManageLessons = isAdmin && !isArchivedSyllabus;
+  const canManageLessons = (isAdmin || isAssignedFaculty) && !isArchivedSyllabus;
 
   const patchLesson = useCallback(
     async (lessonId, body) => {
@@ -227,11 +232,8 @@ export default function SyllabusDetailPage() {
               <p className="spec-toolbar-sub">Read-only formatted document view for screen review and clean printing.</p>
             </div>
             <div className="syllabus-detail-actions">
-              <Link to="/dashboard/instruction/syllabi" className="spec-btn-secondary">
-                <FiArrowLeft />
-                <span>Back</span>
-              </Link>
-              <button type="button" className="spec-btn-primary" onClick={() => window.print()}>
+              {/* disabled since print layout is not yet fixed */}
+              <button type="button" className="spec-btn-primary">
                 <FiPrinter />
                 <span>Print</span>
               </button>

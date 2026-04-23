@@ -11,10 +11,10 @@ const { authenticate, requireRoles } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-router.get('/', authenticate, requireRoles('admin', 'faculty'), getCurricula);
+router.get('/', authenticate, requireRoles('admin'), getCurricula);
 router.post('/', authenticate, requireRoles('admin'), createCurriculum);
 router.patch('/:id/restore', authenticate, requireRoles('admin'), restoreCurriculum);
-router.get('/:id', authenticate, requireRoles('admin', 'faculty'), getCurriculumById);
+router.get('/:id', authenticate, requireRoles('admin'), getCurriculumById);
 router.put('/:id', authenticate, requireRoles('admin'), updateCurriculum);
 router.delete('/:id', authenticate, requireRoles('admin'), archiveCurriculum);
 

@@ -5,6 +5,7 @@ import { useAuth } from '../../providers/AuthContext';
 import logoSrc from '../../assets/images/ccs-logo.jpg';
 
 const FACULTY_PREFIX = '/dashboard/faculty';
+const FACULTY_DASHBOARD_PATH = '/dashboard/faculty/dashboard';
 const FACULTY_CLASSES_PATH = '/dashboard/faculty/classes';
 const INSTRUCTION_PREFIX = '/dashboard/instruction';
 const SCHEDULING_PREFIX = '/dashboard/scheduling';
@@ -87,6 +88,16 @@ const Sidebar = () => {
             <>
               <li className="nav-item">
                 <NavLink
+                  to={FACULTY_DASHBOARD_PATH}
+                  end
+                  className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+                >
+                  <span className="nav-icon"><FiBarChart2 /></span>
+                  <span className="nav-text">Dashboard</span>
+                </NavLink>
+              </li>
+              <li className="nav-item">
+                <NavLink
                   to={FACULTY_CLASSES_PATH}
                   end
                   className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
@@ -124,16 +135,6 @@ const Sidebar = () => {
                 </button>
                 {instructionNavOpen ? (
                   <ul className="nav-sublist" id="sidebar-faculty-instruction-subnav" role="list">
-                    <li className="nav-subitem">
-                      <NavLink
-                        to="/dashboard/instruction/curricula"
-                        end
-                        className={({ isActive }) => (isActive ? 'nav-link nav-sublink active' : 'nav-link nav-sublink')}
-                      >
-                        <span className="nav-icon nav-sublink-icon"><FiLayers /></span>
-                        <span className="nav-text">Curricula</span>
-                      </NavLink>
-                    </li>
                     <li className="nav-subitem">
                       <NavLink
                         to="/dashboard/instruction/syllabi"

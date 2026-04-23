@@ -24,6 +24,9 @@ import MyEventsPage from './features/events/routes/MyEventsPage';
 import GlobalCalendarPage from './features/events/routes/GlobalCalendarPage';
 import FacultyMyClassesPage from './features/faculty/routes/FacultyMyClassesPage';
 import FacultyClassStudentsPage from './features/faculty/routes/FacultyClassStudentsPage';
+import FacultyClassOverviewPage from './features/faculty/routes/FacultyClassOverviewPage';
+import FacultyClassAttendancePage from './features/faculty/routes/FacultyClassAttendancePage';
+import FacultyPortalDashboardPage from './features/faculty/routes/FacultyPortalDashboardPage';
 import { useAuth } from './providers/AuthContext';
 
 // Protected Route Wrapper
@@ -175,7 +178,7 @@ const FacultyProfileIndexRedirect = () => {
 function DashboardIndex() {
   const { isFaculty } = useAuth();
   if (isFaculty) {
-    return <Navigate to="/dashboard/faculty/classes" replace />;
+    return <Navigate to="/dashboard/faculty/dashboard" replace />;
   }
   return <DashboardHome />;
 }
@@ -275,10 +278,26 @@ function App() {
           )}
         />
         <Route
+          path="faculty/dashboard"
+          element={(
+            <FacultyOnlyRoute>
+              <FacultyPortalDashboardPage />
+            </FacultyOnlyRoute>
+          )}
+        />
+        <Route
           path="faculty/classes"
           element={(
             <FacultyOnlyRoute>
               <FacultyMyClassesPage />
+            </FacultyOnlyRoute>
+          )}
+        />
+        <Route
+          path="faculty/classes/:sectionId"
+          element={(
+            <FacultyOnlyRoute>
+              <FacultyClassOverviewPage />
             </FacultyOnlyRoute>
           )}
         />
@@ -291,6 +310,14 @@ function App() {
           )}
         />
         <Route
+          path="faculty/classes/:sectionId/attendance"
+          element={(
+            <FacultyOnlyRoute>
+              <FacultyClassAttendancePage />
+            </FacultyOnlyRoute>
+          )}
+        />
+        <Route
           path="reports"
           element={(
             <AdminRoute>
@@ -299,7 +326,7 @@ function App() {
           )}
         />
         <Route path="instruction" element={<Navigate to="/dashboard/instruction/syllabi" replace />} />
-        <Route path="instruction/curricula" element={<NonStudentRoute><CurriculaManagement /></NonStudentRoute>} />
+        <Route path="instruction/curricula" element={<AdminRoute><CurriculaManagement /></AdminRoute>} />
         <Route path="instruction/syllabi" element={<NonStudentRoute><SyllabusListPage /></NonStudentRoute>} />
         <Route path="instruction/syllabi/:id" element={<NonStudentRoute><SyllabusDetailPage /></NonStudentRoute>} />
         <Route
@@ -317,7 +344,7 @@ function App() {
           <Route path="overview" element={<AdminRoute><SchedulingDashboard /></AdminRoute>} />
         </Route>
         <Route path="events" element={<ProtectedRoute><EventListPage /></ProtectedRoute>} />
-        <Route path="events/create" element={<NonStudentRoute><EventCreationPage /></NonStudentRoute>} />
+        <Route path="events/create" element={<AdminRoute><EventCreationPage /></AdminRoute>} />
         <Route path="events/approval" element={<AdminRoute><EventApprovalPage /></AdminRoute>} />
         <Route path="events/calendar" element={<GlobalCalendarPage />} />
         <Route path="my-events" element={<MyEventsPage />} />

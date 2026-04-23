@@ -33,7 +33,8 @@ export default function EventListPage() {
   const [attendanceUpdateError, setAttendanceUpdateError] = useState('');
   const [page, setPage] = useState(1);
   const [pageInput, setPageInput] = useState('1');
-  const canManageEvents = user?.role === 'admin' || user?.role === 'faculty';
+  const isFacultyViewer = user?.role === 'faculty';
+  const canManageEvents = user?.role === 'admin';
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -175,12 +176,14 @@ export default function EventListPage() {
       }
       setViewEvent(data);
 
-      const reportRes = await apiFetch(`/api/events/${eventId}/analytics`);
-      const reportData = await reportRes.json().catch(() => ({}));
-      if (!reportRes.ok) {
-        setViewReportError(reportData.message || 'Failed to load report data.');
-      } else {
-        setViewReport(reportData);
+      if (!isFacultyViewer) {
+        const reportRes = await apiFetch(`/api/events/${eventId}/analytics`);
+        const reportData = await reportRes.json().catch(() => ({}));
+        if (!reportRes.ok) {
+          setViewReportError(reportData.message || 'Failed to load report data.');
+        } else {
+          setViewReport(reportData);
+        }
       }
     } catch (err) {
       setViewError(err.message || 'Error loading event details.');
@@ -353,18 +356,20 @@ export default function EventListPage() {
                 <FiCalendar />
                 <span>Events Calendar</span>
               </button>
-              <button
-                type="button"
-                className="spec-btn-primary"
-                onClick={() => {
-                  setModalMode('create');
-                  setActiveEvent(null);
-                  setIsCreateModalOpen(true);
-                }}
-              >
-                <FiPlus />
-                <span>Create Event</span>
-              </button>
+              {!isFacultyViewer ? (
+                <button
+                  type="button"
+                  className="spec-btn-primary"
+                  onClick={() => {
+                    setModalMode('create');
+                    setActiveEvent(null);
+                    setIsCreateModalOpen(true);
+                  }}
+                >
+                  <FiPlus />
+                  <span>Create Event</span>
+                </button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -492,19 +497,21 @@ export default function EventListPage() {
                       >
                         <FiEye />
                       </button>
-                      <button
-                        type="button"
-                        className="action-btn edit"
-                        title="Edit event"
-                        aria-label="Edit event"
-                        onClick={() => {
-                          setModalMode('edit');
-                          setActiveEvent(event);
-                          setIsCreateModalOpen(true);
-                        }}
-                      >
-                        <FiEdit2 />
-                      </button>
+                      {!isFacultyViewer ? (
+                        <button
+                          type="button"
+                          className="action-btn edit"
+                          title="Edit event"
+                          aria-label="Edit event"
+                          onClick={() => {
+                            setModalMode('edit');
+                            setActiveEvent(event);
+                            setIsCreateModalOpen(true);
+                          }}
+                        >
+                          <FiEdit2 />
+                        </button>
+                      ) : null}
                       {canManageEvents ? (
                         <button
                           type="button"
@@ -655,13 +662,15 @@ export default function EventListPage() {
                     >
                       Event Details
                     </button>
-                    <button
-                      type="button"
-                      className={`event-view-tab ${viewTab === 'report' ? 'active' : ''}`}
-                      onClick={() => setViewTab('report')}
-                    >
-                      Report
-                    </button>
+                    {!isFacultyViewer ? (
+                      <button
+                        type="button"
+                        className={`event-view-tab ${viewTab === 'report' ? 'active' : ''}`}
+                        onClick={() => setViewTab('report')}
+                      >
+                        Report
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       className={`event-view-tab ${viewTab === 'registration' ? 'active' : ''}`}
