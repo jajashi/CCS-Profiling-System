@@ -138,7 +138,7 @@ export default function MasterScheduleMatrix({ term, academicYear }) {
           )}
         </div>
       ) : (
-        <div className="matrix-grid">
+        <>
           {selectedFaculty && (
             <div className="matrix-drilldown-header">
               <button 
@@ -152,8 +152,8 @@ export default function MasterScheduleMatrix({ term, academicYear }) {
               </div>
             </div>
           )}
-          
-          <div className="matrix-time-col">
+          <div className="matrix-grid">
+            <div className="matrix-time-col">
             <div className="matrix-header-cell">Time</div>
             {hours.map(h => (
               <div key={h} className="matrix-time-slot">{formatHour12(h)}</div>
@@ -196,6 +196,7 @@ export default function MasterScheduleMatrix({ term, academicYear }) {
             ))}
           </div>
         </div>
+        </>
       )}
     </div>
   );
