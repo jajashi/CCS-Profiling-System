@@ -1,12 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FiCalendar, FiGrid, FiLayers, FiArrowRight } from 'react-icons/fi';
 import MasterScheduleMatrix from '../components/MasterScheduleMatrix';
+import { apiFetch } from '../../../lib/api';
 import './SchedulingDashboard.css';
 
 export default function SchedulingDashboard() {
-  const [term, setTerm] = useState('1st Term');
-  const [academicYear, setAcademicYear] = useState('2025-2026');
+  const [termOptions, setTermOptions] = useState(['1st Term', '2nd Term', 'Summer']);
+  const [yearOptions, setYearOptions] = useState(['2024-2025', '2025-2026', '2026-2027']);
+  const [term, setTerm] = useState('');
+  const [academicYear, setAcademicYear] = useState('');
+
+  useEffect(() => {
+    apiFetch('/api/scheduling/sections?status=All')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const terms = [...new Set(data.map(s => String(s.term || '').trim()).filter(Boolean))];
+          const years = [...new Set(data.map(s => String(s.academicYear || '').trim()).filter(Boolean))];
+          if (terms.length > 0) {
+            setTermOptions(terms);
+            setTerm(terms[0]);
+          } else {
+            setTerm('1st Term');
+          }
+          if (years.length > 0) {
+            setYearOptions(years.sort((a,b) => b.localeCompare(a)));
+            setAcademicYear(years.sort((a,b) => b.localeCompare(a))[0]);
+          } else {
+            setAcademicYear('2025-2026');
+          }
+        }
+      })
+      .catch(() => {
+        setTerm('1st Term');
+        setAcademicYear('2025-2026');
+      });
+  }, []);
 
   return (
     <div className="scheduling-dashboard-page">
@@ -26,16 +56,12 @@ export default function SchedulingDashboard() {
         <div className="dashboard-filters">
           <label htmlFor="sched-term">Term</label>
           <select id="sched-term" value={term} onChange={(e) => setTerm(e.target.value)}>
-            <option value="1st Term">1st Term</option>
-            <option value="2nd Term">2nd Term</option>
-            <option value="Summer">Summer</option>
+            {termOptions.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
 
           <label htmlFor="sched-ay">Academic Year</label>
           <select id="sched-ay" value={academicYear} onChange={(e) => setAcademicYear(e.target.value)}>
-            <option value="2024-2025">2024-2025</option>
-            <option value="2025-2026">2025-2026</option>
-            <option value="2026-2027">2026-2027</option>
+             {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
         <div className="quick-actions">

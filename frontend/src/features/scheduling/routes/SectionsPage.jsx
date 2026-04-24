@@ -284,7 +284,7 @@ export default function SectionsPage() {
         apiFetch('/api/scheduling/sections?status=All'),
         apiFetch('/api/curricula?status=Active'),
         apiFetch('/api/scheduling/rooms?status=Active'),
-        apiFetch('/api/faculty'),
+        apiFetch('/api/faculty?status=Active'),
         apiFetch('/api/scheduling/timeblocks')
       ]);
 

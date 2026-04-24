@@ -210,6 +210,8 @@ async function listSections(req, res, next) {
 
     const sections = await Section.find(query)
       .populate('curriculumId', 'courseCode courseTitle curriculumYear creditUnits courseLearningOutcomes status')
+      .populate('schedules.roomId', 'name type maximumCapacity status')
+      .populate('schedules.facultyId', 'employeeId firstName lastName department status')
       .sort({ academicYear: -1, term: -1, updatedAt: -1 });
 
     return res.status(200).json(sections.map((row) => row.toJSON()));
@@ -520,7 +522,7 @@ async function updateSectionResources(req, res, next) {
 
     const populated = await Section.findById(id)
       .populate('curriculumId', 'courseCode courseTitle curriculumYear creditUnits courseLearningOutcomes status')
-      .populate('schedules.roomId', 'name roomType maximumCapacity status')
+      .populate('schedules.roomId', 'name type maximumCapacity status')
       .populate('schedules.facultyId', 'employeeId firstName lastName department status');
 
     await logActivity(req, {
@@ -563,15 +565,20 @@ async function getScheduleMatrix(req, res, next) {
     sections.forEach((sec) => {
       if (sec.schedules && Array.isArray(sec.schedules)) {
         sec.schedules.forEach((sched) => {
+          const room = sched.roomId;
+          const faculty = sched.facultyId;
+          
           matrixEvents.push({
             sectionId: sec._id,
             sectionIdentifier: sec.sectionIdentifier,
             courseCode: sec.curriculumId?.courseCode,
             courseTitle: sec.curriculumId?.courseTitle,
-            roomId: sched.roomId?._id,
-            roomName: sched.roomId?.name,
-            facultyId: sched.facultyId?._id,
-            facultyName: sched.facultyId ? `${sched.facultyId.firstName} ${sched.facultyId.lastName}` : 'Unassigned',
+            roomId: room?._id || room,
+            roomName: room?.name || 'Unknown Room',
+            facultyId: faculty?._id || faculty,
+            facultyName: (faculty && typeof faculty === 'object' && faculty.firstName)
+              ? `${faculty.firstName} ${faculty.lastName}`
+              : (faculty ? 'Assigned' : 'Unassigned'),
             dayOfWeek: sched.dayOfWeek,
             startTime: sched.startTime,
             endTime: sched.endTime,
