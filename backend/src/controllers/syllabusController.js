@@ -644,6 +644,67 @@ async function updateWeeklyLesson(req, res, next) {
   }
 }
 
+async function cloneSyllabus(req, res, next) {
+  try {
+    const { sourceSyllabusId, targetSectionId, facultyId } = req.body;
+    if (!mongoose.Types.ObjectId.isValid(sourceSyllabusId)) {
+      return res.status(400).json({ message: 'Invalid source syllabus id.' });
+    }
+    const source = await Syllabus.findById(sourceSyllabusId).lean();
+    if (!source) return res.status(404).json({ message: 'Source syllabus not found.' });
+
+    const Section = await resolveSectionModel();
+    if (!Section) return res.status(503).json({ message: 'Scheduling module is not available.' });
+
+    const section = await Section.findById(targetSectionId).lean();
+    if (!section) return res.status(404).json({ message: 'Target section not found.' });
+
+    const targetFacultyId = facultyId || source.facultyId;
+
+    const duplicate = await Syllabus.findOne({
+      sectionId: targetSectionId,
+      facultyId: targetFacultyId,
+      status: { $in: ['Draft', 'Active'] },
+    });
+    if (duplicate) {
+      return res.status(409).json({ message: 'A draft or active syllabus already exists for this section and faculty.' });
+    }
+
+    const newSyllabusData = {
+      curriculumId: section.curriculumId,
+      facultyId: targetFacultyId,
+      sectionId: targetSectionId,
+      description: source.description,
+      gradingSystem: source.gradingSystem,
+      coursePolicies: source.coursePolicies,
+      status: 'Draft',
+      weeklyLessons: (source.weeklyLessons || []).map((l) => ({
+        weekNumber: l.weekNumber,
+        topic: l.topic,
+        objectives: l.objectives,
+        materials: l.materials,
+        assessments: l.assessments,
+        timeAllocation: l.timeAllocation,
+        status: 'Pending',
+        deliveredAt: null,
+        deliveredBy: null,
+      })),
+    };
+
+    const created = await Syllabus.create(newSyllabusData);
+    await logActivity(req, {
+      action: 'Cloned syllabus',
+      module: 'Instruction',
+      target: created._id,
+      status: 'Completed',
+    });
+
+    return res.status(201).json(created.toJSON());
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   getSyllabi,
   getSyllabusById,
@@ -651,4 +712,5 @@ module.exports = {
   updateSyllabus,
   archiveSyllabus,
   updateWeeklyLesson,
+  cloneSyllabus,
 };

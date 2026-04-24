@@ -12,6 +12,7 @@ import FacultyDashboard from './features/faculty/routes/FacultyDashboard';
 import CurriculaManagement from './features/instruction/routes/CurriculaManagement';
 import SyllabusListPage from './features/instruction/routes/SyllabusListPage';
 import SyllabusDetailPage from './features/instruction/routes/SyllabusDetailPage';
+import InstructionDashboard from './features/instruction/routes/InstructionDashboard';
 import TimeBlocksPage from './features/scheduling/routes/TimeBlocksPage';
 import RoomsPage from './features/scheduling/routes/RoomsPage';
 import SectionsPage from './features/scheduling/routes/SectionsPage';
@@ -325,7 +326,7 @@ function App() {
             </AdminRoute>
           )}
         />
-        <Route path="instruction" element={<Navigate to="/dashboard/instruction/syllabi" replace />} />
+        <Route path="instruction" element={<NonStudentRoute><InstructionDashboard /></NonStudentRoute>} />
         <Route path="instruction/curricula" element={<AdminRoute><CurriculaManagement /></AdminRoute>} />
         <Route path="instruction/syllabi" element={<NonStudentRoute><SyllabusListPage /></NonStudentRoute>} />
         <Route path="instruction/syllabi/:id" element={<NonStudentRoute><SyllabusDetailPage /></NonStudentRoute>} />

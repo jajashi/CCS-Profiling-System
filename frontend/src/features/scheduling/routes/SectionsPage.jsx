@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { FiPlus, FiCalendar, FiBook, FiUser, FiMapPin, FiGrid, FiSettings, FiX, FiTrash2, FiClock, FiSearch, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { apiFetch } from '../../../lib/api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../../providers/AuthContext';
+import AddEditSyllabusModal from '../../instruction/components/AddEditSyllabusModal';
 import '../../students/routes/StudentInformation.css';
 import './SectionsPage.css';
 
@@ -262,6 +265,7 @@ function AssignResourcesModal({ section, onClose, onUpdated, rooms, faculty, tim
 
 export default function SectionsPage() {
   const PAGE_SIZE = 12;
+  const { isAdmin } = useAuth();
   const [sections, setSections] = useState([]);
   const [curricula, setCurricula] = useState([]);
   const [rooms, setRooms] = useState([]);
@@ -270,6 +274,7 @@ export default function SectionsPage() {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [assignTarget, setAssignTarget] = useState(null);
+  const [syllabusSectionId, setSyllabusSectionId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [termFilter, setTermFilter] = useState('All');
   const [yearFilter, setYearFilter] = useState('All');
@@ -503,8 +508,22 @@ export default function SectionsPage() {
 
               <div className="section-actions">
                 <button className="btn-assign" onClick={() => setAssignTarget(section)}>
-                  <FiSettings /> Assign Resources
+                  <FiSettings /> {isAdmin ? 'Resources' : 'View Resources'}
                 </button>
+                {isAdmin && (
+                  section.syllabusId ? (
+                    <Link 
+                      to={`/dashboard/instruction/syllabi/${section.syllabusId}`} 
+                      className="btn-assign btn-syllabus-action"
+                    >
+                      <FiBook /> View Syllabus
+                    </Link>
+                  ) : (
+                    <button className="btn-assign btn-syllabus-action" onClick={() => setSyllabusSectionId(section._id)}>
+                      <FiBook /> Add Syllabus
+                    </button>
+                  )
+                )}
               </div>
             </div>
           ))}
@@ -580,6 +599,18 @@ export default function SectionsPage() {
           onUpdated={(updated) => {
             setSections(sections.map(s => s._id === updated._id ? updated : s));
             setAssignTarget(null);
+          }}
+        />
+      )}
+
+      {syllabusSectionId && (
+        <AddEditSyllabusModal
+          isOpen={!!syllabusSectionId}
+          onClose={() => setSyllabusSectionId(null)}
+          initialSectionId={syllabusSectionId}
+          onSuccess={() => {
+            setSyllabusSectionId(null);
+            loadData();
           }}
         />
       )}

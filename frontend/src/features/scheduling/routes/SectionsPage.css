@@ -200,6 +200,17 @@
   border-color: #cbd5e1;
 }
 
+.btn-syllabus-action {
+  border-color: rgba(37, 99, 235, 0.2);
+  color: var(--primary-color);
+  background: rgba(37, 99, 235, 0.02);
+}
+
+.btn-syllabus-action:hover {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: var(--primary-color);
+}
+
 /* Modal Specifics */
 .resource-form-row {
   display: grid;

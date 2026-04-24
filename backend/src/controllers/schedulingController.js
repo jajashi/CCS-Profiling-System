@@ -214,7 +214,44 @@ async function listSections(req, res, next) {
       .populate('schedules.facultyId', 'employeeId firstName lastName department status')
       .sort({ academicYear: -1, term: -1, updatedAt: -1 });
 
-    return res.status(200).json(sections.map((row) => row.toJSON()));
+    // Link syllabi search
+    const { Syllabus } = require('../models/Syllabus');
+    const sectionIds = sections.map(s => s._id);
+    const syllabi = await Syllabus.find({ sectionId: { $in: sectionIds } }).select('_id sectionId').lean();
+    const syllabusMap = new Map(syllabi.map(s => [String(s.sectionId), s._id]));
+
+    return res.status(200).json(sections.map((row) => {
+      const doc = row.toJSON();
+      doc.syllabusId = syllabusMap.get(String(row._id)) || null;
+      return doc;
+    }));
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function getSectionById(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid section id.' });
+    }
+
+    const Section = await resolveSectionModel();
+    if (!Section) {
+      return res.status(503).json({ message: 'Scheduling module is not available.' });
+    }
+
+    const section = await Section.findById(id)
+      .populate('curriculumId', 'courseCode courseTitle curriculumYear creditUnits courseLearningOutcomes status')
+      .populate('schedules.roomId', 'name type maximumCapacity status')
+      .populate('schedules.facultyId', 'employeeId firstName lastName department status');
+
+    if (!section) {
+      return res.status(404).json({ message: 'Section not found.' });
+    }
+
+    return res.status(200).json(section.toJSON());
   } catch (err) {
     return next(err);
   }
@@ -1106,6 +1143,7 @@ module.exports = {
   listSections,
   createSection,
   updateSectionResources,
+  getSectionById,
   getScheduleMatrix,
   getRoomUtilization,
   getMyClasses,

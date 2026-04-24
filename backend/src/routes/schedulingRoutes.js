@@ -3,6 +3,7 @@ const {
   listSections,
   createSection,
   updateSectionResources,
+  getSectionById,
   getScheduleMatrix,
   getRoomUtilization,
   getMyClasses,
@@ -22,6 +23,7 @@ const { authenticate, requireRoles } = require('../middleware/authMiddleware');
 const router = express.Router();
 
 router.get('/sections', authenticate, requireRoles('admin', 'faculty'), listSections);
+router.get('/sections/:id', authenticate, requireRoles('admin', 'faculty'), getSectionById);
 router.post('/sections', authenticate, requireRoles('admin'), createSection);
 router.get('/sections/:id/roster', authenticate, requireRoles('admin', 'faculty'), getSectionRoster);
 router.patch('/sections/:id/roster', authenticate, requireRoles('admin', 'faculty'), patchSectionRoster);
