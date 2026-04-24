@@ -1,26 +1,36 @@
-const mongoose = require('mongoose');
-const Curriculum = require('../models/Curriculum');
-const TimeBlock = require('../models/TimeBlock');
-const Room = require('../models/Room');
-const { logActivity } = require('../services/activityLogService');
+const mongoose = require("mongoose");
+const Curriculum = require("../models/Curriculum");
+const TimeBlock = require("../models/TimeBlock");
+const Room = require("../models/Room");
+const { logActivity } = require("../services/activityLogService");
 const {
   resolveFacultyForUser,
   facultyTeachesSection: facultyTeachesSectionScoped,
   assertFacultySectionAccess,
-} = require('../services/facultyPermissionsService');
+} = require("../services/facultyPermissionsService");
 
-const DAY_ENUM = TimeBlock.DAY_ENUM || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const STATUS_ENUM = TimeBlock.STATUS_ENUM || ['Active', 'Archived'];
+const DAY_ENUM = TimeBlock.DAY_ENUM || [
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
+  "Sun",
+];
+const STATUS_ENUM = TimeBlock.STATUS_ENUM || ["Active", "Archived"];
 
 const TIME_RE = /^([01]?\d|2[0-3]):([0-5]\d)$/;
 
 function normalizeString(value) {
-  return String(value ?? '').trim();
+  return String(value ?? "").trim();
 }
 
 function normalizeOptionalObjectId(value) {
-  if (value == null || value === '') return null;
-  return mongoose.Types.ObjectId.isValid(value) ? new mongoose.Types.ObjectId(value) : null;
+  if (value == null || value === "") return null;
+  return mongoose.Types.ObjectId.isValid(value)
+    ? new mongoose.Types.ObjectId(value)
+    : null;
 }
 
 function parseTimeToMinutes(value) {
@@ -40,14 +50,14 @@ function validateStartDurationEnd(startTime, endTime, durationMinutes) {
   const start = parseTimeToMinutes(startTime);
   const end = parseTimeToMinutes(endTime);
   if (start == null || end == null) {
-    return 'startTime and endTime must use HH:mm (24-hour, e.g. 08:30 or 14:00).';
+    return "startTime and endTime must use HH:mm (24-hour, e.g. 08:30 or 14:00).";
   }
   const dur = Number(durationMinutes);
   if (!Number.isFinite(dur) || !Number.isInteger(dur) || dur < 1) {
-    return 'durationMinutes must be a positive integer (minutes).';
+    return "durationMinutes must be a positive integer (minutes).";
   }
   if (start + dur !== end) {
-    return 'startTime plus durationMinutes must exactly equal endTime.';
+    return "startTime plus durationMinutes must exactly equal endTime.";
   }
   return null;
 }
@@ -72,16 +82,18 @@ function normalizeDays(value) {
  */
 async function validateCurriculumBounds(curriculumId, durationMinutes) {
   if (!curriculumId) return null;
-  const curriculum = await Curriculum.findById(curriculumId).select('lectureHours labHours status').lean();
-  if (!curriculum) return 'Referenced curriculum was not found.';
-  if (normalizeString(curriculum.status) !== 'Active') {
-    return 'Curriculum must be Active when assigned to a time block.';
+  const curriculum = await Curriculum.findById(curriculumId)
+    .select("lectureHours labHours status")
+    .lean();
+  if (!curriculum) return "Referenced curriculum was not found.";
+  if (normalizeString(curriculum.status) !== "Active") {
+    return "Curriculum must be Active when assigned to a time block.";
   }
 
   const lecMin = Math.round(Number(curriculum.lectureHours || 0) * 60);
   const labMin = Math.round(Number(curriculum.labHours || 0) * 60);
   if (lecMin <= 0 && labMin <= 0) {
-    return 'Curriculum has no lecture or lab hours; set hours before binding this time block.';
+    return "Curriculum has no lecture or lab hours; set hours before binding this time block.";
   }
 
   const maxPerSession = Math.max(lecMin, labMin);
@@ -102,25 +114,29 @@ function buildPayload(body, { partial = false } = {}) {
   const raw = body || {};
   const data = {};
 
-  if (!partial || Object.prototype.hasOwnProperty.call(raw, 'label')) {
+  if (!partial || Object.prototype.hasOwnProperty.call(raw, "label")) {
     data.label = normalizeString(raw.label);
   }
-  if (!partial || Object.prototype.hasOwnProperty.call(raw, 'durationMinutes')) {
-    data.durationMinutes = raw.durationMinutes == null ? null : Number(raw.durationMinutes);
+  if (
+    !partial ||
+    Object.prototype.hasOwnProperty.call(raw, "durationMinutes")
+  ) {
+    data.durationMinutes =
+      raw.durationMinutes == null ? null : Number(raw.durationMinutes);
   }
-  if (!partial || Object.prototype.hasOwnProperty.call(raw, 'daysOfWeek')) {
+  if (!partial || Object.prototype.hasOwnProperty.call(raw, "daysOfWeek")) {
     data.daysOfWeek = normalizeDays(raw.daysOfWeek);
   }
-  if (!partial || Object.prototype.hasOwnProperty.call(raw, 'startTime')) {
+  if (!partial || Object.prototype.hasOwnProperty.call(raw, "startTime")) {
     data.startTime = normalizeString(raw.startTime);
   }
-  if (!partial || Object.prototype.hasOwnProperty.call(raw, 'endTime')) {
+  if (!partial || Object.prototype.hasOwnProperty.call(raw, "endTime")) {
     data.endTime = normalizeString(raw.endTime);
   }
-  if (!partial || Object.prototype.hasOwnProperty.call(raw, 'status')) {
-    data.status = raw.status == null ? 'Active' : normalizeString(raw.status);
+  if (!partial || Object.prototype.hasOwnProperty.call(raw, "status")) {
+    data.status = raw.status == null ? "Active" : normalizeString(raw.status);
   }
-  if (!partial || Object.prototype.hasOwnProperty.call(raw, 'curriculumId')) {
+  if (!partial || Object.prototype.hasOwnProperty.call(raw, "curriculumId")) {
     data.curriculumId = normalizeOptionalObjectId(raw.curriculumId);
   }
 
@@ -132,41 +148,62 @@ function validatePayload(data, { isCreate = false, existing = null } = {}) {
     ? { ...data }
     : {
         label: data.label != null ? data.label : existing.label,
-        durationMinutes: data.durationMinutes != null ? data.durationMinutes : existing.durationMinutes,
-        daysOfWeek: data.daysOfWeek != null ? data.daysOfWeek : existing.daysOfWeek,
+        durationMinutes:
+          data.durationMinutes != null
+            ? data.durationMinutes
+            : existing.durationMinutes,
+        daysOfWeek:
+          data.daysOfWeek != null ? data.daysOfWeek : existing.daysOfWeek,
         startTime: data.startTime != null ? data.startTime : existing.startTime,
         endTime: data.endTime != null ? data.endTime : existing.endTime,
         status: data.status != null ? data.status : existing.status,
-        curriculumId: Object.prototype.hasOwnProperty.call(data, 'curriculumId')
+        curriculumId: Object.prototype.hasOwnProperty.call(data, "curriculumId")
           ? data.curriculumId
           : existing.curriculumId,
       };
 
   if (isCreate || data.label != null) {
-    if (!merged.label) return 'label is required.';
+    if (!merged.label) return "label is required.";
   }
   if (isCreate || data.durationMinutes != null) {
-    if (!Number.isFinite(merged.durationMinutes) || !Number.isInteger(merged.durationMinutes) || merged.durationMinutes < 1) {
-      return 'durationMinutes must be a positive integer.';
+    if (
+      !Number.isFinite(merged.durationMinutes) ||
+      !Number.isInteger(merged.durationMinutes) ||
+      merged.durationMinutes < 1
+    ) {
+      return "durationMinutes must be a positive integer.";
     }
   }
   if (isCreate || data.daysOfWeek != null) {
-    if (!merged.daysOfWeek.length) return 'At least one dayOfWeek is required.';
+    if (!merged.daysOfWeek.length) return "At least one dayOfWeek is required.";
     for (const d of merged.daysOfWeek) {
       if (!DAY_ENUM.includes(d)) {
         return `Invalid dayOfWeek "${d}". Use Mon–Sun.`;
       }
     }
     if (merged.daysOfWeek.length !== new Set(merged.daysOfWeek).size) {
-      return 'daysOfWeek must not contain duplicates.';
+      return "daysOfWeek must not contain duplicates.";
     }
   }
-  if (isCreate || data.startTime != null || data.endTime != null || data.durationMinutes != null) {
-    const timeErr = validateStartDurationEnd(merged.startTime, merged.endTime, merged.durationMinutes);
+  if (
+    isCreate ||
+    data.startTime != null ||
+    data.endTime != null ||
+    data.durationMinutes != null
+  ) {
+    const timeErr = validateStartDurationEnd(
+      merged.startTime,
+      merged.endTime,
+      merged.durationMinutes,
+    );
     if (timeErr) return timeErr;
   }
-  if (merged.status != null && merged.status !== '' && !STATUS_ENUM.includes(merged.status)) {
-    return `status must be one of: ${STATUS_ENUM.join(', ')}.`;
+  if (
+    merged.status != null &&
+    merged.status !== "" &&
+    !STATUS_ENUM.includes(merged.status)
+  ) {
+    return `status must be one of: ${STATUS_ENUM.join(", ")}.`;
   }
 
   return null;
@@ -175,7 +212,7 @@ function validatePayload(data, { isCreate = false, existing = null } = {}) {
 async function resolveSectionModel() {
   if (mongoose.models.Section) return mongoose.models.Section;
   try {
-    return require('../models/Section');
+    return require("../models/Section");
   } catch {
     return null;
   }
@@ -186,45 +223,70 @@ async function listSections(req, res, next) {
     const { status, facultyId, curriculumId } = req.query;
     const Section = await resolveSectionModel();
     if (!Section) {
-      return res.status(503).json({ message: 'Scheduling module is not available.' });
+      return res
+        .status(503)
+        .json({ message: "Scheduling module is not available." });
     }
 
     const query = {};
 
     if (status) {
       const normalized = normalizeString(status);
-      if (!['Open', 'Closed', 'Waitlisted', 'Archived', 'All'].includes(normalized)) {
-        return res.status(400).json({ message: 'status must be Open, Closed, Waitlisted, Archived, or All.' });
+      if (
+        !["Open", "Closed", "Waitlisted", "Archived", "All"].includes(
+          normalized,
+        )
+      ) {
+        return res
+          .status(400)
+          .json({
+            message:
+              "status must be Open, Closed, Waitlisted, Archived, or All.",
+          });
       }
-      if (normalized !== 'All') {
+      if (normalized !== "All") {
         query.status = normalized;
       }
     }
 
     if (curriculumId) {
       if (!mongoose.Types.ObjectId.isValid(curriculumId)) {
-        return res.status(400).json({ message: 'curriculumId must be a valid ObjectId.' });
+        return res
+          .status(400)
+          .json({ message: "curriculumId must be a valid ObjectId." });
       }
       query.curriculumId = curriculumId;
     }
 
     const sections = await Section.find(query)
-      .populate('curriculumId', 'courseCode courseTitle curriculumYear creditUnits courseLearningOutcomes status')
-      .populate('schedules.roomId', 'name type maximumCapacity status')
-      .populate('schedules.facultyId', 'employeeId firstName lastName department status')
+      .populate(
+        "curriculumId",
+        "courseCode courseTitle curriculumYear creditUnits courseLearningOutcomes status",
+      )
+      .populate("schedules.roomId", "name type maximumCapacity status")
+      .populate(
+        "schedules.facultyId",
+        "employeeId firstName lastName department status",
+      )
       .sort({ academicYear: -1, term: -1, updatedAt: -1 });
 
     // Link syllabi search
-    const { Syllabus } = require('../models/Syllabus');
-    const sectionIds = sections.map(s => s._id);
-    const syllabi = await Syllabus.find({ sectionId: { $in: sectionIds } }).select('_id sectionId').lean();
-    const syllabusMap = new Map(syllabi.map(s => [String(s.sectionId), s._id]));
+    const { Syllabus } = require("../models/Syllabus");
+    const sectionIds = sections.map((s) => s._id);
+    const syllabi = await Syllabus.find({ sectionId: { $in: sectionIds } })
+      .select("_id sectionId")
+      .lean();
+    const syllabusMap = new Map(
+      syllabi.map((s) => [String(s.sectionId), s._id]),
+    );
 
-    return res.status(200).json(sections.map((row) => {
-      const doc = row.toJSON();
-      doc.syllabusId = syllabusMap.get(String(row._id)) || null;
-      return doc;
-    }));
+    return res.status(200).json(
+      sections.map((row) => {
+        const doc = row.toJSON();
+        doc.syllabusId = syllabusMap.get(String(row._id)) || null;
+        return doc;
+      }),
+    );
   } catch (err) {
     return next(err);
   }
@@ -234,21 +296,29 @@ async function getSectionById(req, res, next) {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: 'Invalid section id.' });
+      return res.status(400).json({ message: "Invalid section id." });
     }
 
     const Section = await resolveSectionModel();
     if (!Section) {
-      return res.status(503).json({ message: 'Scheduling module is not available.' });
+      return res
+        .status(503)
+        .json({ message: "Scheduling module is not available." });
     }
 
     const section = await Section.findById(id)
-      .populate('curriculumId', 'courseCode courseTitle curriculumYear creditUnits courseLearningOutcomes status')
-      .populate('schedules.roomId', 'name type maximumCapacity status')
-      .populate('schedules.facultyId', 'employeeId firstName lastName department status');
+      .populate(
+        "curriculumId",
+        "courseCode courseTitle curriculumYear creditUnits courseLearningOutcomes status",
+      )
+      .populate("schedules.roomId", "name type maximumCapacity status")
+      .populate(
+        "schedules.facultyId",
+        "employeeId firstName lastName department status",
+      );
 
     if (!section) {
-      return res.status(404).json({ message: 'Section not found.' });
+      return res.status(404).json({ message: "Section not found." });
     }
 
     return res.status(200).json(section.toJSON());
@@ -259,8 +329,11 @@ async function getSectionById(req, res, next) {
 
 async function listTimeBlocks(_req, res, next) {
   try {
-    const rows = await TimeBlock.find({ status: 'Active' })
-      .populate('curriculumId', 'courseCode courseTitle lectureHours labHours status')
+    const rows = await TimeBlock.find({ status: "Active" })
+      .populate(
+        "curriculumId",
+        "courseCode courseTitle lectureHours labHours status",
+      )
       .sort({ label: 1 });
     return res.status(200).json(rows.map((row) => row.toJSON()));
   } catch (err) {
@@ -275,7 +348,10 @@ async function createTimeBlock(req, res, next) {
     if (err) return res.status(400).json({ message: err });
 
     if (payload.curriculumId) {
-      const curErr = await validateCurriculumBounds(payload.curriculumId, payload.durationMinutes);
+      const curErr = await validateCurriculumBounds(
+        payload.curriculumId,
+        payload.durationMinutes,
+      );
       if (curErr) return res.status(400).json({ message: curErr });
     }
 
@@ -285,23 +361,25 @@ async function createTimeBlock(req, res, next) {
       daysOfWeek: payload.daysOfWeek,
       startTime: payload.startTime,
       endTime: payload.endTime,
-      status: 'Active',
+      status: "Active",
       curriculumId: payload.curriculumId,
     });
     const populated = await TimeBlock.findById(created._id).populate(
-      'curriculumId',
-      'courseCode courseTitle lectureHours labHours status',
+      "curriculumId",
+      "courseCode courseTitle lectureHours labHours status",
     );
     await logActivity(req, {
-      action: 'Created time block',
-      module: 'Scheduling',
+      action: "Created time block",
+      module: "Scheduling",
       target: populated?.label || created.label,
-      status: 'Completed',
+      status: "Completed",
     });
     return res.status(201).json(populated.toJSON());
   } catch (err) {
-    if (err && err.name === 'ValidationError') {
-      return res.status(400).json({ message: err.message || 'Invalid time block.' });
+    if (err && err.name === "ValidationError") {
+      return res
+        .status(400)
+        .json({ message: err.message || "Invalid time block." });
     }
     return next(err);
   }
@@ -311,59 +389,79 @@ async function updateTimeBlock(req, res, next) {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: 'Invalid time block id.' });
+      return res.status(400).json({ message: "Invalid time block id." });
     }
 
     const existing = await TimeBlock.findById(id);
     if (!existing) {
-      return res.status(404).json({ message: 'Time block not found.' });
+      return res.status(404).json({ message: "Time block not found." });
     }
-    if (existing.status === 'Archived') {
-      return res.status(400).json({ message: 'Archived time blocks cannot be updated.' });
+    if (existing.status === "Archived") {
+      return res
+        .status(400)
+        .json({ message: "Archived time blocks cannot be updated." });
     }
 
     const payload = buildPayload(req.body, { partial: true });
-    if (payload.status != null && payload.status === 'Archived') {
-      return res.status(400).json({ message: 'Use DELETE /api/scheduling/timeblocks/:id to archive a time block.' });
+    if (payload.status != null && payload.status === "Archived") {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Use DELETE /api/scheduling/timeblocks/:id to archive a time block.",
+        });
     }
     const err = validatePayload(payload, { isCreate: false, existing });
     if (err) return res.status(400).json({ message: err });
 
-    const mergedDuration = payload.durationMinutes != null ? payload.durationMinutes : existing.durationMinutes;
-    const mergedCurriculum = Object.prototype.hasOwnProperty.call(payload, 'curriculumId')
+    const mergedDuration =
+      payload.durationMinutes != null
+        ? payload.durationMinutes
+        : existing.durationMinutes;
+    const mergedCurriculum = Object.prototype.hasOwnProperty.call(
+      payload,
+      "curriculumId",
+    )
       ? payload.curriculumId
       : existing.curriculumId;
 
     if (mergedCurriculum) {
-      const curErr = await validateCurriculumBounds(mergedCurriculum, mergedDuration);
+      const curErr = await validateCurriculumBounds(
+        mergedCurriculum,
+        mergedDuration,
+      );
       if (curErr) return res.status(400).json({ message: curErr });
     }
 
     if (payload.label != null) existing.label = payload.label;
-    if (payload.durationMinutes != null) existing.durationMinutes = payload.durationMinutes;
+    if (payload.durationMinutes != null)
+      existing.durationMinutes = payload.durationMinutes;
     if (payload.daysOfWeek != null) existing.daysOfWeek = payload.daysOfWeek;
     if (payload.startTime != null) existing.startTime = payload.startTime;
     if (payload.endTime != null) existing.endTime = payload.endTime;
-    if (payload.status != null && payload.status !== '') existing.status = payload.status;
-    if (Object.prototype.hasOwnProperty.call(payload, 'curriculumId')) {
+    if (payload.status != null && payload.status !== "")
+      existing.status = payload.status;
+    if (Object.prototype.hasOwnProperty.call(payload, "curriculumId")) {
       existing.curriculumId = payload.curriculumId;
     }
 
     await existing.save();
     const populated = await TimeBlock.findById(existing._id).populate(
-      'curriculumId',
-      'courseCode courseTitle lectureHours labHours status',
+      "curriculumId",
+      "courseCode courseTitle lectureHours labHours status",
     );
     await logActivity(req, {
-      action: 'Updated time block',
-      module: 'Scheduling',
+      action: "Updated time block",
+      module: "Scheduling",
       target: populated?.label || existing.label,
-      status: 'Completed',
+      status: "Completed",
     });
     return res.status(200).json(populated.toJSON());
   } catch (err) {
-    if (err && err.name === 'ValidationError') {
-      return res.status(400).json({ message: err.message || 'Invalid time block.' });
+    if (err && err.name === "ValidationError") {
+      return res
+        .status(400)
+        .json({ message: err.message || "Invalid time block." });
     }
     return next(err);
   }
@@ -373,26 +471,30 @@ async function archiveTimeBlock(req, res, next) {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: 'Invalid time block id.' });
+      return res.status(400).json({ message: "Invalid time block id." });
     }
 
     const row = await TimeBlock.findById(id);
     if (!row) {
-      return res.status(404).json({ message: 'Time block not found.' });
+      return res.status(404).json({ message: "Time block not found." });
     }
-    if (row.status === 'Archived') {
-      return res.status(400).json({ message: 'Time block is already archived.' });
+    if (row.status === "Archived") {
+      return res
+        .status(400)
+        .json({ message: "Time block is already archived." });
     }
 
-    row.status = 'Archived';
+    row.status = "Archived";
     await row.save();
     await logActivity(req, {
-      action: 'Archived time block',
-      module: 'Scheduling',
+      action: "Archived time block",
+      module: "Scheduling",
       target: row.label,
-      status: 'Completed',
+      status: "Completed",
     });
-    return res.status(200).json({ message: 'Time block archived.', timeBlock: row.toJSON() });
+    return res
+      .status(200)
+      .json({ message: "Time block archived.", timeBlock: row.toJSON() });
   } catch (err) {
     return next(err);
   }
@@ -402,27 +504,41 @@ async function createSection(req, res, next) {
   try {
     const Section = await resolveSectionModel();
     if (!Section) {
-      return res.status(503).json({ message: 'Scheduling module is not available.' });
+      return res
+        .status(503)
+        .json({ message: "Scheduling module is not available." });
     }
 
     const { curriculumId, term, academicYear } = req.body;
-    if (!curriculumId) return res.status(400).json({ message: 'curriculumId is required.' });
-    if (!term) return res.status(400).json({ message: 'term is required.' });
-    if (!academicYear) return res.status(400).json({ message: 'academicYear is required.' });
+    if (!curriculumId)
+      return res.status(400).json({ message: "curriculumId is required." });
+    if (!term) return res.status(400).json({ message: "term is required." });
+    if (!academicYear)
+      return res.status(400).json({ message: "academicYear is required." });
 
     const curriculum = await Curriculum.findById(curriculumId);
-    if (!curriculum) return res.status(404).json({ message: 'Curriculum not found.' });
-    if (curriculum.status !== 'Active') {
-      return res.status(400).json({ message: 'Curriculum is not active.' });
+    if (!curriculum)
+      return res.status(404).json({ message: "Curriculum not found." });
+    if (curriculum.status !== "Active") {
+      return res.status(400).json({ message: "Curriculum is not active." });
     }
 
-    const count = await Section.countDocuments({ curriculumId, term, academicYear });
+    const count = await Section.countDocuments({
+      curriculumId,
+      term,
+      academicYear,
+    });
     const sectionIndex = count + 1;
-    
+
     // Generate an identifier autonomously
-    const courseCode = normalizeString(curriculum.courseCode).toUpperCase().replace(/\s+/g, '-');
+    const courseCode = normalizeString(curriculum.courseCode)
+      .toUpperCase()
+      .replace(/\s+/g, "-");
     const termCode = term.substring(0, 2).toUpperCase();
-    const yearSuffix = academicYear.length > 2 ? academicYear.substring(academicYear.length - 2) : academicYear;
+    const yearSuffix =
+      academicYear.length > 2
+        ? academicYear.substring(academicYear.length - 2)
+        : academicYear;
 
     const sectionIdentifier = `${courseCode}-${termCode}${yearSuffix}-S${sectionIndex}`;
 
@@ -431,7 +547,7 @@ async function createSection(req, res, next) {
       curriculumId,
       term,
       academicYear,
-      status: 'Open',
+      status: "Open",
       currentEnrollmentCount: 0,
       schedules: [],
     });
@@ -439,24 +555,30 @@ async function createSection(req, res, next) {
     await newSection.save();
 
     const populated = await Section.findById(newSection._id).populate(
-      'curriculumId',
-      'courseCode courseTitle curriculumYear creditUnits courseLearningOutcomes status'
+      "curriculumId",
+      "courseCode courseTitle curriculumYear creditUnits courseLearningOutcomes status",
     );
 
     await logActivity(req, {
-      action: 'Created section',
-      module: 'Scheduling',
+      action: "Created section",
+      module: "Scheduling",
       target: populated?.sectionIdentifier || newSection.sectionIdentifier,
-      status: 'Completed',
+      status: "Completed",
     });
 
     return res.status(201).json(populated.toJSON());
   } catch (err) {
-    if (err && err.name === 'ValidationError') {
-      return res.status(400).json({ message: err.message || 'Invalid section data.' });
+    if (err && err.name === "ValidationError") {
+      return res
+        .status(400)
+        .json({ message: err.message || "Invalid section data." });
     }
     if (err && err.code === 11000) {
-      return res.status(400).json({ message: 'Section identifier already exists. Please try again.' });
+      return res
+        .status(400)
+        .json({
+          message: "Section identifier already exists. Please try again.",
+        });
     }
     return next(err);
   }
@@ -466,23 +588,28 @@ async function updateSectionResources(req, res, next) {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: 'Invalid section id.' });
+      return res.status(400).json({ message: "Invalid section id." });
     }
 
     const { schedules } = req.body;
     if (!Array.isArray(schedules)) {
-      return res.status(400).json({ message: 'schedules must be an array.' });
+      return res.status(400).json({ message: "schedules must be an array." });
     }
 
     const Section = await resolveSectionModel();
     if (!Section) {
-      return res.status(503).json({ message: 'Scheduling module is not available.' });
+      return res
+        .status(503)
+        .json({ message: "Scheduling module is not available." });
     }
 
     const section = await Section.findById(id);
-    if (!section) return res.status(404).json({ message: 'Section not found.' });
-    if (section.status === 'Archived') {
-      return res.status(400).json({ message: 'Archived sections cannot be modified.' });
+    if (!section)
+      return res.status(404).json({ message: "Section not found." });
+    if (section.status === "Archived") {
+      return res
+        .status(400)
+        .json({ message: "Archived sections cannot be modified." });
     }
 
     // Validation & Conflict Check
@@ -490,7 +617,7 @@ async function updateSectionResources(req, res, next) {
       term: section.term,
       academicYear: section.academicYear,
       _id: { $ne: section._id },
-      status: { $in: ['Open', 'Waitlisted', 'Closed'] },
+      status: { $in: ["Open", "Waitlisted", "Closed"] },
     });
 
     for (let i = 0; i < schedules.length; i++) {
@@ -499,10 +626,14 @@ async function updateSectionResources(req, res, next) {
       const nEnd = parseTimeToMinutes(s.endTime);
 
       if (nStart == null || nEnd == null) {
-        return res.status(400).json({ message: 'Invalid startTime or endTime format. Use HH:mm.' });
+        return res
+          .status(400)
+          .json({ message: "Invalid startTime or endTime format. Use HH:mm." });
       }
       if (nStart >= nEnd) {
-        return res.status(400).json({ message: 'startTime must be before endTime.' });
+        return res
+          .status(400)
+          .json({ message: "startTime must be before endTime." });
       }
 
       // Check intra-schedule conflicts (within the new payload itself)
@@ -513,8 +644,8 @@ async function updateSectionResources(req, res, next) {
           const s2End = parseTimeToMinutes(s2.endTime);
           if (nStart < s2End && nEnd > s2Start) {
             return res.status(409).json({
-              message: 'Conflict detected within the new schedules payload.',
-              conflictType: 'INTERNAL_SCHEDULE_CONFLICT',
+              message: "Conflict detected within the new schedules payload.",
+              conflictType: "INTERNAL_SCHEDULE_CONFLICT",
               sectionIdentifier: section.sectionIdentifier,
             });
           }
@@ -523,7 +654,8 @@ async function updateSectionResources(req, res, next) {
 
       // Check external system state conflicts
       for (const existingSec of activeSections) {
-        if (!existingSec.schedules || !Array.isArray(existingSec.schedules)) continue;
+        if (!existingSec.schedules || !Array.isArray(existingSec.schedules))
+          continue;
 
         for (const ex of existingSec.schedules) {
           if (s.dayOfWeek !== ex.dayOfWeek) continue;
@@ -534,17 +666,27 @@ async function updateSectionResources(req, res, next) {
           if (eStart == null || eEnd == null) continue;
 
           if (nStart < eEnd && nEnd > eStart) {
-            if (s.roomId && ex.roomId && s.roomId.toString() === ex.roomId.toString()) {
+            if (
+              s.roomId &&
+              ex.roomId &&
+              s.roomId.toString() === ex.roomId.toString()
+            ) {
               return res.status(409).json({
-                message: 'Conflict detected: Room is already booked for this time.',
-                conflictType: 'ROOM_DOUBLE_BOOKED',
+                message:
+                  "Conflict detected: Room is already booked for this time.",
+                conflictType: "ROOM_DOUBLE_BOOKED",
                 sectionIdentifier: existingSec.sectionIdentifier,
               });
             }
-            if (s.facultyId && ex.facultyId && s.facultyId.toString() === ex.facultyId.toString()) {
+            if (
+              s.facultyId &&
+              ex.facultyId &&
+              s.facultyId.toString() === ex.facultyId.toString()
+            ) {
               return res.status(409).json({
-                message: 'Conflict detected: Faculty is already booked for this time.',
-                conflictType: 'FACULTY_DOUBLE_BOOKED',
+                message:
+                  "Conflict detected: Faculty is already booked for this time.",
+                conflictType: "FACULTY_DOUBLE_BOOKED",
                 sectionIdentifier: existingSec.sectionIdentifier,
               });
             }
@@ -558,21 +700,29 @@ async function updateSectionResources(req, res, next) {
     await section.save();
 
     const populated = await Section.findById(id)
-      .populate('curriculumId', 'courseCode courseTitle curriculumYear creditUnits courseLearningOutcomes status')
-      .populate('schedules.roomId', 'name type maximumCapacity status')
-      .populate('schedules.facultyId', 'employeeId firstName lastName department status');
+      .populate(
+        "curriculumId",
+        "courseCode courseTitle curriculumYear creditUnits courseLearningOutcomes status",
+      )
+      .populate("schedules.roomId", "name type maximumCapacity status")
+      .populate(
+        "schedules.facultyId",
+        "employeeId firstName lastName department status",
+      );
 
     await logActivity(req, {
-      action: 'Updated section resources',
-      module: 'Scheduling',
+      action: "Updated section resources",
+      module: "Scheduling",
       target: populated?.sectionIdentifier || section.sectionIdentifier,
-      status: 'Completed',
+      status: "Completed",
     });
 
     return res.status(200).json(populated.toJSON());
   } catch (err) {
-    if (err && err.name === 'ValidationError') {
-      return res.status(400).json({ message: err.message || 'Invalid schedules data.' });
+    if (err && err.name === "ValidationError") {
+      return res
+        .status(400)
+        .json({ message: err.message || "Invalid schedules data." });
     }
     return next(err);
   }
@@ -581,22 +731,25 @@ async function updateSectionResources(req, res, next) {
 async function getScheduleMatrix(req, res, next) {
   try {
     const { term, academicYear } = req.query;
-    if (!term) return res.status(400).json({ message: 'term is required.' });
-    if (!academicYear) return res.status(400).json({ message: 'academicYear is required.' });
+    if (!term) return res.status(400).json({ message: "term is required." });
+    if (!academicYear)
+      return res.status(400).json({ message: "academicYear is required." });
 
     const Section = await resolveSectionModel();
     if (!Section) {
-      return res.status(503).json({ message: 'Scheduling module is not available.' });
+      return res
+        .status(503)
+        .json({ message: "Scheduling module is not available." });
     }
 
-    const sections = await Section.find({ 
+    const sections = await Section.find({
       term,
       academicYear,
-      status: { $in: ['Open', 'Waitlisted', 'Closed'] },
+      status: { $in: ["Open", "Waitlisted", "Closed"] },
     })
-      .populate('curriculumId', 'courseCode courseTitle')
-      .populate('schedules.roomId', 'name maximumCapacity')
-      .populate('schedules.facultyId', 'firstName lastName employeeId');
+      .populate("curriculumId", "courseCode courseTitle")
+      .populate("schedules.roomId", "name maximumCapacity")
+      .populate("schedules.facultyId", "firstName lastName employeeId");
 
     const matrixEvents = [];
     sections.forEach((sec) => {
@@ -604,18 +757,21 @@ async function getScheduleMatrix(req, res, next) {
         sec.schedules.forEach((sched) => {
           const room = sched.roomId;
           const faculty = sched.facultyId;
-          
+
           matrixEvents.push({
             sectionId: sec._id,
             sectionIdentifier: sec.sectionIdentifier,
             courseCode: sec.curriculumId?.courseCode,
             courseTitle: sec.curriculumId?.courseTitle,
             roomId: room?._id || room,
-            roomName: room?.name || 'Unknown Room',
+            roomName: room?.name || "Unknown Room",
             facultyId: faculty?._id || faculty,
-            facultyName: (faculty && typeof faculty === 'object' && faculty.firstName)
-              ? `${faculty.firstName} ${faculty.lastName}`
-              : (faculty ? 'Assigned' : 'Unassigned'),
+            facultyName:
+              faculty && typeof faculty === "object" && faculty.firstName
+                ? `${faculty.firstName} ${faculty.lastName}`
+                : faculty
+                  ? "Assigned"
+                  : "Unassigned",
             dayOfWeek: sched.dayOfWeek,
             startTime: sched.startTime,
             endTime: sched.endTime,
@@ -633,13 +789,14 @@ async function getScheduleMatrix(req, res, next) {
 async function getRoomUtilization(req, res, next) {
   try {
     const { term, academicYear } = req.query;
-    if (!term) return res.status(400).json({ message: 'term is required.' });
-    if (!academicYear) return res.status(400).json({ message: 'academicYear is required.' });
+    if (!term) return res.status(400).json({ message: "term is required." });
+    if (!academicYear)
+      return res.status(400).json({ message: "academicYear is required." });
 
     const Section = await resolveSectionModel();
 
     // Get all active rooms first to ensure we account for empty ones
-    const allActiveRooms = await Room.find({ status: 'Active' }).lean();
+    const allActiveRooms = await Room.find({ status: "Active" }).lean();
 
     // Aggregation pipeline for calculating total hours per room from sections
     const pipeline = [
@@ -647,50 +804,62 @@ async function getRoomUtilization(req, res, next) {
         $match: {
           term,
           academicYear,
-          status: { $in: ['Open', 'Waitlisted', 'Closed'] }
-        }
+          status: { $in: ["Open", "Waitlisted", "Closed"] },
+        },
       },
-      { $unwind: '$schedules' },
+      { $unwind: "$schedules" },
       {
         $group: {
-          _id: '$schedules.roomId',
+          _id: "$schedules.roomId",
           totalMinutes: {
             $sum: {
               $subtract: [
                 {
                   $add: [
-                    { $multiply: [{ $toInt: { $substr: ['$schedules.endTime', 0, 2] } }, 60] },
-                    { $toInt: { $substr: ['$schedules.endTime', 3, 2] } }
-                  ]
+                    {
+                      $multiply: [
+                        { $toInt: { $substr: ["$schedules.endTime", 0, 2] } },
+                        60,
+                      ],
+                    },
+                    { $toInt: { $substr: ["$schedules.endTime", 3, 2] } },
+                  ],
                 },
                 {
                   $add: [
-                    { $multiply: [{ $toInt: { $substr: ['$schedules.startTime', 0, 2] } }, 60] },
-                    { $toInt: { $substr: ['$schedules.startTime', 3, 2] } }
-                  ]
-                }
-              ]
-            }
+                    {
+                      $multiply: [
+                        { $toInt: { $substr: ["$schedules.startTime", 0, 2] } },
+                        60,
+                      ],
+                    },
+                    { $toInt: { $substr: ["$schedules.startTime", 3, 2] } },
+                  ],
+                },
+              ],
+            },
           },
           schedules: {
             $push: {
-              dayOfWeek: '$schedules.dayOfWeek',
-              startTime: '$schedules.startTime',
-              endTime: '$schedules.endTime',
-              sectionIdentifier: '$sectionIdentifier'
-            }
-          }
-        }
-      }
+              dayOfWeek: "$schedules.dayOfWeek",
+              startTime: "$schedules.startTime",
+              endTime: "$schedules.endTime",
+              sectionIdentifier: "$sectionIdentifier",
+            },
+          },
+        },
+      },
     ];
 
     const utilizationData = await Section.aggregate(pipeline);
 
     // Merge everything into the list of all active rooms
     const result = allActiveRooms.map((room) => {
-      const stats = utilizationData.find((u) => String(u._id) === String(room._id));
+      const stats = utilizationData.find(
+        (u) => String(u._id) === String(room._id),
+      );
       const totalMinutes = stats ? stats.totalMinutes : 0;
-      
+
       return {
         roomId: room._id,
         roomName: room.name,
@@ -729,13 +898,15 @@ async function getMyClasses(req, res, next) {
 
     const Section = await resolveSectionModel();
     if (!Section) {
-      return res.status(503).json({ message: 'Scheduling module is not available.' });
+      return res
+        .status(503)
+        .json({ message: "Scheduling module is not available." });
     }
 
-    const { Syllabus: SyllabusModel } = require('../models/Syllabus');
+    const { Syllabus: SyllabusModel } = require("../models/Syllabus");
 
     const baseQuery = {
-      status: { $in: ['Open', 'Waitlisted', 'Closed'] },
+      status: { $in: ["Open", "Waitlisted", "Closed"] },
     };
     if (term) {
       baseQuery.term = term;
@@ -747,7 +918,7 @@ async function getMyClasses(req, res, next) {
       ...baseQuery,
       schedules: { $elemMatch: { facultyId: faculty._id } },
     })
-      .select('_id')
+      .select("_id")
       .lean();
     sectionsWithFaculty.forEach((s) => sectionIdSet.add(s._id.toString()));
 
@@ -755,7 +926,7 @@ async function getMyClasses(req, res, next) {
       facultyId: faculty._id,
       sectionId: { $ne: null },
     })
-      .select('sectionId _id')
+      .select("sectionId _id")
       .lean();
 
     const syllabusBySectionId = new Map();
@@ -770,12 +941,14 @@ async function getMyClasses(req, res, next) {
     }
 
     const sectionQuery = {
-      _id: { $in: [...sectionIdSet].map((id) => new mongoose.Types.ObjectId(id)) },
+      _id: {
+        $in: [...sectionIdSet].map((id) => new mongoose.Types.ObjectId(id)),
+      },
       ...baseQuery,
     };
 
     const sections = await Section.find(sectionQuery)
-      .populate('curriculumId', 'courseCode courseTitle')
+      .populate("curriculumId", "courseCode courseTitle")
       .sort({ academicYear: -1, term: 1, sectionIdentifier: 1 })
       .lean();
 
@@ -787,7 +960,9 @@ async function getMyClasses(req, res, next) {
       courseCode: sec.curriculumId?.courseCode,
       courseTitle: sec.curriculumId?.courseTitle,
       syllabusId: syllabusBySectionId.get(sec._id.toString()) || null,
-      enrolledCount: Array.isArray(sec.enrolledStudentIds) ? sec.enrolledStudentIds.length : 0,
+      enrolledCount: Array.isArray(sec.enrolledStudentIds)
+        ? sec.enrolledStudentIds.length
+        : 0,
     }));
 
     return res.status(200).json(rows);
@@ -806,32 +981,42 @@ async function getMySchedule(req, res, next) {
     const { faculty } = resolved;
 
     const Section = await resolveSectionModel();
-    const query = { status: { $in: ['Open', 'Waitlisted', 'Closed'] } };
+    const query = { status: { $in: ["Open", "Waitlisted", "Closed"] } };
     if (term) query.term = term;
 
     const sections = await Section.find(query)
-      .populate('curriculumId', 'courseCode courseTitle')
-      .populate('schedules.roomId', 'name');
+      .populate("curriculumId", "courseCode courseTitle")
+      .populate("schedules.roomId", "name");
 
-    const SyllabusModel = mongoose.models.Syllabus || (await (async () => {
-       try { 
-         const m = require('../models/Syllabus'); 
-         return m.Syllabus || m; 
-       } catch { return null; } 
-    })());
+    const SyllabusModel =
+      mongoose.models.Syllabus ||
+      (await (async () => {
+        try {
+          const m = require("../models/Syllabus");
+          return m.Syllabus || m;
+        } catch {
+          return null;
+        }
+      })());
 
     const myEvents = [];
     for (const sec of sections) {
       if (!sec.schedules || !Array.isArray(sec.schedules)) continue;
-      
+
       let secSyllabusId = null;
       if (SyllabusModel) {
-        const syllabus = await SyllabusModel.findOne({ sectionId: sec._id, facultyId: faculty._id }).lean();
+        const syllabus = await SyllabusModel.findOne({
+          sectionId: sec._id,
+          facultyId: faculty._id,
+        }).lean();
         if (syllabus) secSyllabusId = syllabus._id.toString();
       }
 
       for (const sched of sec.schedules) {
-        if (sched.facultyId && sched.facultyId.toString() === faculty._id.toString()) {
+        if (
+          sched.facultyId &&
+          sched.facultyId.toString() === faculty._id.toString()
+        ) {
           myEvents.push({
             sectionId: sec._id.toString(),
             sectionIdentifier: sec.sectionIdentifier,
@@ -840,11 +1025,11 @@ async function getMySchedule(req, res, next) {
             courseCode: sec.curriculumId?.courseCode,
             courseTitle: sec.curriculumId?.courseTitle,
             roomId: sched.roomId?._id,
-            roomName: sched.roomId?.name || 'TBA',
+            roomName: sched.roomId?.name || "TBA",
             dayOfWeek: sched.dayOfWeek,
             startTime: sched.startTime,
             endTime: sched.endTime,
-            syllabusId: secSyllabusId
+            syllabusId: secSyllabusId,
           });
         }
       }
@@ -865,12 +1050,12 @@ async function assertStaffCanManageSectionRoster(req, sectionDoc) {
 }
 
 async function resolveStudentObjectIdsFromBody(ids) {
-  const Student = require('../models/Student');
+  const Student = require("../models/Student");
   const out = [];
   const seen = new Set();
   if (!Array.isArray(ids)) return out;
   for (const raw of ids) {
-    const s = String(raw ?? '').trim();
+    const s = String(raw ?? "").trim();
     if (!s) continue;
     let doc = null;
     if (mongoose.Types.ObjectId.isValid(s)) {
@@ -886,7 +1071,7 @@ async function resolveStudentObjectIdsFromBody(ids) {
 }
 
 function normalizeSessionDateInput(value) {
-  const raw = String(value || '').trim();
+  const raw = String(value || "").trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
   return raw;
 }
@@ -895,19 +1080,28 @@ async function getSectionRoster(req, res, next) {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: 'Invalid section id.' });
+      return res.status(400).json({ message: "Invalid section id." });
     }
     const Section = await resolveSectionModel();
-    if (!Section) return res.status(503).json({ message: 'Scheduling module is not available.' });
+    if (!Section)
+      return res
+        .status(503)
+        .json({ message: "Scheduling module is not available." });
 
-    const section = await Section.findById(id).populate('curriculumId', 'courseCode courseTitle').lean();
-    if (!section) return res.status(404).json({ message: 'Section not found.' });
+    const section = await Section.findById(id)
+      .populate("curriculumId", "courseCode courseTitle")
+      .lean();
+    if (!section)
+      return res.status(404).json({ message: "Section not found." });
 
     const gate = await assertStaffCanManageSectionRoster(req, section);
-    if (!gate.ok) return res.status(gate.status).json({ message: gate.message });
+    if (!gate.ok)
+      return res.status(gate.status).json({ message: gate.message });
 
-    const Student = require('../models/Student');
-    const ids = Array.isArray(section.enrolledStudentIds) ? section.enrolledStudentIds : [];
+    const Student = require("../models/Student");
+    const ids = Array.isArray(section.enrolledStudentIds)
+      ? section.enrolledStudentIds
+      : [];
     const docs = await Student.find({ _id: { $in: ids } }).lean();
     const byId = new Map(docs.map((d) => [d._id.toString(), d]));
     const ordered = ids.map((oid) => byId.get(String(oid))).filter(Boolean);
@@ -941,49 +1135,92 @@ async function patchSectionRoster(req, res, next) {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: 'Invalid section id.' });
+      return res.status(400).json({ message: "Invalid section id." });
     }
     const Section = await resolveSectionModel();
-    if (!Section) return res.status(503).json({ message: 'Scheduling module is not available.' });
+    if (!Section)
+      return res
+        .status(503)
+        .json({ message: "Scheduling module is not available." });
 
     const section = await Section.findById(id);
-    if (!section) return res.status(404).json({ message: 'Section not found.' });
-    if (section.status === 'Archived') {
-      return res.status(400).json({ message: 'Cannot modify roster for an archived section.' });
+    if (!section)
+      return res.status(404).json({ message: "Section not found." });
+    if (section.status === "Archived") {
+      return res
+        .status(400)
+        .json({ message: "Cannot modify roster for an archived section." });
     }
 
     const gate = await assertStaffCanManageSectionRoster(req, section);
-    if (!gate.ok) return res.status(gate.status).json({ message: gate.message });
+    if (!gate.ok)
+      return res.status(gate.status).json({ message: gate.message });
 
     const add = req.body?.add;
     const remove = req.body?.remove;
     if (!Array.isArray(add) && !Array.isArray(remove)) {
-      return res.status(400).json({ message: 'Provide add and/or remove as arrays of student ids.' });
+      return res
+        .status(400)
+        .json({
+          message: "Provide add and/or remove as arrays of student ids.",
+        });
     }
 
-    const addIds = await resolveStudentObjectIdsFromBody(Array.isArray(add) ? add : []);
-    const removeIds = await resolveStudentObjectIdsFromBody(Array.isArray(remove) ? remove : []);
+    const addIds = await resolveStudentObjectIdsFromBody(
+      Array.isArray(add) ? add : [],
+    );
+    const removeIds = await resolveStudentObjectIdsFromBody(
+      Array.isArray(remove) ? remove : [],
+    );
 
-    const set = new Set((section.enrolledStudentIds || []).map((x) => x.toString()));
+    const set = new Set(
+      (section.enrolledStudentIds || []).map((x) => x.toString()),
+    );
     for (const r of removeIds) set.delete(r.toString());
     for (const a of addIds) set.add(a.toString());
 
-    section.enrolledStudentIds = [...set].map((s) => new mongoose.Types.ObjectId(s));
+    section.enrolledStudentIds = [...set].map(
+      (s) => new mongoose.Types.ObjectId(s),
+    );
     section.currentEnrollmentCount = section.enrolledStudentIds.length;
+
+    const Student = require("../models/Student");
+    await Promise.all(
+      addIds.map((studentId) =>
+        Student.findByIdAndUpdate(
+          studentId,
+          { sectionId: section._id, section: section.sectionIdentifier },
+          { new: true, runValidators: true },
+        ),
+      ),
+    );
+
+    await Promise.all(
+      removeIds.map((studentId) =>
+        Student.findOneAndUpdate(
+          { _id: studentId, sectionId: section._id },
+          { sectionId: null, section: "" },
+          { new: true, runValidators: true },
+        ),
+      ),
+    );
+
     await section.save();
 
-    const populated = await Section.findById(id).populate('curriculumId', 'courseCode courseTitle').lean();
-    const Student = require('../models/Student');
+    const populated = await Section.findById(id)
+      .populate("curriculumId", "courseCode courseTitle")
+      .lean();
+    const Student = require("../models/Student");
     const ids2 = populated.enrolledStudentIds || [];
     const docs = await Student.find({ _id: { $in: ids2 } }).lean();
     const byId = new Map(docs.map((d) => [d._id.toString(), d]));
     const ordered = ids2.map((oid) => byId.get(String(oid))).filter(Boolean);
 
     await logActivity(req, {
-      action: 'Updated section roster',
-      module: 'Scheduling',
+      action: "Updated section roster",
+      module: "Scheduling",
       target: populated?.sectionIdentifier || section.sectionIdentifier,
-      status: 'Completed',
+      status: "Completed",
       metadata: { enrolledCount: ordered.length },
     });
 
@@ -1017,23 +1254,33 @@ async function getSectionAttendance(req, res, next) {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: 'Invalid section id.' });
+      return res.status(400).json({ message: "Invalid section id." });
     }
     const sessionDate = normalizeSessionDateInput(req.query?.sessionDate);
     if (!sessionDate) {
-      return res.status(400).json({ message: 'sessionDate is required in YYYY-MM-DD format.' });
+      return res
+        .status(400)
+        .json({ message: "sessionDate is required in YYYY-MM-DD format." });
     }
 
     const Section = await resolveSectionModel();
-    if (!Section) return res.status(503).json({ message: 'Scheduling module is not available.' });
+    if (!Section)
+      return res
+        .status(503)
+        .json({ message: "Scheduling module is not available." });
     const section = await Section.findById(id).lean();
-    if (!section) return res.status(404).json({ message: 'Section not found.' });
+    if (!section)
+      return res.status(404).json({ message: "Section not found." });
 
     const gate = await assertStaffCanManageSectionRoster(req, section);
-    if (!gate.ok) return res.status(gate.status).json({ message: gate.message });
+    if (!gate.ok)
+      return res.status(gate.status).json({ message: gate.message });
 
-    const ClassAttendance = require('../models/ClassAttendance');
-    const row = await ClassAttendance.findOne({ sectionId: section._id, sessionDate }).lean();
+    const ClassAttendance = require("../models/ClassAttendance");
+    const row = await ClassAttendance.findOne({
+      sectionId: section._id,
+      sessionDate,
+    }).lean();
     const records = Array.isArray(row?.records)
       ? row.records.map((r) => ({
           studentId: String(r.studentId),
@@ -1056,43 +1303,65 @@ async function upsertSectionAttendance(req, res, next) {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: 'Invalid section id.' });
+      return res.status(400).json({ message: "Invalid section id." });
     }
 
     const sessionDate = normalizeSessionDateInput(req.body?.sessionDate);
     if (!sessionDate) {
-      return res.status(400).json({ message: 'sessionDate is required in YYYY-MM-DD format.' });
+      return res
+        .status(400)
+        .json({ message: "sessionDate is required in YYYY-MM-DD format." });
     }
     const records = Array.isArray(req.body?.records) ? req.body.records : null;
     if (!records) {
-      return res.status(400).json({ message: 'records must be an array.' });
+      return res.status(400).json({ message: "records must be an array." });
     }
 
     const Section = await resolveSectionModel();
-    if (!Section) return res.status(503).json({ message: 'Scheduling module is not available.' });
+    if (!Section)
+      return res
+        .status(503)
+        .json({ message: "Scheduling module is not available." });
     const section = await Section.findById(id);
-    if (!section) return res.status(404).json({ message: 'Section not found.' });
-    if (section.status === 'Archived') {
-      return res.status(400).json({ message: 'Cannot modify attendance for an archived section.' });
+    if (!section)
+      return res.status(404).json({ message: "Section not found." });
+    if (section.status === "Archived") {
+      return res
+        .status(400)
+        .json({ message: "Cannot modify attendance for an archived section." });
     }
 
     const gate = await assertStaffCanManageSectionRoster(req, section);
-    if (!gate.ok) return res.status(gate.status).json({ message: gate.message });
+    if (!gate.ok)
+      return res.status(gate.status).json({ message: gate.message });
 
-    const enrolledSet = new Set((section.enrolledStudentIds || []).map((sid) => String(sid)));
+    const enrolledSet = new Set(
+      (section.enrolledStudentIds || []).map((sid) => String(sid)),
+    );
     const nextRecords = [];
     const seen = new Set();
     for (const row of records) {
-      const sid = String(row?.studentId || '').trim();
-      const status = String(row?.status || '').trim();
+      const sid = String(row?.studentId || "").trim();
+      const status = String(row?.status || "").trim();
       if (!sid || !mongoose.Types.ObjectId.isValid(sid)) {
-        return res.status(400).json({ message: 'Each record.studentId must be a valid student ObjectId.' });
+        return res
+          .status(400)
+          .json({
+            message: "Each record.studentId must be a valid student ObjectId.",
+          });
       }
-      if (!['Present', 'Late', 'Absent'].includes(status)) {
-        return res.status(400).json({ message: 'record.status must be Present, Late, or Absent.' });
+      if (!["Present", "Late", "Absent"].includes(status)) {
+        return res
+          .status(400)
+          .json({ message: "record.status must be Present, Late, or Absent." });
       }
       if (!enrolledSet.has(sid)) {
-        return res.status(400).json({ message: 'Attendance records must only include currently enrolled students.' });
+        return res
+          .status(400)
+          .json({
+            message:
+              "Attendance records must only include currently enrolled students.",
+          });
       }
       if (seen.has(sid)) continue;
       seen.add(sid);
@@ -1102,23 +1371,25 @@ async function upsertSectionAttendance(req, res, next) {
       });
     }
 
-    const ClassAttendance = require('../models/ClassAttendance');
+    const ClassAttendance = require("../models/ClassAttendance");
     const saved = await ClassAttendance.findOneAndUpdate(
       { sectionId: section._id, sessionDate },
       {
         $set: {
           records: nextRecords,
-          updatedByUserId: req.user?.id ? new mongoose.Types.ObjectId(req.user.id) : null,
+          updatedByUserId: req.user?.id
+            ? new mongoose.Types.ObjectId(req.user.id)
+            : null,
         },
       },
       { upsert: true, new: true, setDefaultsOnInsert: true },
     ).lean();
 
     await logActivity(req, {
-      action: 'Updated class attendance',
-      module: 'Scheduling',
+      action: "Updated class attendance",
+      module: "Scheduling",
       target: section.sectionIdentifier,
-      status: 'Completed',
+      status: "Completed",
       metadata: { sessionDate, records: nextRecords.length },
     });
 
@@ -1133,7 +1404,12 @@ async function upsertSectionAttendance(req, res, next) {
     });
   } catch (err) {
     if (err && err.code === 11000) {
-      return res.status(409).json({ message: 'Attendance record already exists for that section and date.' });
+      return res
+        .status(409)
+        .json({
+          message:
+            "Attendance record already exists for that section and date.",
+        });
     }
     return next(err);
   }
