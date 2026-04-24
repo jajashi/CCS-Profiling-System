@@ -58,7 +58,7 @@ const isUserInTargetGroups = (event, targetingMeta) => {
 const canUserAccessEvent = (event, user, targetingMeta) => {
   if (!event || !user) return false;
   const isOrganizer = (event.organizers || []).some(
-    (org) => String(org.userId) === String(user.id || user._id)
+    (org) => String(org.userId?._id || org.userId) === String(user.id || user._id)
   );
   if (user.role === 'admin' || isOrganizer) return true;
   return isUserInTargetGroups(event, targetingMeta);

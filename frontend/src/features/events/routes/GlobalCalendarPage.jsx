@@ -5,8 +5,9 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import './GlobalCalendarPage.css';
 import { useNavigate } from 'react-router-dom';
 
+import { apiFetch } from '../../../lib/api';
+
 const localizer = momentLocalizer(moment);
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export default function GlobalCalendarPage() {
   const [events, setEvents] = useState([]);
@@ -18,10 +19,7 @@ export default function GlobalCalendarPage() {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`${apiUrl}/api/events`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const res = await apiFetch('/api/events');
         if (res.ok) {
           const data = await res.json();
           // Map to react-big-calendar format. Native Date automatically converts from UTC ISO string to local browser time!
