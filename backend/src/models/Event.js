@@ -81,8 +81,12 @@ const feedbackSchema = new mongoose.Schema({
 const eventSchema = new mongoose.Schema({
   type: {
     type: String,
-    enum: ['Curricular', 'Extra-Curricular'],
+    enum: ['Curricular', 'Extra-Curricular', 'Other'],
     required: true
+  },
+  typeOtherLabel: {
+    type: String,
+    trim: true
   },
   status: {
     type: String,

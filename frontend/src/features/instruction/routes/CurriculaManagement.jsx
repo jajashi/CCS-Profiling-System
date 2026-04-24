@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FiArchive, FiBookOpen, FiEdit2, FiEye, FiPlus, FiRotateCcw, FiSearch, FiX } from 'react-icons/fi';
+import { FiArchive, FiBookOpen, FiChevronLeft, FiChevronRight, FiEdit2, FiEye, FiPlus, FiRotateCcw, FiSearch, FiX } from 'react-icons/fi';
 import { apiFetch } from '../../../lib/api';
 import { readFacultyCache, writeFacultyCache } from '../../../lib/facultyPortalCache';
 import { useAuth } from '../../../providers/AuthContext';
@@ -269,6 +269,7 @@ export default function CurriculaManagement() {
   const [programFilter, setProgramFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('Active');
   const [page, setPage] = useState(1);
+  const [pageInput, setPageInput] = useState('1');
   const [formModal, setFormModal] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
@@ -351,6 +352,23 @@ export default function CurriculaManagement() {
   const totalPages = Math.max(Math.ceil(filteredRows.length / PAGE_SIZE), 1);
   const paginatedRows = useMemo(() => filteredRows.slice((page - 1) * PAGE_SIZE, (page - 1) * PAGE_SIZE + PAGE_SIZE), [filteredRows, page]);
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+  useEffect(() => { setPageInput(String(page || 1)); }, [page]);
+
+  const hasPrev = page > 1;
+  const hasNext = page < totalPages;
+
+  const handlePageJump = () => {
+    const parsed = Number.parseInt(String(pageInput || '').trim(), 10);
+    if (!Number.isFinite(parsed)) {
+      setPageInput(String(page || 1));
+      return;
+    }
+    const nextPage = Math.min(Math.max(parsed, 1), Math.max(totalPages || 1, 1));
+    setPageInput(String(nextPage));
+    if (nextPage !== page) {
+      setPage(nextPage);
+    }
+  };
 
   const openEdit = (row) => {
     setViewRow(null);
@@ -485,8 +503,52 @@ export default function CurriculaManagement() {
 
         {!loading ? (
           <div className="results-count">
-            Showing <strong>{filteredRows.length}</strong>{' '}
-            {filteredRows.length === 1 ? 'curriculum' : 'curricula'}
+            <div className="results-count-text">
+              Showing <strong>{filteredRows.length}</strong>{' '}
+              {filteredRows.length === 1 ? 'curriculum' : 'curricula'}
+            </div>
+            {filteredRows.length > PAGE_SIZE ? (
+              <div className="results-count-pagination" aria-label="Top pagination controls">
+                <button
+                  className="pagination-btn pagination-btn-sm"
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={!hasPrev}
+                  type="button"
+                  aria-label="Previous page"
+                >
+                  <FiChevronLeft />
+                </button>
+                <label className="pagination-input-wrap" aria-label="Page number">
+                  <span className="pagination-input-label">Page</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max={totalPages}
+                    inputMode="numeric"
+                    value={pageInput}
+                    onChange={(e) => setPageInput(e.target.value)}
+                    onBlur={handlePageJump}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handlePageJump();
+                      }
+                    }}
+                    className="pagination-page-input"
+                  />
+                </label>
+                <span className="pagination-info pagination-info-sm">of {totalPages}</span>
+                <button
+                  className="pagination-btn pagination-btn-sm"
+                  onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={!hasNext}
+                  type="button"
+                  aria-label="Next page"
+                >
+                  <FiChevronRight />
+                </button>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -566,7 +628,50 @@ export default function CurriculaManagement() {
             </tbody>
           </table>
         </div>
-        {filteredRows.length > PAGE_SIZE ? <div className="table-pagination"><button type="button" className="pagination-btn" disabled={page <= 1} onClick={() => setPage((prev) => prev - 1)}>Previous</button><span className="pagination-meta">Page {page} of {totalPages}</span><button type="button" className="pagination-btn" disabled={page >= totalPages} onClick={() => setPage((prev) => prev + 1)}>Next</button></div> : null}
+        {filteredRows.length > PAGE_SIZE ? (
+          <div className="pagination-controls">
+            <div className="results-count-pagination" aria-label="Bottom pagination controls">
+              <button
+                className="pagination-btn pagination-btn-sm"
+                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                disabled={!hasPrev}
+                type="button"
+                aria-label="Previous page"
+              >
+                <FiChevronLeft />
+              </button>
+              <label className="pagination-input-wrap" aria-label="Page number">
+                <span className="pagination-input-label">Page</span>
+                <input
+                  type="number"
+                  min="1"
+                  max={totalPages}
+                  inputMode="numeric"
+                  value={pageInput}
+                  onChange={(e) => setPageInput(e.target.value)}
+                  onBlur={handlePageJump}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handlePageJump();
+                    }
+                  }}
+                  className="pagination-page-input"
+                />
+              </label>
+              <span className="pagination-info pagination-info-sm">of {totalPages}</span>
+              <button
+                className="pagination-btn pagination-btn-sm"
+                onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+                disabled={!hasNext}
+                type="button"
+                aria-label="Next page"
+              >
+                <FiChevronRight />
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {viewRow ? (

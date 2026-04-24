@@ -1,4 +1,6 @@
 .schedule-matrix-container {
+  --matrix-header-height: 42px;
+  --matrix-hour-height: 60px;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -39,7 +41,8 @@
 }
 
 .matrix-header-cell {
-  height: 40px;
+  height: var(--matrix-header-height);
+  min-height: var(--matrix-header-height);
   border-bottom: 2px solid #dee2e6;
   background-color: #f8f9fa;
   display: flex;
@@ -51,6 +54,7 @@
   position: sticky;
   top: 0;
   z-index: 20;
+  box-sizing: border-box;
 }
 
 .matrix-time-col {
@@ -68,14 +72,16 @@
 }
 
 .matrix-time-slot {
-  height: 60px; /* 1 hour = 60px */
+  height: var(--matrix-hour-height); /* 1 hour row height */
+  min-height: var(--matrix-hour-height);
   border-bottom: 1px solid #f1f3f5;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  padding-top: 4px;
+  padding-top: 0;
   font-size: 0.8rem;
   color: #adb5bd;
+  box-sizing: border-box;
 }
 
 .matrix-columns-wrapper {
@@ -96,12 +102,14 @@
 .matrix-events-area {
   position: relative;
   flex: 1;
-  min-height: 900px; /* 15 hours * 60px */
+  min-height: var(--matrix-height, 900px);
 }
 
 .matrix-grid-line {
-  height: 60px;
+  height: var(--matrix-hour-height);
+  min-height: var(--matrix-hour-height);
   border-bottom: 1px dashed #e9ecef;
+  box-sizing: border-box;
 }
 
 .matrix-event {
@@ -111,12 +119,12 @@
   background-color: #e3f2fd;
   border-left: 4px solid #1976d2;
   border-radius: 4px;
-  padding: 4px 6px;
+  padding: 5px 6px;
   overflow: hidden;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   transition: transform 0.2s, box-shadow 0.2s;
   z-index: 10;
 }
@@ -129,17 +137,153 @@
 
 .event-title {
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   color: #0d47a1;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
 .event-sub {
-  font-size: 0.7rem;
+  font-size: 0.66rem;
   color: #1565c0;
-  white-space: nowrap;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
   text-overflow: ellipsis;
   overflow: hidden;
+}
+
+.event-time {
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: #0f3f91;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Faculty Cards View */
+.faculty-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  padding: 24px;
+  overflow-y: auto;
+  background-color: #f1f3f5;
+}
+
+.faculty-schedule-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  border: 2px solid transparent;
+}
+
+.faculty-schedule-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-color: #e3f2fd;
+}
+
+.faculty-card-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1976d2, #64b5f6);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.faculty-card-content {
+  flex: 1;
+}
+
+.faculty-card-name {
+  margin: 0 0 6px 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1a202c;
+}
+
+.faculty-card-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: #4a5568;
+  margin-bottom: 12px;
+}
+
+.view-schedule-btn {
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  color: #2d3748;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.faculty-schedule-card:hover .view-schedule-btn {
+  background: #1976d2;
+  color: white;
+  border-color: #1976d2;
+}
+
+/* Drilldown View */
+.matrix-drilldown-header {
+  padding: 12px 16px;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  position: sticky;
+  top: var(--matrix-header-height);
+  z-index: 50;
+}
+
+.matrix-back-btn {
+  background: none;
+  border: none;
+  color: #1976d2;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.matrix-back-btn:hover {
+  background: #e3f2fd;
+}
+
+.drilldown-title {
+  font-size: 1rem;
+  color: #4a5568;
+}
+
+.matrix-empty-state {
+  grid-column: 1 / -1;
+  padding: 60px;
+  text-align: center;
+  color: #718096;
+  font-size: 1.1rem;
 }

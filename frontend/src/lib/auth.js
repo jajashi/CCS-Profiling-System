@@ -20,7 +20,7 @@ export const auth = {
           token: data.token
         };
         localStorage.setItem('ccs_user', JSON.stringify(userData));
-        return { success: true };
+        return { success: true, user: userData };
       } else {
         return { success: false, error: data.message || 'Login failed' };
       }
@@ -45,5 +45,31 @@ export const auth = {
 
   isAuthenticated() {
     return !!this.getUser();
+  },
+
+  async changePassword(currentPassword, newPassword) {
+    try {
+      const response = await apiFetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        return { success: false, error: data?.message || 'Could not change password.' };
+      }
+
+      const userData = this.getUser();
+      if (userData) {
+        userData.mustChangePassword = false;
+        userData.isNewAccount = false;
+        localStorage.setItem('ccs_user', JSON.stringify(userData));
+      }
+      return { success: true, showWelcome: data?.showWelcome === true };
+    } catch {
+      return { success: false, error: 'Network error while changing password.' };
+    }
   }
 };

@@ -16,6 +16,6 @@ router.get('/:id', authenticate, requireRoles('admin', 'faculty'), getSyllabusBy
 router.post('/', authenticate, requireRoles('admin'), createSyllabus);
 router.put('/:id', authenticate, requireRoles('admin'), updateSyllabus);
 router.delete('/:id', authenticate, requireRoles('admin'), archiveSyllabus);
-router.patch('/:id/lessons/:lessonId', authenticate, requireRoles('admin'), updateWeeklyLesson);
+router.patch('/:id/lessons/:lessonId', authenticate, requireRoles('admin', 'faculty'), updateWeeklyLesson);
 
 module.exports = router;

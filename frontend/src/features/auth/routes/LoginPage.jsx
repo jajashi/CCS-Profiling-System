@@ -19,7 +19,11 @@ const LoginPage = () => {
     const result = await login(username, password);
 
     if (result.success) {
-      navigate('/dashboard');
+      if (result.user?.mustChangePassword) {
+        navigate('/change-password');
+      } else {
+        navigate('/dashboard');
+      }
     } else {
       setError(result.error);
       setPassword(''); // clear password field on failure

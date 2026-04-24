@@ -87,19 +87,19 @@ router.route('/')
 
 router.route('/:id')
   .get(getEventById)
-  .patch(updateEvent)
-  .delete(deleteEvent);
+  .patch(requireRoles('admin'), updateEvent)
+  .delete(requireRoles('admin'), deleteEvent);
 
 router.post('/:id/rsvp', requireRoles('student', 'faculty'), rsvpToEvent);
 router.delete('/:id/rsvp', requireRoles('student', 'faculty'), cancelRsvp);
 router.post('/:id/unrsvp', requireRoles('student', 'faculty'), cancelRsvp);
-router.patch('/:id/attendees/:userId', requireRoles('admin', 'faculty'), updateAttendance);
+router.patch('/:id/attendees/:userId', requireRoles('admin'), updateAttendance);
 
-router.patch('/:id/status', requireRoles('admin', 'faculty'), updateEventStatus);
-router.get('/:id/analytics', requireRoles('admin', 'faculty'), getEventAnalytics);
+router.patch('/:id/status', requireRoles('admin'), updateEventStatus);
+router.get('/:id/analytics', requireRoles('admin'), getEventAnalytics);
 router.post('/:id/feedback', submitFeedback);
-router.post('/:id/certificates', requireRoles('admin', 'faculty'), generateCertificates);
-router.get('/:id/certificates/bulk', requireRoles('admin', 'faculty'), downloadBulkCertificates);
+router.post('/:id/certificates', requireRoles('admin'), generateCertificates);
+router.get('/:id/certificates/bulk', requireRoles('admin'), downloadBulkCertificates);
 router.get('/:id/certificates/me', downloadUserCertificate);
 
 // User routes

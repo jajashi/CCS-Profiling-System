@@ -3,6 +3,7 @@ const Curriculum = require('../models/Curriculum');
 const Faculty = require('../models/Faculty');
 const User = require('../models/User');
 const { Syllabus, SYLLABUS_STATUS_ENUM, LESSON_STATUS_ENUM } = require('../models/Syllabus');
+const { logActivity } = require('../services/activityLogService');
 
 function normalizeString(value) {
   return String(value ?? '').trim();
@@ -405,6 +406,12 @@ async function createSyllabus(req, res, next) {
     const created = await Syllabus.create(data);
     const Section = await resolveSectionModel();
     const populated = await Syllabus.findById(created._id).populate(buildDetailPopulateOptions(Boolean(Section)));
+    await logActivity(req, {
+      action: 'Created syllabus',
+      module: 'Instruction',
+      target: populated?._id || created._id,
+      status: 'Completed',
+    });
     return res.status(201).json(populated.toJSON());
   } catch (err) {
     if (err && err.name === 'ValidationError') {
@@ -489,6 +496,12 @@ async function updateSyllabus(req, res, next) {
 
     const Section = await resolveSectionModel();
     const populated = await Syllabus.findById(syllabus._id).populate(buildDetailPopulateOptions(Boolean(Section)));
+    await logActivity(req, {
+      action: 'Updated syllabus',
+      module: 'Instruction',
+      target: populated?._id || syllabus._id,
+      status: 'Completed',
+    });
     return res.status(200).json(populated.toJSON());
   } catch (err) {
     if (err && err.name === 'ValidationError') {
@@ -520,6 +533,12 @@ async function archiveSyllabus(req, res, next) {
 
     syllabus.status = 'Archived';
     await syllabus.save();
+    await logActivity(req, {
+      action: 'Archived syllabus',
+      module: 'Instruction',
+      target: syllabus._id,
+      status: 'Completed',
+    });
 
     return res.status(200).json({ message: 'Syllabus archived successfully.', syllabus: syllabus.toJSON() });
   } catch (err) {
@@ -610,6 +629,12 @@ async function updateWeeklyLesson(req, res, next) {
     }
 
     await syllabus.save();
+    await logActivity(req, {
+      action: 'Updated weekly lesson',
+      module: 'Instruction',
+      target: syllabus._id,
+      status: 'Completed',
+    });
     return res.status(200).json(lesson.toJSON());
   } catch (err) {
     if (err && err.name === 'ValidationError') {

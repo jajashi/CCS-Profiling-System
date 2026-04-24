@@ -438,7 +438,9 @@ export default function TimeBlocksPage() {
 
         {!loading ? (
           <div className="results-count">
-            Showing <strong>{filteredRows.length}</strong> time block{filteredRows.length === 1 ? '' : 's'}
+            <div className="results-count-text">
+              Showing <strong>{filteredRows.length}</strong> time block{filteredRows.length === 1 ? '' : 's'}
+            </div>
           </div>
         ) : null}
 

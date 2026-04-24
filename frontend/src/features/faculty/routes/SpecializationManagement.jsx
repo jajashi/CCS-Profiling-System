@@ -1,19 +1,12 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  FiArrowLeft,
-  FiEdit2,
-  FiEye,
-  FiLayers,
-  FiPlus,
-  FiTrash2,
-  FiX,
-} from 'react-icons/fi';
+import { FiArrowLeft, FiChevronLeft, FiChevronRight, FiEdit2, FiEye, FiLayers, FiPlus, FiSearch, FiTrash2, FiX, } from 'react-icons/fi';
 import { apiFetch } from '../../../lib/api';
 import '../../students/routes/StudentInformation.css';
 import './SpecializationManagement.css';
 
 const FACULTY_DIRECTORY_PATH = '/dashboard/faculty/directory';
+const PAGE_SIZE = 20;
 
 export default function SpecializationManagement() {
   const [rows, setRows] = useState([]);
@@ -27,6 +20,9 @@ export default function SpecializationManagement() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [viewRow, setViewRow] = useState(null);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageInput, setPageInput] = useState('1');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -142,6 +138,46 @@ export default function SpecializationManagement() {
     }
   };
 
+  const filteredRows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return rows;
+    return rows.filter((row) => {
+      const name = String(row.name || '').toLowerCase();
+      const description = String(row.description || '').toLowerCase();
+      return name.includes(query) || description.includes(query);
+    });
+  }, [rows, search]);
+
+  const totalPages = Math.max(Math.ceil(filteredRows.length / PAGE_SIZE), 1);
+  const paginatedRows = filteredRows.slice((page - 1) * PAGE_SIZE, (page - 1) * PAGE_SIZE + PAGE_SIZE);
+  const hasPrev = page > 1;
+  const hasNext = page < totalPages;
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
+  useEffect(() => {
+    setPageInput(String(page || 1));
+  }, [page]);
+
+  const handlePageJump = () => {
+    const parsed = Number.parseInt(String(pageInput || '').trim(), 10);
+    if (!Number.isFinite(parsed)) {
+      setPageInput(String(page || 1));
+      return;
+    }
+    const nextPage = Math.min(Math.max(parsed, 1), Math.max(totalPages || 1, 1));
+    setPageInput(String(nextPage));
+    if (nextPage !== page) {
+      setPage(nextPage);
+    }
+  };
+
   return (
     <div className="student-directory spec-page">
       <div className="directory-hero faculty-hero">
@@ -156,27 +192,24 @@ export default function SpecializationManagement() {
         </div>
       </div>
 
-      <div className="spec-back-row">
-        <Link to={FACULTY_DIRECTORY_PATH} className="spec-back-link">
-          <FiArrowLeft aria-hidden />
-          Back to faculty directory
-        </Link>
-      </div>
-
       <div className="spec-card">
         <div className="spec-toolbar">
-          <div className="spec-toolbar-meta">
-            <h2 className="spec-toolbar-title">Specialization catalog</h2>
-            <p className="spec-toolbar-sub">
-              {loading ? 'Loading…' : 'Deletion is blocked while a specialization is still assigned.'}
-            </p>
+          <div className="search-box curriculum-search">
+            <FiSearch />
+            <input
+              type="text"
+              placeholder="Search specialization name or description"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              disabled={loading}
+            />
           </div>
           <div className="spec-toolbar-right">
             {!loading ? (
               <div className="student-count-badge">
                 <FiLayers />
                 <span>
-                  {rows.length} specialization{rows.length === 1 ? '' : 's'}
+                  {filteredRows.length} specialization{filteredRows.length === 1 ? '' : 's'}
                 </span>
               </div>
             ) : null}
@@ -189,7 +222,51 @@ export default function SpecializationManagement() {
 
         {!loading ? (
           <div className="results-count">
-            Showing <strong>{rows.length}</strong> specialization{rows.length === 1 ? '' : 's'}
+            <div className="results-count-text">
+              Showing <strong>{filteredRows.length}</strong> specialization{filteredRows.length === 1 ? '' : 's'}
+            </div>
+            {filteredRows.length > PAGE_SIZE ? (
+              <div className="results-count-pagination" aria-label="Top pagination controls">
+                <button
+                  className="pagination-btn pagination-btn-sm"
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={!hasPrev}
+                  type="button"
+                  aria-label="Previous page"
+                >
+                  <FiChevronLeft />
+                </button>
+                <label className="pagination-input-wrap" aria-label="Page number">
+                  <span className="pagination-input-label">Page</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max={totalPages}
+                    inputMode="numeric"
+                    value={pageInput}
+                    onChange={(e) => setPageInput(e.target.value)}
+                    onBlur={handlePageJump}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handlePageJump();
+                      }
+                    }}
+                    className="pagination-page-input"
+                  />
+                </label>
+                <span className="pagination-info pagination-info-sm">of {totalPages}</span>
+                <button
+                  className="pagination-btn pagination-btn-sm"
+                  onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={!hasNext}
+                  type="button"
+                  aria-label="Next page"
+                >
+                  <FiChevronRight />
+                </button>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -216,14 +293,14 @@ export default function SpecializationManagement() {
                     Loading specializations…
                   </td>
                 </tr>
-              ) : rows.length === 0 ? (
+              ) : filteredRows.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="spec-empty">
-                    No specializations yet. Use &quot;Add specialization&quot; to create the first entry.
+                    No specializations matched your search.
                   </td>
                 </tr>
               ) : (
-                rows.map((row) => {
+                paginatedRows.map((row) => {
                   const count = row.assignedCount ?? 0;
                   return (
                     <tr
@@ -288,6 +365,50 @@ export default function SpecializationManagement() {
             </tbody>
           </table>
         </div>
+        {filteredRows.length > PAGE_SIZE ? (
+          <div className="pagination-controls">
+            <div className="results-count-pagination" aria-label="Bottom pagination controls">
+              <button
+                className="pagination-btn pagination-btn-sm"
+                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                disabled={!hasPrev}
+                type="button"
+                aria-label="Previous page"
+              >
+                <FiChevronLeft />
+              </button>
+              <label className="pagination-input-wrap" aria-label="Page number">
+                <span className="pagination-input-label">Page</span>
+                <input
+                  type="number"
+                  min="1"
+                  max={totalPages}
+                  inputMode="numeric"
+                  value={pageInput}
+                  onChange={(e) => setPageInput(e.target.value)}
+                  onBlur={handlePageJump}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handlePageJump();
+                    }
+                  }}
+                  className="pagination-page-input"
+                />
+              </label>
+              <span className="pagination-info pagination-info-sm">of {totalPages}</span>
+              <button
+                className="pagination-btn pagination-btn-sm"
+                onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+                disabled={!hasNext}
+                type="button"
+                aria-label="Next page"
+              >
+                <FiChevronRight />
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {viewRow ? (

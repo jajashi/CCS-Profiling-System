@@ -20,6 +20,14 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const changePassword = async (currentPassword, newPassword) => {
+    const result = await auth.changePassword(currentPassword, newPassword);
+    if (result.success) {
+      setUser(auth.getUser());
+    }
+    return result;
+  };
+
   useEffect(() => {
     const handleExpired = () => {
       logout();
@@ -47,8 +55,10 @@ export const AuthProvider = ({ children }) => {
       isAdmin: user?.role === 'admin',
       isFaculty: user?.role === 'faculty',
       isStudent: user?.role === 'student',
+      mustChangePassword: user?.mustChangePassword === true,
       login,
       logout,
+      changePassword,
     }),
     [user],
   );

@@ -332,7 +332,97 @@ export default function AddStudentForm({
             ) : null}
 
             {!showPreview ? (
-            <div className="add-student-grid">
+            <div className="add-student-categories">
+            <section className="add-student-category">
+              <h4 className="add-student-section-heading">Student Picture</h4>
+              <div className="add-student-grid">
+                <div className="md:col-span-2">
+              <div className="avatar-input-mode">
+                <label className="avatar-input-option">
+                  <input
+                    type="radio"
+                    name="avatarInputMode"
+                    value="url"
+                    checked={avatarInputMode === 'url'}
+                    onChange={() => setAvatarInputMode('url')}
+                  />
+                  <span>URL</span>
+                </label>
+                <label className="avatar-input-option">
+                  <input
+                    type="radio"
+                    name="avatarInputMode"
+                    value="upload"
+                    checked={avatarInputMode === 'upload'}
+                    onChange={() => setAvatarInputMode('upload')}
+                  />
+                  <span>Upload</span>
+                </label>
+              </div>
+              {avatarInputMode === 'url' ? (
+                <input
+                  id="profileAvatar"
+                  name="profileAvatar"
+                  type="url"
+                  value={formData.profileAvatar}
+                  onChange={handleChange}
+                  className={controlClass}
+                  placeholder="https://example.com/avatar.jpg"
+                  autoComplete="off"
+                />
+              ) : (
+                <input
+                  id="profileAvatarUpload"
+                  name="profileAvatarUpload"
+                  type="file"
+                  accept="image/*"
+                  className={controlClass}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (!IMAGE_MIME_TYPES.includes(file.type)) {
+                      setErrors((prev) => ({
+                        ...prev,
+                        profileAvatar: 'Unsupported image type. Use JPG, PNG, WEBP, or GIF.',
+                      }));
+                      return;
+                    }
+                    if (file.size > MAX_AVATAR_BYTES) {
+                      setErrors((prev) => ({
+                        ...prev,
+                        profileAvatar: 'Image is too large. Maximum file size is 2MB.',
+                      }));
+                      return;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      const result = String(reader.result || '');
+                      if (result.startsWith('data:image/')) {
+                        setErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.profileAvatar;
+                          return next;
+                        });
+                        setFormData((prev) => ({ ...prev, profileAvatar: result }));
+                      }
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                />
+              )}
+              <FieldError name="profileAvatar" />
+              {formData.profileAvatar ? (
+                <div className="avatar-preview-wrap">
+                  <img className="avatar-preview-img" src={formData.profileAvatar} alt="Student avatar preview" />
+                </div>
+              ) : null}
+            </div>
+              </div>
+            </section>
+
+            <section className="add-student-category">
+              <h4 className="add-student-section-heading">Student Information</h4>
+              <div className="add-student-grid">
             <div>
               <label htmlFor="id" className={labelClass}>
                 Student ID {isEditMode ? <span className="text-red-600">*</span> : null}
@@ -430,8 +520,13 @@ export default function AddStudentForm({
                 className={controlClass}
               />
             </div>
+              </div>
+            </section>
 
-                <div>
+            <section className="add-student-category">
+              <h4 className="add-student-section-heading">Academic Information</h4>
+              <div className="add-student-grid">
+              <div>
                   <label htmlFor="program" className={labelClass}>
                     Program / Course <span className="text-red-600">*</span>
                   </label>
@@ -447,7 +542,7 @@ export default function AddStudentForm({
                     <option value="BSIT">BSIT</option>
                   </select>
                   <FieldError name="program" />
-                </div>
+              </div>
 
             <div>
               <label htmlFor="yearLevel" className={labelClass}>
@@ -514,7 +609,6 @@ export default function AddStudentForm({
                 <option value="Graduating">Graduating</option>
               </select>
             </div>
-
             <div>
               <label htmlFor="scholarship" className={labelClass}>
                 Scholarship
@@ -534,92 +628,25 @@ export default function AddStudentForm({
                 ))}
               </select>
             </div>
-
-            <div className="md:col-span-2">
-              <label htmlFor="profileAvatar" className={labelClass}>
-                Profile Avatar
-              </label>
-              <div className="avatar-input-mode">
-                <label className="avatar-input-option">
-                  <input
-                    type="radio"
-                    name="avatarInputMode"
-                    value="url"
-                    checked={avatarInputMode === 'url'}
-                    onChange={() => setAvatarInputMode('url')}
-                  />
-                  <span>URL</span>
+              <div>
+                <label htmlFor="dateEnrolled" className={labelClass}>
+                  Date Enrolled <span className="text-red-600">*</span>
                 </label>
-                <label className="avatar-input-option">
-                  <input
-                    type="radio"
-                    name="avatarInputMode"
-                    value="upload"
-                    checked={avatarInputMode === 'upload'}
-                    onChange={() => setAvatarInputMode('upload')}
-                  />
-                  <span>Upload</span>
-                </label>
-              </div>
-              {avatarInputMode === 'url' ? (
                 <input
-                  id="profileAvatar"
-                  name="profileAvatar"
-                  type="url"
-                  value={formData.profileAvatar}
+                  id="dateEnrolled"
+                  name="dateEnrolled"
+                  type="date"
+                  value={formData.dateEnrolled}
                   onChange={handleChange}
                   className={controlClass}
-                  placeholder="https://example.com/avatar.jpg"
-                  autoComplete="off"
                 />
-              ) : (
-                <input
-                  id="profileAvatarUpload"
-                  name="profileAvatarUpload"
-                  type="file"
-                  accept="image/*"
-                  className={controlClass}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    if (!IMAGE_MIME_TYPES.includes(file.type)) {
-                      setErrors((prev) => ({
-                        ...prev,
-                        profileAvatar: 'Unsupported image type. Use JPG, PNG, WEBP, or GIF.',
-                      }));
-                      return;
-                    }
-                    if (file.size > MAX_AVATAR_BYTES) {
-                      setErrors((prev) => ({
-                        ...prev,
-                        profileAvatar: 'Image is too large. Maximum file size is 2MB.',
-                      }));
-                      return;
-                    }
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                      const result = String(reader.result || '');
-                      if (result.startsWith('data:image/')) {
-                        setErrors((prev) => {
-                          const next = { ...prev };
-                          delete next.profileAvatar;
-                          return next;
-                        });
-                        setFormData((prev) => ({ ...prev, profileAvatar: result }));
-                      }
-                    };
-                    reader.readAsDataURL(file);
-                  }}
-                />
-              )}
-              <FieldError name="profileAvatar" />
-              {formData.profileAvatar ? (
-                <div className="avatar-preview-wrap">
-                  <img className="avatar-preview-img" src={formData.profileAvatar} alt="Student avatar preview" />
-                </div>
-              ) : null}
-            </div>
+              </div>
+              </div>
+            </section>
 
+            <section className="add-student-category">
+              <h4 className="add-student-section-heading">Contact & Guardian</h4>
+              <div className="add-student-grid">
             <div>
               <label htmlFor="email" className={labelClass}>
                 Email Address <span className="text-red-600">*</span>
@@ -654,21 +681,6 @@ export default function AddStudentForm({
               />
               <FieldError name="contact" />
             </div>
-
-            <div>
-              <label htmlFor="dateEnrolled" className={labelClass}>
-                Date Enrolled <span className="text-red-600">*</span>
-              </label>
-              <input
-                id="dateEnrolled"
-                name="dateEnrolled"
-                type="date"
-                value={formData.dateEnrolled}
-                onChange={handleChange}
-                className={controlClass}
-              />
-            </div>
-
             <div>
               <label htmlFor="guardian" className={labelClass}>
                 Guardian <span className="text-red-600">*</span>
@@ -700,7 +712,12 @@ export default function AddStudentForm({
               />
               <FieldError name="guardianContact" />
             </div>
+              </div>
+            </section>
 
+            <section className="add-student-category">
+              <h4 className="add-student-section-heading">Student Development</h4>
+              <div className="add-student-grid">
             <div className="md:col-span-2">
               <label htmlFor="violation" className={labelClass}>
                 Violation
@@ -749,6 +766,8 @@ export default function AddStudentForm({
                 })}
               </div>
             </div>
+              </div>
+            </section>
           </div>
             ) : (
               <div className="preview-card">

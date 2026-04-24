@@ -1,27 +1,6 @@
-import React, {
-  useEffect,
-  useMemo,
-  useState,
-  useCallback,
-  useRef,
-} from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import toast from "react-hot-toast";
-import {
-  FiPlus,
-  FiSearch,
-  FiEye,
-  FiUser,
-  FiMail,
-  FiPhone,
-  FiEdit2,
-  FiTrash2,
-  FiInfo,
-  FiX,
-  FiRotateCcw,
-  FiFilter,
-  FiAward,
-  FiUsers,
-} from "react-icons/fi";
+import { FiPlus, FiSearch, FiEye, FiUser, FiEdit2, FiTrash2, FiInfo, FiX, FiFilter, FiAward, FiUsers, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { useNavigate, useParams } from 'react-router-dom';
 import femaleImage from "../../../assets/images/female.jpg";
 import maleImage from "../../../assets/images/male.jpg";
@@ -217,7 +196,7 @@ const mockStudents = [
   {
     id: "2023-010",
     firstName: "Javier",
-    middleName: "S.",
+    middleName: "Santos",
     lastName: "Delos Reyes",
     gender: "Male",
     dob: "2003-10-19",
@@ -273,6 +252,7 @@ const StudentInformation = () => {
   const [violationFilter, setViolationFilter] = useState("");
   const [isFetching, setIsFetching] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [pageInput, setPageInput] = useState("1");
 
   const searchInputRef = useRef(null);
 
@@ -628,6 +608,35 @@ const StudentInformation = () => {
     }
   };
 
+  const currentStudentFilters = {
+    search: debouncedQuery,
+    program: programFilter,
+    skill: skillFilter,
+    yearLevel: yearLevelFilter,
+    section: sectionFilter,
+    status: statusFilter,
+    scholarship: scholarshipFilter,
+    gender: genderFilter,
+    violation: violationFilter,
+  };
+
+  useEffect(() => {
+    setPageInput(String(pagination.page || 1));
+  }, [pagination.page]);
+
+  const handleTopPaginationJump = () => {
+    const parsed = Number.parseInt(String(pageInput || "").trim(), 10);
+    if (!Number.isFinite(parsed)) {
+      setPageInput(String(pagination.page || 1));
+      return;
+    }
+    const nextPage = Math.min(Math.max(parsed, 1), Math.max(pagination.totalPages || 1, 1));
+    setPageInput(String(nextPage));
+    if (nextPage !== pagination.page && !isFetching) {
+      fetchStudents(currentStudentFilters, nextPage, pagination.limit);
+    }
+  };
+
   return (
     <div className="student-directory">
       {isStudent ? (
@@ -828,9 +837,54 @@ const StudentInformation = () => {
 
         {/* ===== Results Count ===== */}
         <div className="results-count">
-          Showing <strong>{students.length}</strong> student
-          {students.length !== 1 ? "s" : ""}
-          {activeFilterCount > 0 ? ` of ${students.length} filtered` : ""}
+          <div className="results-count-text">
+            Showing <strong>{students.length}</strong> student
+            {students.length !== 1 ? "s" : ""}
+            {activeFilterCount > 0 ? ` of ${students.length} filtered` : ""}
+          </div>
+          {pagination.totalPages > 1 ? (
+            <div className="results-count-pagination" aria-label="Top pagination controls">
+              <button
+                className="pagination-btn pagination-btn-sm"
+                onClick={() => fetchStudents(currentStudentFilters, pagination.page - 1, pagination.limit)}
+                disabled={!pagination.hasPrev || isFetching}
+                type="button"
+                aria-label="Previous page"
+              >
+                <FiChevronLeft />
+              </button>
+              <label className="pagination-input-wrap" aria-label="Page number">
+                <span className="pagination-input-label">Page</span>
+                <input
+                  type="number"
+                  min="1"
+                  max={pagination.totalPages}
+                  inputMode="numeric"
+                  value={pageInput}
+                  onChange={(e) => setPageInput(e.target.value)}
+                  onBlur={handleTopPaginationJump}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleTopPaginationJump();
+                    }
+                  }}
+                  className="pagination-page-input"
+                  disabled={isFetching}
+                />
+              </label>
+              <span className="pagination-info pagination-info-sm">of {pagination.totalPages}</span>
+              <button
+                className="pagination-btn pagination-btn-sm"
+                onClick={() => fetchStudents(currentStudentFilters, pagination.page + 1, pagination.limit)}
+                disabled={!pagination.hasNext || isFetching}
+                type="button"
+                aria-label="Next page"
+              >
+                <FiChevronRight />
+              </button>
+            </div>
+          ) : null}
         </div>
 
         {studentLoadError ? (
@@ -850,20 +904,11 @@ const StudentInformation = () => {
               <tr>
                 <th>Student ID</th>
                 <th>First Name</th>
-                <th>Middle Name</th>
                 <th>Last Name</th>
                 <th>Gender</th>
-                <th>Date of Birth</th>
-                <th>Program/Course</th>
+                <th>Program</th>
                 <th>Year Level</th>
-                <th>Section</th>
                 <th>Enrollment Status</th>
-                <th>Scholarship</th>
-                <th>Email Address</th>
-                <th>Contact Number</th>
-                <th>Date Enrolled</th>
-                <th>Guardian</th>
-                <th>Guardian Contact Information</th>
                 <th>Violation</th>
                 <th>Skills</th>
                 <th>Actions</th>
@@ -871,7 +916,11 @@ const StudentInformation = () => {
             </thead>
             <tbody>
               {students.map((student) => (
-                <tr key={student.id} onClick={() => handleRowClick(student)}>
+                <tr
+                  key={student.id}
+                  onClick={() => handleRowClick(student)}
+                  className={String(selectedStudentId || '') === String(student.id || '') ? 'row-selected' : ''}
+                >
                   <td className="id-cell">
                     <span className="id-badge">{student.id}</span>
                   </td>
@@ -881,34 +930,15 @@ const StudentInformation = () => {
                       <span>{student.firstName}</span>
                     </div>
                   </td>
-                  <td>{student.middleName}</td>
                   <td>{student.lastName}</td>
                   <td>{student.gender}</td>
-                  <td>{student.dob}</td>
                   <td>{student.program}</td>
                   <td>{student.yearLevel}</td>
-                  <td>{student.section}</td>
                   <td>
                     <span className={`status-badge status-${student.status.replace(' ', '').toLowerCase()}`}>
                       {student.status}
                     </span>
                   </td>
-                  <td>{student.scholarship}</td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <FiMail />
-                      <span>{student.email}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <FiPhone />
-                      <span>{student.contact}</span>
-                    </div>
-                  </td>
-                  <td>{student.dateEnrolled}</td>
-                  <td>{student.guardian}</td>
-                  <td>{student.guardianContact}</td>
                   <td>{student.violation}</td>
                   <td className="skills-cell">
                     {student.skills && student.skills.length > 0 ? (
@@ -969,7 +999,7 @@ const StudentInformation = () => {
               ))}
               {!students.length && (
                 <tr>
-                  <td colSpan="19" className="empty-row">
+                  <td colSpan="10" className="empty-row">
                     {isFetching
                       ? "Loading students..."
                       : query ||
@@ -993,23 +1023,47 @@ const StudentInformation = () => {
         {/* Pagination Controls */}
         {pagination.totalPages > 1 && (
           <div className="pagination-controls">
-            <button
-              className="pagination-btn"
-              onClick={() => fetchStudents({ search: debouncedQuery, program: programFilter, skill: skillFilter, yearLevel: yearLevelFilter, section: sectionFilter, status: statusFilter, scholarship: scholarshipFilter, gender: genderFilter, violation: violationFilter }, pagination.page - 1, pagination.limit)}
-              disabled={!pagination.hasPrev || isFetching}
-            >
-              Previous
-            </button>
-            <span className="pagination-info">
-              Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
-            </span>
-            <button
-              className="pagination-btn"
-              onClick={() => fetchStudents({ search: debouncedQuery, program: programFilter, skill: skillFilter, yearLevel: yearLevelFilter, section: sectionFilter, status: statusFilter, scholarship: scholarshipFilter, gender: genderFilter, violation: violationFilter }, pagination.page + 1, pagination.limit)}
-              disabled={!pagination.hasNext || isFetching}
-            >
-              Next
-            </button>
+            <div className="results-count-pagination" aria-label="Bottom pagination controls">
+              <button
+                className="pagination-btn pagination-btn-sm"
+                onClick={() => fetchStudents(currentStudentFilters, pagination.page - 1, pagination.limit)}
+                disabled={!pagination.hasPrev || isFetching}
+                type="button"
+                aria-label="Previous page"
+              >
+                <FiChevronLeft />
+              </button>
+              <label className="pagination-input-wrap" aria-label="Page number">
+                <span className="pagination-input-label">Page</span>
+                <input
+                  type="number"
+                  min="1"
+                  max={pagination.totalPages}
+                  inputMode="numeric"
+                  value={pageInput}
+                  onChange={(e) => setPageInput(e.target.value)}
+                  onBlur={handleTopPaginationJump}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleTopPaginationJump();
+                    }
+                  }}
+                  className="pagination-page-input"
+                  disabled={isFetching}
+                />
+              </label>
+              <span className="pagination-info pagination-info-sm">of {pagination.totalPages}</span>
+              <button
+                className="pagination-btn pagination-btn-sm"
+                onClick={() => fetchStudents(currentStudentFilters, pagination.page + 1, pagination.limit)}
+                disabled={!pagination.hasNext || isFetching}
+                type="button"
+                aria-label="Next page"
+              >
+                <FiChevronRight />
+              </button>
+            </div>
           </div>
         )}
         </div>

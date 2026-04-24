@@ -5,6 +5,7 @@ const Section = require('../models/Section');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const Student = require('../models/Student');
+const { logActivity } = require('../services/activityLogService');
 
 const RSVP_CLOSED_MESSAGE = 'Registration is already closed for this event.';
 
@@ -57,7 +58,7 @@ const isUserInTargetGroups = (event, targetingMeta) => {
 const canUserAccessEvent = (event, user, targetingMeta) => {
   if (!event || !user) return false;
   const isOrganizer = (event.organizers || []).some(
-    (org) => String(org.userId) === String(user.id || user._id)
+    (org) => String(org.userId?._id || org.userId) === String(user.id || user._id)
   );
   if (user.role === 'admin' || isOrganizer) return true;
   return isUserInTargetGroups(event, targetingMeta);
@@ -99,6 +100,10 @@ const mapEventWithViewerState = (event, viewerId) => {
 
 const createEvent = async (req, res) => {
   try {
+    if (req.user?.role === 'faculty') {
+      return res.status(403).json({ message: 'Faculty are not allowed to create events.' });
+    }
+
     const {
       type,
       schedule,
@@ -256,6 +261,13 @@ const createEvent = async (req, res) => {
     if (eventStatus === 'published') {
       await dispatchEventNotifications(newEvent);
     }
+
+    await logActivity(req, {
+      action: eventStatus === 'published' ? 'Published event' : 'Created event',
+      module: 'Events',
+      target: newEvent.title,
+      status: eventStatus === 'published' ? 'Published' : 'Pending',
+    });
 
     res.status(201).json(newEvent);
   } catch (error) {
@@ -659,7 +671,97 @@ const validateEventForRSVP = (event) => {
 
 const updateEvent = async (req, res) => {
   try {
-    const updates = req.body;
+    if (req.user?.role === 'faculty') {
+      return res.status(403).json({ message: 'Faculty are not allowed to update events.' });
+    }
+
+    const updates = { ...(req.body || {}) };
+
+    // Normalize venue fields to avoid ObjectId cast errors from empty strings.
+    const hasIsVirtual = Object.prototype.hasOwnProperty.call(updates, 'isVirtual');
+    const hasRoomId = Object.prototype.hasOwnProperty.call(updates, 'roomId');
+    const hasSetRoomId = updates.$set && Object.prototype.hasOwnProperty.call(updates.$set, 'roomId');
+
+    if (hasIsVirtual && updates.isVirtual === true) {
+      // Virtual events should not carry a physical room reference.
+      if (updates.$unset && typeof updates.$unset === 'object') {
+        updates.$unset.roomId = 1;
+      } else {
+        updates.$unset = { roomId: 1 };
+      }
+      if (hasRoomId) delete updates.roomId;
+      if (hasSetRoomId) delete updates.$set.roomId;
+    } else {
+      const normalizeRoomIdValue = (rawRoomId) => {
+        if (rawRoomId == null || String(rawRoomId).trim() === '') {
+          return null;
+        }
+        const roomObjectId = toObjectId(rawRoomId);
+        if (!roomObjectId) {
+          return 'INVALID';
+        }
+        return roomObjectId;
+      };
+
+      if (hasRoomId) {
+        const normalizedRoomId = normalizeRoomIdValue(updates.roomId);
+        if (normalizedRoomId === 'INVALID') {
+          return res.status(400).json({ message: 'Invalid roomId supplied.' });
+        }
+        if (normalizedRoomId === null) delete updates.roomId;
+        else updates.roomId = normalizedRoomId;
+      }
+
+      if (hasSetRoomId) {
+        const normalizedSetRoomId = normalizeRoomIdValue(updates.$set.roomId);
+        if (normalizedSetRoomId === 'INVALID') {
+          return res.status(400).json({ message: 'Invalid roomId supplied.' });
+        }
+        if (normalizedSetRoomId === null) delete updates.$set.roomId;
+        else updates.$set.roomId = normalizedSetRoomId;
+      }
+    }
+
+    // Keep update payload consistent with create flow: resolve organizer references to User ObjectIds.
+    if (Array.isArray(updates.organizers)) {
+      const processedOrganizers = [];
+      for (const organizer of updates.organizers) {
+        const rawUserId = organizer?.userId;
+        if (!rawUserId) {
+          return res.status(400).json({ message: 'Each organizer must include a userId.' });
+        }
+
+        const trimmedId = String(rawUserId).trim();
+        let user = null;
+
+        if (mongoose.Types.ObjectId.isValid(trimmedId)) {
+          user = await User.findById(trimmedId);
+        }
+        if (!user) {
+          user = await User.findOne({ employeeId: trimmedId });
+        }
+        if (!user) {
+          user = await User.findOne({ studentId: trimmedId });
+        }
+        if (!user) {
+          user = await User.findOne({ username: trimmedId.toLowerCase() });
+        }
+        if (!user) {
+          user = await User.findOne({ name: { $regex: new RegExp(`^${trimmedId}$`, 'i') } });
+        }
+        if (!user) {
+          return res.status(400).json({
+            message: `Invalid organizer userId: ${rawUserId}. User not found.`,
+          });
+        }
+
+        processedOrganizers.push({
+          userId: user._id,
+          role: organizer.role || 'Organizer',
+        });
+      }
+      updates.organizers = processedOrganizers;
+    }
     
     // Role check for status transition
     if (updates.status === 'published' && req.user && req.user.role === 'student_leader') {
@@ -668,6 +770,17 @@ const updateEvent = async (req, res) => {
     
     if (updates.schedule) {
       const eventDate = new Date(updates.schedule.date);
+      const eventStart = new Date(updates.schedule.startTime);
+      const eventEnd = new Date(updates.schedule.endTime);
+
+      if (
+        Number.isNaN(eventDate.getTime())
+        || Number.isNaN(eventStart.getTime())
+        || Number.isNaN(eventEnd.getTime())
+      ) {
+        return res.status(400).json({ message: 'Invalid schedule date/time format.' });
+      }
+
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
@@ -675,20 +788,28 @@ const updateEvent = async (req, res) => {
         return res.status(400).json({ message: 'Event date must not be in the past.' });
       }
 
-      const [startHour, startMin] = updates.schedule.startTime.split(':').map(Number);
-      const [endHour, endMin] = updates.schedule.endTime.split(':').map(Number);
-
-      if (startHour > endHour || (startHour === endHour && startMin >= endMin)) {
+      if (eventStart >= eventEnd) {
         return res.status(400).json({ message: 'endTime must be strictly greater than startTime.' });
       }
     }
 
     const event = await Event.findByIdAndUpdate(req.params.id, updates, { new: true });
     if (!event) return res.status(404).json({ message: 'Event not found.' });
+
+    await logActivity(req, {
+      action: 'Updated event',
+      module: 'Events',
+      target: event.title,
+      status: event.status === 'published' ? 'Published' : 'Completed',
+    });
     
     res.json(event);
   } catch (error) {
-    res.status(500).json({ message: 'Server error updating event.' });
+    console.error('Error updating event:', error);
+    if (error?.name === 'ValidationError' || error?.name === 'CastError') {
+      return res.status(400).json({ message: error.message || 'Invalid event update payload.' });
+    }
+    return res.status(500).json({ message: 'Server error updating event.' });
   }
 };
 
@@ -712,6 +833,12 @@ const updateEventStatus = async (req, res) => {
       event.status = 'draft';
       event.cancelReason = cancelReason;
       await event.save();
+      await logActivity(req, {
+        action: 'Rejected event',
+        module: 'Events',
+        target: event.title,
+        status: 'Completed',
+      });
       // Notify creator (mock)
       console.log(`Notification sent to creator: Event rejected. Reason: ${cancelReason}`);
       return res.json({ message: 'Event rejected.', event });
@@ -722,6 +849,12 @@ const updateEventStatus = async (req, res) => {
       await event.save();
       // Trigger calendar and notification pipeline
       await dispatchEventNotifications(event);
+      await logActivity(req, {
+        action: 'Published event',
+        module: 'Events',
+        target: event.title,
+        status: 'Published',
+      });
       console.log('Event published and calendar updated.');
       return res.json({ message: 'Event published successfully.', event });
     }
@@ -735,6 +868,12 @@ const deleteEvent = async (req, res) => {
   try {
     const event = await Event.findByIdAndDelete(req.params.id);
     if (!event) return res.status(404).json({ message: 'Event not found.' });
+    await logActivity(req, {
+      action: 'Deleted event',
+      module: 'Events',
+      target: event.title,
+      status: 'Completed',
+    });
     res.json({ message: 'Event deleted successfully.' });
   } catch (error) {
     res.status(500).json({ message: 'Server error deleting event.' });
@@ -900,9 +1039,7 @@ const generateCertificates = async (req, res) => {
 const downloadBulkCertificates = async (req, res) => {
   try {
     const { id } = req.params;
-    const archiver = require('archiver');
-    const path = require('path');
-    const fs = require('fs');
+    const { generateBulkCertificatesPdf } = require('../services/certificateService');
 
     const event = await Event.findById(id);
     
@@ -915,38 +1052,14 @@ const downloadBulkCertificates = async (req, res) => {
       return res.status(403).json({ message: 'Certificates have not been generated yet.' });
     }
 
-    const certDir = path.join(__dirname, '../../certificates', id);
-    
-    if (!fs.existsSync(certDir)) {
-      return res.status(404).json({ message: 'Certificate files not found.' });
-    }
+    const pdfBuffer = await generateBulkCertificatesPdf(id);
 
-    // Create zip archive
-    const archive = archiver('zip', { zlib: { level: 9 } });
-    const output = fs.createWriteStream(path.join(__dirname, `../../certificates/${id}_certificates.zip`));
-
-    archive.on('error', (err) => {
-      throw err;
-    });
-
-    archive.pipe(output);
-
-    // Add all certificate files to archive
-    const files = fs.readdirSync(certDir);
-    files.forEach(file => {
-      const filePath = path.join(certDir, file);
-      if (fs.statSync(filePath).isFile()) {
-        archive.file(filePath, { name: file });
-      }
-    });
-
-    await archive.finalize();
-
-    // Send the zip file
-    res.download(path.join(__dirname, `../../certificates/${id}_certificates.zip`), `event_${id}_certificates.zip`);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="event_${id}_certificates.pdf"`);
+    res.send(pdfBuffer);
   } catch (error) {
     console.error('Error downloading bulk certificates:', error);
-    res.status(500).json({ message: 'Server error downloading certificates.' });
+    res.status(500).json({ message: error.message || 'Server error downloading certificates.' });
   }
 };
 

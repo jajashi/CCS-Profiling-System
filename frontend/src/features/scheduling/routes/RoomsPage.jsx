@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FiCheckCircle, FiEdit2, FiEye, FiHome, FiPlus, FiRefreshCw, FiSearch, FiTool, FiX } from 'react-icons/fi';
+import { FiCheckCircle, FiChevronLeft, FiChevronRight, FiEdit2, FiEye, FiHome, FiPlus, FiRefreshCw, FiSearch, FiTool, FiX } from 'react-icons/fi';
 import { apiFetch } from '../../../lib/api';
 import '../../students/routes/StudentInformation.css';
 import '../../faculty/routes/SpecializationManagement.css';
@@ -10,6 +10,7 @@ import './RoomsPage.css';
 const ROOM_TYPES = ['Lecture', 'IT Lab', 'Biology Lab', 'Multipurpose'];
 const ROOM_STATUSES = ['Active', 'Maintenance', 'Archived'];
 const BUILDING_OPTIONS = ['Main Building', 'BCH', 'Nursing Building'];
+const PAGE_SIZE = 20;
 
 function buildingSelectOptions(currentBuilding) {
   const cur = String(currentBuilding || '').trim();
@@ -231,6 +232,8 @@ export default function RoomsPage() {
   const [viewRow, setViewRow] = useState(null);
   const [toggleBusyId, setToggleBusyId] = useState(null);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageInput, setPageInput] = useState('1');
 
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -243,6 +246,10 @@ export default function RoomsPage() {
       return code.includes(q) || name.includes(q) || b.includes(q) || typ.includes(q);
     });
   }, [rows, search]);
+  const totalPages = Math.max(Math.ceil(filteredRows.length / PAGE_SIZE), 1);
+  const paginatedRows = filteredRows.slice((page - 1) * PAGE_SIZE, (page - 1) * PAGE_SIZE + PAGE_SIZE);
+  const hasPrev = page > 1;
+  const hasNext = page < totalPages;
 
   const queryString = useMemo(() => {
     const p = new URLSearchParams();
@@ -271,6 +278,31 @@ export default function RoomsPage() {
   useEffect(() => {
     loadRooms();
   }, [loadRooms]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, typeFilter, statusFilter]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  useEffect(() => {
+    setPageInput(String(page || 1));
+  }, [page]);
+
+  const handlePageJump = () => {
+    const parsed = Number.parseInt(String(pageInput || '').trim(), 10);
+    if (!Number.isFinite(parsed)) {
+      setPageInput(String(page || 1));
+      return;
+    }
+    const nextPage = Math.min(Math.max(parsed, 1), Math.max(totalPages || 1, 1));
+    setPageInput(String(nextPage));
+    if (nextPage !== page) {
+      setPage(nextPage);
+    }
+  };
 
   useEffect(() => {
     if (!viewRow?._id) return;
@@ -389,7 +421,51 @@ export default function RoomsPage() {
 
         {!loading ? (
           <div className="results-count">
-            Showing <strong>{filteredRows.length}</strong> room{filteredRows.length === 1 ? '' : 's'}
+            <div className="results-count-text">
+              Showing <strong>{filteredRows.length}</strong> room{filteredRows.length === 1 ? '' : 's'}
+            </div>
+            {filteredRows.length > PAGE_SIZE ? (
+              <div className="results-count-pagination" aria-label="Top pagination controls">
+                <button
+                  className="pagination-btn pagination-btn-sm"
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={!hasPrev}
+                  type="button"
+                  aria-label="Previous page"
+                >
+                  <FiChevronLeft />
+                </button>
+                <label className="pagination-input-wrap" aria-label="Page number">
+                  <span className="pagination-input-label">Page</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max={totalPages}
+                    inputMode="numeric"
+                    value={pageInput}
+                    onChange={(e) => setPageInput(e.target.value)}
+                    onBlur={handlePageJump}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handlePageJump();
+                      }
+                    }}
+                    className="pagination-page-input"
+                  />
+                </label>
+                <span className="pagination-info pagination-info-sm">of {totalPages}</span>
+                <button
+                  className="pagination-btn pagination-btn-sm"
+                  onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={!hasNext}
+                  type="button"
+                  aria-label="Next page"
+                >
+                  <FiChevronRight />
+                </button>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -431,7 +507,7 @@ export default function RoomsPage() {
                 </tr>
               ) : null}
               {!loading
-                ? filteredRows.map((row) => {
+                ? paginatedRows.map((row) => {
                     const busy = toggleBusyId === row._id;
                     const canQuick = row.status === 'Active' || row.status === 'Maintenance';
                     const archived = row.status === 'Archived';
@@ -520,6 +596,50 @@ export default function RoomsPage() {
             </tbody>
           </table>
         </div>
+        {filteredRows.length > PAGE_SIZE ? (
+          <div className="pagination-controls">
+            <div className="results-count-pagination" aria-label="Bottom pagination controls">
+              <button
+                className="pagination-btn pagination-btn-sm"
+                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                disabled={!hasPrev}
+                type="button"
+                aria-label="Previous page"
+              >
+                <FiChevronLeft />
+              </button>
+              <label className="pagination-input-wrap" aria-label="Page number">
+                <span className="pagination-input-label">Page</span>
+                <input
+                  type="number"
+                  min="1"
+                  max={totalPages}
+                  inputMode="numeric"
+                  value={pageInput}
+                  onChange={(e) => setPageInput(e.target.value)}
+                  onBlur={handlePageJump}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handlePageJump();
+                    }
+                  }}
+                  className="pagination-page-input"
+                />
+              </label>
+              <span className="pagination-info pagination-info-sm">of {totalPages}</span>
+              <button
+                className="pagination-btn pagination-btn-sm"
+                onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+                disabled={!hasNext}
+                type="button"
+                aria-label="Next page"
+              >
+                <FiChevronRight />
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {viewRow ? (

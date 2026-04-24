@@ -1,12 +1,56 @@
 .sections-page {
-  padding: 1.5rem;
+  padding: 0;
+  width: 100%;
+  max-width: none;
+}
+
+.sections-page .spec-card {
+  margin-top: 0.75rem;
+}
+
+.section-filters-row {
+  margin-top: 0.5rem;
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.section-filters-row .filter-select {
+  min-width: 180px;
+}
+
+.section-toolbar-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.section-toolbar-filters .curriculum-search {
+  flex: 1 1 260px;
+  min-width: 220px;
+}
+
+.section-toolbar-filters .curriculum-select {
+  min-width: 170px;
 }
 
 .section-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 1.5rem;
-  margin-top: 1.5rem;
+  margin-top: 1rem;
+  padding: 0;
+}
+
+.section-empty-state {
+  margin: 0.75rem 0 0.95rem;
+  border: 1px dashed #dbe3ec;
+  border-radius: 12px;
+  background: #fbfdff;
 }
 
 .section-card {

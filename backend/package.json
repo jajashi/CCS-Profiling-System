@@ -11,7 +11,9 @@
     "seed:faculty": "node src/scripts/seedFaculty.js",
     "seed:specializations": "node src/scripts/seedSpecializations.js",
     "seed:users": "node src/scripts/seedUsers.js",
-    "seed:all": "node src/scripts/seedStudents.js && node src/scripts/seedSpecializations.js && node src/scripts/seedFaculty.js && node src/scripts/seedUsers.js"
+    "seed:testpages": "node src/scripts/seedTestPagesData.js",
+    "seed:all": "node src/scripts/seedStudents.js && node src/scripts/seedSpecializations.js && node src/scripts/seedFaculty.js && node src/scripts/seedUsers.js",
+    "seed:all:test": "node src/scripts/seedStudents.js && node src/scripts/seedSpecializations.js && node src/scripts/seedFaculty.js && node src/scripts/seedUsers.js && node src/scripts/seedTestPagesData.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

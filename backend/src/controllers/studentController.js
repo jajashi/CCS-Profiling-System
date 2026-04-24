@@ -1,4 +1,5 @@
 const Student = require('../models/Student');
+const { logActivity } = require('../services/activityLogService');
 const STUDENT_ID_PREFIX = '2201';
 const STUDENT_ID_DIGITS = 3;
 const MANUAL_ID_MAX = 899; // Reserve 900-999 for seed/demo IDs.
@@ -176,6 +177,12 @@ async function createStudent(req, res, next) {
     };
 
     const created = await Student.create(normalized);
+    await logActivity(req, {
+      action: 'Created student profile',
+      module: 'Student Information',
+      target: created.id,
+      status: 'Completed',
+    });
     return res.status(201).json(created.toJSON());
   } catch (err) {
     // Duplicate `id` (unique index) -> 400 with friendly message
@@ -276,6 +283,13 @@ async function updateStudent(req, res, next) {
       return res.status(404).json({ message: 'Student not found.' });
     }
 
+    await logActivity(req, {
+      action: 'Updated student profile',
+      module: 'Student Information',
+      target: updated.id,
+      status: 'Completed',
+    });
+
     return res.status(200).json(updated.toJSON());
   } catch (err) {
     if (err && err.code === 11000) {
@@ -302,6 +316,13 @@ async function deleteStudent(req, res, next) {
     if (!deleted) {
       return res.status(404).json({ message: 'Student not found.' });
     }
+
+    await logActivity(req, {
+      action: 'Deleted student profile',
+      module: 'Student Information',
+      target: deleted.id,
+      status: 'Completed',
+    });
 
     return res.status(204).send();
   } catch (err) {

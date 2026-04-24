@@ -12,6 +12,9 @@ const DashboardHome = () => {
   const [studentCount, setStudentCount] = useState(null);
   const [totalFacultyCount, setTotalFacultyCount] = useState(null);
   const [activeFacultyCount, setActiveFacultyCount] = useState(null);
+  const [activeCoursesCount, setActiveCoursesCount] = useState(null);
+  const [upcomingEventsCount, setUpcomingEventsCount] = useState(null);
+  const [recentActivities, setRecentActivities] = useState([]);
 
   useEffect(() => {
     if (isStudent) return undefined;
@@ -45,12 +48,48 @@ const DashboardHome = () => {
             setTotalFacultyCount(null);
             setActiveFacultyCount(null);
           }
+
+          const curriculaRes = await apiFetch('/api/curricula?status=Active');
+          if (curriculaRes.ok) {
+            const curriculaData = await curriculaRes.json();
+            setActiveCoursesCount(Array.isArray(curriculaData) ? curriculaData.length : null);
+          } else {
+            setActiveCoursesCount(null);
+          }
+
+          const eventsRes = await apiFetch('/api/events');
+          if (eventsRes.ok) {
+            const eventsData = await eventsRes.json();
+            const now = Date.now();
+            const count = Array.isArray(eventsData)
+              ? eventsData.filter((event) => {
+                  const start = event?.schedule?.startTime ? new Date(event.schedule.startTime).getTime() : NaN;
+                  if (!Number.isFinite(start) || start <= now) return false;
+                  const status = String(event?.status || '').toLowerCase();
+                  return status !== 'cancelled' && status !== 'completed';
+                }).length
+              : null;
+            setUpcomingEventsCount(count);
+          } else {
+            setUpcomingEventsCount(null);
+          }
+
+          const activitiesRes = await apiFetch('/api/dashboard/activities?limit=8');
+          if (activitiesRes.ok) {
+            const activitiesData = await activitiesRes.json();
+            setRecentActivities(Array.isArray(activitiesData.activities) ? activitiesData.activities : []);
+          } else {
+            setRecentActivities([]);
+          }
         }
       } catch {
         if (isMounted) {
           setStudentCount(null);
           setTotalFacultyCount(null);
           setActiveFacultyCount(null);
+          setActiveCoursesCount(null);
+          setUpcomingEventsCount(null);
+          setRecentActivities([]);
         }
       }
     })();
@@ -169,7 +208,9 @@ const DashboardHome = () => {
           </div>
           <div className="stat-details">
             <p className="stat-label">Active Courses</p>
-            <h3 className="stat-value">142</h3> {/* TODO: Replace with actual number of active courses */}
+            <h3 className="stat-value">
+              {activeCoursesCount === null ? '--' : activeCoursesCount.toLocaleString()}
+            </h3>
           </div>
         </div>
 
@@ -179,7 +220,9 @@ const DashboardHome = () => {
           </div>
           <div className="stat-details">
             <p className="stat-label">Upcoming Events</p>
-            <h3 className="stat-value">5</h3> {/* TODO: Replace with actual number of upcoming events */}
+            <h3 className="stat-value">
+              {upcomingEventsCount === null ? '--' : upcomingEventsCount.toLocaleString()}
+            </h3>
           </div>
         </div>
       </div>
@@ -201,34 +244,40 @@ const DashboardHome = () => {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td><strong>Jane Doe</strong><br/><span className="text-muted text-sm">jane.doe@ccs.edu</span></td>
-                <td>Updated profile information</td>
-                <td>Student Information</td>
-                <td>Today, 10:42 AM</td>
-                <td><span className="badge badge-success">Completed</span></td>
-              </tr>
-              <tr>
-                <td><strong>Dr. Smith</strong><br/><span className="text-muted text-sm">smith@ccs.edu</span></td>
-                <td>Uploaded new syllabus</td>
-                <td>Instruction</td>
-                <td>Today, 09:15 AM</td>
-                <td><span className="badge badge-success">Completed</span></td>
-              </tr>
-              <tr>
-                <td><strong>System Admin</strong><br/><span className="text-muted text-sm">admin@ccs.edu</span></td>
-                <td>Created event "Tech Symposium"</td>
-                <td>Events</td>
-                <td>Yesterday, 4:30 PM</td>
-                <td><span className="badge badge-info">Published</span></td>
-              </tr>
-              <tr>
-                <td><strong>John Marks</strong><br/><span className="text-muted text-sm">j.marks@ccs.edu</span></td>
-                <td>Requested schedule change</td>
-                <td>Scheduling</td>
-                <td>Yesterday, 1:20 PM</td>
-                <td><span className="badge badge-warning">Pending</span></td>
-              </tr>
+              {recentActivities.length > 0 ? recentActivities.map((row, index) => {
+                const statusKey = String(row.status || 'Completed').toLowerCase();
+                const badgeClass =
+                  statusKey === 'published'
+                    ? 'badge-info'
+                    : statusKey === 'pending'
+                      ? 'badge-warning'
+                      : statusKey === 'failed'
+                        ? 'badge-danger'
+                        : 'badge-success';
+                const activityDate = row.createdAt ? new Date(row.createdAt) : null;
+                const displayDate = activityDate && !Number.isNaN(activityDate.getTime())
+                  ? activityDate.toLocaleString()
+                  : '--';
+                return (
+                  <tr key={`${row.actorIdentifier || row.actorName || 'actor'}-${index}-${row.createdAt || ''}`}>
+                    <td>
+                      <strong>{row.actorName || 'Unknown'}</strong>
+                      <br />
+                      <span className="text-muted text-sm">{row.actorIdentifier || '-'}</span>
+                    </td>
+                    <td>{row.action || '-'}</td>
+                    <td>{row.module || '-'}</td>
+                    <td>{displayDate}</td>
+                    <td><span className={`badge ${badgeClass}`}>{row.status || 'Completed'}</span></td>
+                  </tr>
+                );
+              }) : (
+                <tr>
+                  <td colSpan="5" className="text-muted text-sm" style={{ textAlign: 'center', padding: '1rem' }}>
+                    No recent activities yet.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import './EventApprovalQueue.css';
 import { useAuth } from '../../../providers/AuthContext';
 
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import { apiFetch } from '../../../lib/api';
 
 export default function EventApprovalQueue() {
   const { user } = useAuth();
@@ -13,10 +13,7 @@ export default function EventApprovalQueue() {
 
   const fetchEvents = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${apiUrl}/api/events`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const res = await apiFetch('/api/events');
       if (res.ok) {
         const data = await res.json();
         // Filter only pending_approval events
@@ -33,15 +30,13 @@ export default function EventApprovalQueue() {
 
   const handleAction = async (id, status, reason = '') => {
     try {
-      const token = localStorage.getItem('token');
       const payload = { status };
       if (reason) payload.cancelReason = reason;
 
-      const res = await fetch(`${apiUrl}/api/events/${id}/status`, {
+      const res = await apiFetch(`/api/events/${id}/status`, {
         method: 'PATCH',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
       });

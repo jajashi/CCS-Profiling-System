@@ -2,6 +2,12 @@ const mongoose = require('mongoose');
 const Curriculum = require('../models/Curriculum');
 const TimeBlock = require('../models/TimeBlock');
 const Room = require('../models/Room');
+const { logActivity } = require('../services/activityLogService');
+const {
+  resolveFacultyForUser,
+  facultyTeachesSection: facultyTeachesSectionScoped,
+  assertFacultySectionAccess,
+} = require('../services/facultyPermissionsService');
 
 const DAY_ENUM = TimeBlock.DAY_ENUM || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const STATUS_ENUM = TimeBlock.STATUS_ENUM || ['Active', 'Archived'];
@@ -10,11 +16,6 @@ const TIME_RE = /^([01]?\d|2[0-3]):([0-5]\d)$/;
 
 function normalizeString(value) {
   return String(value ?? '').trim();
-}
-
-/** Escape user input so it is matched literally in RegExp */
-function escapeRegex(value) {
-  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function normalizeOptionalObjectId(value) {
@@ -209,6 +210,8 @@ async function listSections(req, res, next) {
 
     const sections = await Section.find(query)
       .populate('curriculumId', 'courseCode courseTitle curriculumYear creditUnits courseLearningOutcomes status')
+      .populate('schedules.roomId', 'name type maximumCapacity status')
+      .populate('schedules.facultyId', 'employeeId firstName lastName department status')
       .sort({ academicYear: -1, term: -1, updatedAt: -1 });
 
     return res.status(200).json(sections.map((row) => row.toJSON()));
@@ -252,6 +255,12 @@ async function createTimeBlock(req, res, next) {
       'curriculumId',
       'courseCode courseTitle lectureHours labHours status',
     );
+    await logActivity(req, {
+      action: 'Created time block',
+      module: 'Scheduling',
+      target: populated?.label || created.label,
+      status: 'Completed',
+    });
     return res.status(201).json(populated.toJSON());
   } catch (err) {
     if (err && err.name === 'ValidationError') {
@@ -308,6 +317,12 @@ async function updateTimeBlock(req, res, next) {
       'curriculumId',
       'courseCode courseTitle lectureHours labHours status',
     );
+    await logActivity(req, {
+      action: 'Updated time block',
+      module: 'Scheduling',
+      target: populated?.label || existing.label,
+      status: 'Completed',
+    });
     return res.status(200).json(populated.toJSON());
   } catch (err) {
     if (err && err.name === 'ValidationError') {
@@ -334,6 +349,12 @@ async function archiveTimeBlock(req, res, next) {
 
     row.status = 'Archived';
     await row.save();
+    await logActivity(req, {
+      action: 'Archived time block',
+      module: 'Scheduling',
+      target: row.label,
+      status: 'Completed',
+    });
     return res.status(200).json({ message: 'Time block archived.', timeBlock: row.toJSON() });
   } catch (err) {
     return next(err);
@@ -384,6 +405,13 @@ async function createSection(req, res, next) {
       'curriculumId',
       'courseCode courseTitle curriculumYear creditUnits courseLearningOutcomes status'
     );
+
+    await logActivity(req, {
+      action: 'Created section',
+      module: 'Scheduling',
+      target: populated?.sectionIdentifier || newSection.sectionIdentifier,
+      status: 'Completed',
+    });
 
     return res.status(201).json(populated.toJSON());
   } catch (err) {
@@ -494,8 +522,15 @@ async function updateSectionResources(req, res, next) {
 
     const populated = await Section.findById(id)
       .populate('curriculumId', 'courseCode courseTitle curriculumYear creditUnits courseLearningOutcomes status')
-      .populate('schedules.roomId', 'name roomType maximumCapacity status')
+      .populate('schedules.roomId', 'name type maximumCapacity status')
       .populate('schedules.facultyId', 'employeeId firstName lastName department status');
+
+    await logActivity(req, {
+      action: 'Updated section resources',
+      module: 'Scheduling',
+      target: populated?.sectionIdentifier || section.sectionIdentifier,
+      status: 'Completed',
+    });
 
     return res.status(200).json(populated.toJSON());
   } catch (err) {
@@ -530,15 +565,20 @@ async function getScheduleMatrix(req, res, next) {
     sections.forEach((sec) => {
       if (sec.schedules && Array.isArray(sec.schedules)) {
         sec.schedules.forEach((sched) => {
+          const room = sched.roomId;
+          const faculty = sched.facultyId;
+          
           matrixEvents.push({
             sectionId: sec._id,
             sectionIdentifier: sec.sectionIdentifier,
             courseCode: sec.curriculumId?.courseCode,
             courseTitle: sec.curriculumId?.courseTitle,
-            roomId: sched.roomId?._id,
-            roomName: sched.roomId?.name,
-            facultyId: sched.facultyId?._id,
-            facultyName: sched.facultyId ? `${sched.facultyId.firstName} ${sched.facultyId.lastName}` : 'Unassigned',
+            roomId: room?._id || room,
+            roomName: room?.name || 'Unknown Room',
+            facultyId: faculty?._id || faculty,
+            facultyName: (faculty && typeof faculty === 'object' && faculty.firstName)
+              ? `${faculty.firstName} ${faculty.lastName}`
+              : (faculty ? 'Assigned' : 'Unassigned'),
             dayOfWeek: sched.dayOfWeek,
             startTime: sched.startTime,
             endTime: sched.endTime,
@@ -635,28 +675,7 @@ async function getRoomUtilization(req, res, next) {
 }
 
 async function resolveFacultyForSchedulingUser(req) {
-  const User = mongoose.model('User');
-  const Faculty = mongoose.model('Faculty');
-
-  const user = await User.findById(req.user.id);
-  if (!user || user.role !== 'faculty') {
-    return { ok: false, status: 403, message: 'Access denied: Must be authenticated as a faculty member.' };
-  }
-
-  const fromJwt = req.user.employeeId != null ? String(req.user.employeeId).trim() : '';
-  const fromDb = user.employeeId != null ? String(user.employeeId).trim() : '';
-  const fromUsername = user.username != null ? String(user.username).trim() : '';
-  const lookupKey = fromJwt || fromDb || fromUsername;
-  if (!lookupKey) {
-    return { ok: false, status: 404, message: 'Faculty profile not found for this user.' };
-  }
-  const faculty = await Faculty.findOne({
-    employeeId: new RegExp(`^${escapeRegex(lookupKey)}$`, 'i'),
-  });
-  if (!faculty) {
-    return { ok: false, status: 404, message: 'Faculty profile not found for this user.' };
-  }
-  return { ok: true, faculty };
+  return resolveFacultyForUser(req);
 }
 
 /**
@@ -801,29 +820,11 @@ async function getMySchedule(req, res, next) {
 }
 
 async function facultyTeachesSection(facultyMongoId, sectionDoc) {
-  const fid = String(facultyMongoId);
-  const has = Array.isArray(sectionDoc.schedules)
-    && sectionDoc.schedules.some((s) => s.facultyId && String(s.facultyId) === fid);
-  if (has) return true;
-  const { Syllabus: SyllabusModel } = require('../models/Syllabus');
-  const syll = await SyllabusModel.findOne({ sectionId: sectionDoc._id, facultyId: facultyMongoId })
-    .select('_id')
-    .lean();
-  return Boolean(syll);
+  return facultyTeachesSectionScoped(facultyMongoId, sectionDoc);
 }
 
 async function assertStaffCanManageSectionRoster(req, sectionDoc) {
-  if (req.user?.role === 'admin') return { ok: true };
-  if (req.user?.role !== 'faculty') {
-    return { ok: false, status: 403, message: 'Access denied.' };
-  }
-  const resolved = await resolveFacultyForSchedulingUser(req);
-  if (!resolved.ok) return { ok: false, status: resolved.status, message: resolved.message };
-  const teaches = await facultyTeachesSection(resolved.faculty._id, sectionDoc);
-  if (!teaches) {
-    return { ok: false, status: 403, message: 'You are not assigned to this section.' };
-  }
-  return { ok: true };
+  return assertFacultySectionAccess(req, sectionDoc);
 }
 
 async function resolveStudentObjectIdsFromBody(ids) {
@@ -845,6 +846,12 @@ async function resolveStudentObjectIdsFromBody(ids) {
     }
   }
   return out;
+}
+
+function normalizeSessionDateInput(value) {
+  const raw = String(value || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
+  return raw;
 }
 
 async function getSectionRoster(req, res, next) {
@@ -935,6 +942,14 @@ async function patchSectionRoster(req, res, next) {
     const byId = new Map(docs.map((d) => [d._id.toString(), d]));
     const ordered = ids2.map((oid) => byId.get(String(oid))).filter(Boolean);
 
+    await logActivity(req, {
+      action: 'Updated section roster',
+      module: 'Scheduling',
+      target: populated?.sectionIdentifier || section.sectionIdentifier,
+      status: 'Completed',
+      metadata: { enrolledCount: ordered.length },
+    });
+
     return res.status(200).json({
       section: {
         sectionId: populated._id.toString(),
@@ -961,6 +976,132 @@ async function patchSectionRoster(req, res, next) {
   }
 }
 
+async function getSectionAttendance(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid section id.' });
+    }
+    const sessionDate = normalizeSessionDateInput(req.query?.sessionDate);
+    if (!sessionDate) {
+      return res.status(400).json({ message: 'sessionDate is required in YYYY-MM-DD format.' });
+    }
+
+    const Section = await resolveSectionModel();
+    if (!Section) return res.status(503).json({ message: 'Scheduling module is not available.' });
+    const section = await Section.findById(id).lean();
+    if (!section) return res.status(404).json({ message: 'Section not found.' });
+
+    const gate = await assertStaffCanManageSectionRoster(req, section);
+    if (!gate.ok) return res.status(gate.status).json({ message: gate.message });
+
+    const ClassAttendance = require('../models/ClassAttendance');
+    const row = await ClassAttendance.findOne({ sectionId: section._id, sessionDate }).lean();
+    const records = Array.isArray(row?.records)
+      ? row.records.map((r) => ({
+          studentId: String(r.studentId),
+          status: r.status,
+        }))
+      : [];
+
+    return res.status(200).json({
+      sectionId: String(section._id),
+      sessionDate,
+      records,
+      updatedAt: row?.updatedAt || null,
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function upsertSectionAttendance(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid section id.' });
+    }
+
+    const sessionDate = normalizeSessionDateInput(req.body?.sessionDate);
+    if (!sessionDate) {
+      return res.status(400).json({ message: 'sessionDate is required in YYYY-MM-DD format.' });
+    }
+    const records = Array.isArray(req.body?.records) ? req.body.records : null;
+    if (!records) {
+      return res.status(400).json({ message: 'records must be an array.' });
+    }
+
+    const Section = await resolveSectionModel();
+    if (!Section) return res.status(503).json({ message: 'Scheduling module is not available.' });
+    const section = await Section.findById(id);
+    if (!section) return res.status(404).json({ message: 'Section not found.' });
+    if (section.status === 'Archived') {
+      return res.status(400).json({ message: 'Cannot modify attendance for an archived section.' });
+    }
+
+    const gate = await assertStaffCanManageSectionRoster(req, section);
+    if (!gate.ok) return res.status(gate.status).json({ message: gate.message });
+
+    const enrolledSet = new Set((section.enrolledStudentIds || []).map((sid) => String(sid)));
+    const nextRecords = [];
+    const seen = new Set();
+    for (const row of records) {
+      const sid = String(row?.studentId || '').trim();
+      const status = String(row?.status || '').trim();
+      if (!sid || !mongoose.Types.ObjectId.isValid(sid)) {
+        return res.status(400).json({ message: 'Each record.studentId must be a valid student ObjectId.' });
+      }
+      if (!['Present', 'Late', 'Absent'].includes(status)) {
+        return res.status(400).json({ message: 'record.status must be Present, Late, or Absent.' });
+      }
+      if (!enrolledSet.has(sid)) {
+        return res.status(400).json({ message: 'Attendance records must only include currently enrolled students.' });
+      }
+      if (seen.has(sid)) continue;
+      seen.add(sid);
+      nextRecords.push({
+        studentId: new mongoose.Types.ObjectId(sid),
+        status,
+      });
+    }
+
+    const ClassAttendance = require('../models/ClassAttendance');
+    const saved = await ClassAttendance.findOneAndUpdate(
+      { sectionId: section._id, sessionDate },
+      {
+        $set: {
+          records: nextRecords,
+          updatedByUserId: req.user?.id ? new mongoose.Types.ObjectId(req.user.id) : null,
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true },
+    ).lean();
+
+    await logActivity(req, {
+      action: 'Updated class attendance',
+      module: 'Scheduling',
+      target: section.sectionIdentifier,
+      status: 'Completed',
+      metadata: { sessionDate, records: nextRecords.length },
+    });
+
+    return res.status(200).json({
+      sectionId: String(section._id),
+      sessionDate,
+      records: (saved.records || []).map((r) => ({
+        studentId: String(r.studentId),
+        status: r.status,
+      })),
+      updatedAt: saved.updatedAt || null,
+    });
+  } catch (err) {
+    if (err && err.code === 11000) {
+      return res.status(409).json({ message: 'Attendance record already exists for that section and date.' });
+    }
+    return next(err);
+  }
+}
+
 module.exports = {
   listSections,
   createSection,
@@ -971,6 +1112,8 @@ module.exports = {
   getMySchedule,
   getSectionRoster,
   patchSectionRoster,
+  getSectionAttendance,
+  upsertSectionAttendance,
   listTimeBlocks,
   createTimeBlock,
   updateTimeBlock,
