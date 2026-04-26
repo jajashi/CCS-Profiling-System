@@ -1,13 +1,11 @@
 /**
- * In Vite dev, use same-origin `/api/...` requests so the dev-server proxy (see vite.config.js)
- * forwards to the Express API. Calling http://localhost:5000 directly can 404 if nothing is
- * listening there, an old server is running without the latest routes, or the port differs.
+ * Resolve API base URL depending on environment.
  */
 function resolveApiBaseUrl() {
   if (import.meta.env.DEV && import.meta.env.VITE_DEV_DIRECT_API !== '1') {
     return '';
   }
-  const raw = import.meta.env.VITE_API_URL;
+  const raw = import.meta.env.VITE_API_URL ?? import.meta.env.VITE_BACKEND_URL;
   if (raw != null && String(raw).trim() !== '') {
     return String(raw).trim().replace(/\/+$/, '');
   }
@@ -40,7 +38,8 @@ function getAuthHeaders() {
     const token = parsed?.token;
     if (!token) return {};
     return { Authorization: `Bearer ${token}` };
-  } catch {
+  } catch (err) {
+    console.error("Error parsing ccs_user from localStorage:", err);
     return {};
   }
 }
@@ -50,10 +49,14 @@ export const apiFetch = async (path, options = {}) => {
     ...(options.headers || {}),
     ...getAuthHeaders(),
   };
+
+  console.log("API Fetch →", apiUrl(path));
+  console.log("Headers →", headers);
+
   const response = await fetch(apiUrl(path), { ...options, headers });
-  
+
   if (response.status === 401) {
-    // If the token expires from older sessions, emit a global logout signal
+    console.warn("API Fetch: Unauthorized (401). Token may be missing or expired.");
     window.dispatchEvent(new CustomEvent('auth_expired'));
   }
 
@@ -63,8 +66,10 @@ export const apiFetch = async (path, options = {}) => {
       if (errorData.conflictType) {
         window.dispatchEvent(new CustomEvent('api_conflict', { detail: errorData }));
       }
-    } catch {}
+    } catch (err) {
+      console.error("Error parsing 409 conflict response:", err);
+    }
   }
-  
+
   return response;
 };

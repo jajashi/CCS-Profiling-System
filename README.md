@@ -55,16 +55,17 @@ Create a `.env` file in the `frontend` folder:
 
 ```bash
 cd frontend
-echo "VITE_BACKEND_URL=http://localhost:5001" > .env
+echo "VITE_API_URL=http://localhost:5001" > .env
 ```
 
 Or manually create `frontend/.env`:
 
 ```env
-VITE_BACKEND_URL=http://localhost:5001
+VITE_API_URL=http://localhost:5001
 ```
 
-> **Important:** The `VITE_BACKEND_URL` must match the `PORT` in your backend `.env` file.
+> **Important:** The `VITE_API_URL` must match the `PORT` in your backend `.env` file.
+> For backward compatibility, `VITE_BACKEND_URL` is also supported.
 
 ---
 
@@ -90,7 +91,7 @@ PORT=5002
 
 Edit `frontend/.env`:
 ```env
-VITE_BACKEND_URL=http://localhost:5002
+VITE_API_URL=http://localhost:5002
 ```
 
 ### 3. Restart Both Servers
