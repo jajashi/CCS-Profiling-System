@@ -63,6 +63,11 @@ app.use('/api/accounts', accountRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/advising', advisingRoutes);
 
+// 404 handler for undefined routes
+app.use((req, res) => {
+  res.status(404).json({ message: `Route not found: ${req.method} ${req.path}` });
+});
+
 // Error handler
 app.use((err, _req, res, _next) => {
   const status = err.status || 500;
