@@ -45,6 +45,11 @@ app.options('*', cors(corsOptions));
 app.use(express.json({ limit: '8mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+// Lightweight endpoint for deployment checks
+app.get('/api/health', (_req, res) => {
+  res.status(200).json({ ok: true, service: 'ccs-profiling-backend' });
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use("/api/students", studentRoutes);

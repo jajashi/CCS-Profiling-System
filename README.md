@@ -140,3 +140,41 @@ VITE_API_URL=http://localhost:5000
 # Production — use your deployed API base URL
 VITE_API_URL=https://your-api.example.com
 ```
+
+### Render (recommended for this repo)
+
+This project has two deploy targets:
+
+- API service from `backend`
+- Static frontend from `frontend`
+
+If only one service is deployed (or wrong root directory is used), many pages will show `404`/`Failed to fetch`.
+
+Use the included `render.yaml` blueprint to create both services together.
+
+#### Required environment variables
+
+For API service (`backend`):
+
+```env
+MONGODB_URI=<your mongodb uri>
+JWT_SECRET=<your jwt secret>
+# Include your frontend domain(s), comma-separated
+CORS_ORIGINS=https://<your-frontend>.onrender.com
+```
+
+For frontend service (`frontend`):
+
+```env
+VITE_API_URL=https://<your-api-service>.onrender.com
+```
+
+#### Post-deploy verification
+
+Open these URLs after deployment:
+
+- `https://<your-api-service>.onrender.com/api/health` -> should return `{"ok":true,...}`
+- `https://<your-api-service>.onrender.com/api/auth/login` (POST only) -> should not be `404`
+- `https://<your-api-service>.onrender.com/api/events` -> should return API response (or auth error), not `Cannot GET`
+
+If `api/students` works but `api/events` / `api/syllabi` / `api/scheduling` are `404`, you are pointing to an older or different backend service.
