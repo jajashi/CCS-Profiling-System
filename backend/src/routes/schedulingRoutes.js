@@ -9,6 +9,7 @@ const {
   getRoomUtilization,
   getMyClasses,
   getMySchedule,
+  getStudentSchedule,
   getSectionRoster,
   patchSectionRoster,
   transferStudent,
@@ -43,6 +44,7 @@ router.get('/matrix', authenticate, requireRoles('admin', 'faculty'), getSchedul
 router.get('/room-utilization', authenticate, requireRoles('admin', 'faculty'), getRoomUtilization);
 router.get('/my-classes', authenticate, requireRoles('faculty'), getMyClasses);
 router.get('/my-schedule', authenticate, requireRoles('admin', 'faculty'), getMySchedule);
+router.get('/student-schedule', authenticate, requireRoles('student'), getStudentSchedule);
 
 router.get('/timeblocks', authenticate, requireRoles('admin', 'faculty'), listTimeBlocks);
 router.post('/timeblocks', authenticate, requireRoles('admin'), createTimeBlock);

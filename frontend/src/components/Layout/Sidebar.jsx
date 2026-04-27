@@ -78,12 +78,20 @@ const Sidebar = () => {
           ) : null}
 
           {isStudent ? (
-            <li className="nav-item">
-              <NavLink to={`/dashboard/student-info/${user?.studentId || ''}`} className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
-                <span className="nav-icon"><FiUsers /></span>
-                <span className="nav-text">My Profile</span>
-              </NavLink>
-            </li>
+            <>
+              <li className="nav-item">
+                <NavLink to={`/dashboard/student-info/${user?.studentId || ''}`} className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                  <span className="nav-icon"><FiUsers /></span>
+                  <span className="nav-text">My Profile</span>
+                </NavLink>
+              </li>
+              <li className="nav-item">
+                <NavLink to="/dashboard/student/schedule" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                  <span className="nav-icon"><FiCalendar /></span>
+                  <span className="nav-text">My Schedule</span>
+                </NavLink>
+              </li>
+            </>
           ) : isFaculty && !isAdmin ? (
             <>
               <li className="nav-item">

@@ -1082,18 +1082,24 @@ async function getMyClasses(req, res, next) {
       .sort({ academicYear: -1, term: 1, sectionIdentifier: 1 })
       .lean();
 
-    const rows = sections.map((sec) => ({
-      sectionId: sec._id.toString(),
-      sectionIdentifier: sec.sectionIdentifier,
-      term: sec.term,
-      academicYear: sec.academicYear,
-      courseCode: sec.curriculumId?.courseCode,
-      courseTitle: sec.curriculumId?.courseTitle,
-      syllabusId: syllabusBySectionId.get(sec._id.toString()) || null,
-      enrolledCount: Array.isArray(sec.enrolledStudentIds)
-        ? sec.enrolledStudentIds.length
-        : 0,
-    }));
+    const rows = sections.map((sec) => {
+      // Find the specific schedule block for this faculty to get the right course if it differs
+      const mySched = sec.schedules.find(s => s.facultyId.toString() === faculty._id.toString());
+      const course = mySched?.curriculumId || sec.curriculumId;
+
+      return {
+        sectionId: sec._id.toString(),
+        sectionIdentifier: sec.sectionIdentifier,
+        term: sec.term,
+        academicYear: sec.academicYear,
+        courseCode: course?.courseCode,
+        courseTitle: course?.courseTitle,
+        syllabusId: syllabusBySectionId.get(sec._id.toString()) || null,
+        enrolledCount: Array.isArray(sec.enrolledStudentIds)
+          ? sec.enrolledStudentIds.length
+          : 0,
+      };
+    });
 
     return res.status(200).json(rows);
   } catch (err) {
@@ -1111,11 +1117,15 @@ async function getMySchedule(req, res, next) {
     const { faculty } = resolved;
 
     const Section = await resolveSectionModel();
-    const query = { status: { $in: ["Open", "Waitlisted", "Closed"] } };
+    const query = { 
+      status: { $in: ["Active", "Open", "Waitlisted", "Closed"] },
+      schedules: { $elemMatch: { facultyId: faculty._id } }
+    };
     if (term) query.term = term;
 
     const sections = await Section.find(query)
       .populate("curriculumId", "courseCode courseTitle")
+      .populate("schedules.curriculumId", "courseCode courseTitle")
       .populate("schedules.roomId", "name");
 
     const SyllabusModel = Syllabus;
@@ -1745,6 +1755,45 @@ async function graduateSections(req, res, next) {
   }
 }
 
+async function getStudentSchedule(req, res, next) {
+  try {
+    const User = require("../models/User");
+    const user = await User.findById(req.user.id);
+    if (!user || user.role !== 'student' || !user.studentId) {
+      return res.status(403).json({ message: "Access denied or missing student ID." });
+    }
+
+    const Student = require("../models/Student");
+    const student = await Student.findOne({ id: user.studentId });
+    if (!student || !student.sectionId) {
+      return res.status(404).json({ message: "Student record or section assignment not found." });
+    }
+
+    const Section = await resolveSectionModel();
+    const section = await Section.findById(student.sectionId)
+      .populate("curriculumId", "courseCode courseTitle")
+      .populate("schedules.curriculumId", "courseCode courseTitle")
+      .populate("schedules.roomId", "name type")
+      .populate("schedules.facultyId", "firstName lastName");
+
+    if (!section) {
+      return res.status(404).json({ message: "Assigned section not found." });
+    }
+
+    return res.status(200).json({
+      sectionId: section._id,
+      sectionIdentifier: section.sectionIdentifier,
+      program: section.program,
+      yearLevel: section.yearLevel,
+      term: section.term,
+      academicYear: section.academicYear,
+      schedules: section.schedules,
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   listSections,
   createSection,
@@ -1755,9 +1804,12 @@ module.exports = {
   getRoomUtilization,
   getMyClasses,
   getMySchedule,
+  getStudentSchedule,
   getSectionRoster,
   patchSectionRoster,
   transferStudent,
+  batchLevelUp,
+  graduateSections,
   getSectionAttendance,
   upsertSectionAttendance,
   listTimeBlocks,

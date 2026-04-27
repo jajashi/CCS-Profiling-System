@@ -99,12 +99,28 @@ const DashboardHome = () => {
     };
   }, [isStudent, isAdmin]);
 
+  const [studentSchedule, setStudentSchedule] = useState(null);
+  const [loadingSchedule, setLoadingSchedule] = useState(false);
+
+  useEffect(() => {
+    if (!isStudent) return;
+    setLoadingSchedule(true);
+    apiFetch('/api/scheduling/student-schedule')
+      .then(res => res.json())
+      .then(data => setStudentSchedule(data))
+      .catch(() => setStudentSchedule(null))
+      .finally(() => setLoadingSchedule(false));
+  }, [isStudent]);
+
   if (isStudent) {
+    const today = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date().getDay()];
+    const todayClasses = studentSchedule?.schedules?.filter(s => s.dayOfWeek === today) || [];
+
     return (
       <div className="dashboard-home">
         <div className="page-header">
           <h2>Student Dashboard</h2>
-          <p className="subtitle">Welcome back! Here's an overview of your academic and clearance status.</p>
+          <p className="subtitle">Welcome back! Here's an overview of your academic schedule and status.</p>
         </div>
 
         <div className="stats-grid">
@@ -123,8 +139,8 @@ const DashboardHome = () => {
               <FiActivity />
             </div>
             <div className="stat-details">
-              <p className="stat-label">Program & Year</p>
-              <h3 className="stat-value" style={{ fontSize: '1.2rem' }}>BSCS - 2nd Year</h3>
+              <p className="stat-label">Section</p>
+              <h3 className="stat-value" style={{ fontSize: '1.2rem' }}>{studentSchedule?.sectionIdentifier || 'Assigned'}</h3>
             </div>
           </div>
 
@@ -133,35 +149,61 @@ const DashboardHome = () => {
               <FiCheckCircle />
             </div>
             <div className="stat-details">
-              <p className="stat-label">Clearance Status</p>
-              <h3 className="stat-value">Cleared</h3>
+              <p className="stat-label">Academic Year</p>
+              <h3 className="stat-value">{studentSchedule?.academicYear || '2025-2026'}</h3>
             </div>
           </div>
 
           <div className="stat-card">
             <div className="stat-icon faculty">
-              <FiAlertCircle />
+              <FiCalendar />
             </div>
             <div className="stat-details">
-              <p className="stat-label">Pending Requirements</p>
-              <h3 className="stat-value" style={{ color: '#ef4444' }}>0</h3>
+              <p className="stat-label">Term</p>
+              <h3 className="stat-value">{studentSchedule?.term || '1st Term'}</h3>
             </div>
           </div>
         </div>
 
-        <div className="recent-activity-section" style={{ 
-          marginTop: '2rem', 
-          textAlign: 'center', 
-          padding: '5rem 2rem', 
-          background: 'linear-gradient(135deg, #ffffff 0%, #fff7ed 100%)', 
-          borderRadius: '24px', 
-          border: '2px dashed #fed7aa' 
-        }}>
-          <div style={{ color: '#9a3412', fontSize: '1.1rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <FiActivity style={{ width: '64px', height: '64px', color: '#060403ff', opacity: 0.3, marginBottom: '1.5rem' }} />
-            <h3>More features are coming!</h3>
-            <p style={{ marginTop: '0.75rem', fontSize: '1rem', color: '#7c2d12', opacity: 0.8 }}>
-              Other features are currently being worked on.</p>
+        <div className="dashboard-content-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '2rem', marginTop: '2rem' }}>
+          <div className="today-schedule-panel">
+            <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3>Today's Classes</h3>
+              <Link to="/dashboard/student/schedule" className="btn btn-sm btn-primary">View Full Schedule</Link>
+            </div>
+            
+            <div className="schedule-list" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {loadingSchedule ? (
+                <p>Loading your schedule...</p>
+              ) : todayClasses.length > 0 ? (
+                todayClasses.map((s, idx) => (
+                  <div key={idx} className="today-class-item" style={{ background: 'white', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '1rem', color: '#1e293b' }}>{s.curriculumId?.courseTitle}</div>
+                      <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.25rem' }}>{s.curriculumId?.courseCode} | {s.roomId?.name || 'TBA'}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontWeight: 600, color: '#3b82f6' }}>{s.startTime} - {s.endTime}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{s.facultyId ? `${s.facultyId.firstName} ${s.facultyId.lastName}` : 'TBA'}</div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div style={{ padding: '3rem', textAlign: 'center', background: '#f8fafc', borderRadius: '16px', border: '2px dashed #e2e8f0' }}>
+                  <p style={{ color: '#64748b' }}>No classes scheduled for today.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="recent-activity-col">
+             <div className="section-header">
+                <h3>Campus Events</h3>
+             </div>
+             <div style={{ padding: '1rem', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '16px', textAlign: 'center' }}>
+                <FiActivity size={32} color="#9a3412" style={{ marginBottom: '0.5rem' }} />
+                <p style={{ fontSize: '0.85rem', color: '#7c2d12' }}>Check the Events tab for upcoming campus activities!</p>
+             </div>
           </div>
         </div>
       </div>

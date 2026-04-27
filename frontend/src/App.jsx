@@ -23,6 +23,7 @@ import EventListPage from './features/events/routes/EventListPage';
 import EventApprovalPage from './features/events/routes/EventApprovalPage';
 import MyEventsPage from './features/events/routes/MyEventsPage';
 import GlobalCalendarPage from './features/events/routes/GlobalCalendarPage';
+import StudentSchedulePage from './features/scheduling/routes/StudentSchedulePage';
 import FacultyMyClassesPage from './features/faculty/routes/FacultyMyClassesPage';
 import FacultyClassStudentsPage from './features/faculty/routes/FacultyClassStudentsPage';
 import FacultyClassOverviewPage from './features/faculty/routes/FacultyClassOverviewPage';
@@ -202,6 +203,7 @@ function App() {
         <Route index element={<DashboardIndex />} />
         <Route path="student-info" element={<StudentDirectoryRoute><StudentInformation /></StudentDirectoryRoute>} />
         <Route path="student-info/:id" element={<StudentProfileRoute><StudentInformation /></StudentProfileRoute>} />
+        <Route path="student/schedule" element={<ProtectedRoute><StudentSchedulePage /></ProtectedRoute>} />
         
         <Route
           path="faculty"
