@@ -26,15 +26,18 @@ import "./SectionsPage.css";
 
 function CreateSectionModal({ onClose, onCreated, curricula }) {
   const [form, setForm] = useState({
-    curriculumId: "",
+    sectionIdentifier: "",
+    program: "IT",
+    yearLevel: "1st Year",
     term: "1st Term",
     academicYear: "2025-2026",
+    curriculumId: "",
   });
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.curriculumId) return toast.error("Please select a curriculum.");
+    if (!form.sectionIdentifier) return toast.error("Section name is required.");
 
     setSubmitting(true);
     try {
@@ -46,7 +49,7 @@ function CreateSectionModal({ onClose, onCreated, curricula }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to create section");
 
-      toast.success("Section initialized successfully.");
+      toast.success("Block section created successfully.");
       onCreated(data);
     } catch (err) {
       toast.error(err.message);
@@ -60,9 +63,9 @@ function CreateSectionModal({ onClose, onCreated, curricula }) {
       <div className="spec-modal" onClick={(e) => e.stopPropagation()}>
         <div className="spec-modal-header">
           <div>
-            <h2 className="spec-modal-title">Initialize New Section</h2>
+            <h2 className="spec-modal-title">Create New Block Section</h2>
             <p className="spec-modal-sub">
-              Step 1: Define the base section linked to a curriculum course.
+              Define a new cohort group for academic organization.
             </p>
           </div>
           <button onClick={onClose} className="spec-modal-close">
@@ -70,23 +73,58 @@ function CreateSectionModal({ onClose, onCreated, curricula }) {
           </button>
         </div>
         <form onSubmit={handleSubmit} className="spec-modal-body">
-          <div className="form-field">
-            <label className="form-label">Course / Curriculum</label>
-            <select
-              className="form-select"
-              value={form.curriculumId}
-              onChange={(e) =>
-                setForm({ ...form, curriculumId: e.target.value })
-              }
-              required>
-              <option value="">Select a course...</option>
-              {curricula.map((c) => (
-                <option key={c._id} value={c._id}>
-                  {c.courseCode} - {c.courseTitle}
-                </option>
-              ))}
-            </select>
+          <div className="modal-grid">
+            <div className="form-field">
+              <label className="form-label">Section Name</label>
+              <input
+                className="form-input"
+                value={form.sectionIdentifier}
+                onChange={(e) =>
+                  setForm({ ...form, sectionIdentifier: e.target.value })
+                }
+                placeholder="e.g. BSIT-1A"
+                required
+              />
+            </div>
+            <div className="form-field">
+              <label className="form-label">Program</label>
+              <select
+                className="form-select"
+                value={form.program}
+                onChange={(e) => setForm({ ...form, program: e.target.value })}
+                required>
+                <option value="IT">BSIT</option>
+                <option value="CS">BSCS</option>
+                <option value="General">General</option>
+              </select>
+            </div>
           </div>
+
+          <div className="modal-grid">
+            <div className="form-field">
+              <label className="form-label">Year Level</label>
+              <select
+                className="form-select"
+                value={form.yearLevel}
+                onChange={(e) => setForm({ ...form, yearLevel: e.target.value })}
+                required>
+                <option value="1st Year">1st Year</option>
+                <option value="2nd Year">2nd Year</option>
+                <option value="3rd Year">3rd Year</option>
+                <option value="4th Year">4th Year</option>
+              </select>
+            </div>
+            <div className="form-field">
+              <label className="form-label">Capacity (Hard Limit)</label>
+              <input
+                className="form-input"
+                value="55"
+                disabled
+                readOnly
+              />
+            </div>
+          </div>
+
           <div className="modal-grid">
             <div className="form-field">
               <label className="form-label">Academic Year</label>
@@ -97,6 +135,169 @@ function CreateSectionModal({ onClose, onCreated, curricula }) {
                   setForm({ ...form, academicYear: e.target.value })
                 }
                 placeholder="e.g. 2025-2026"
+                required
+              />
+            </div>
+            <div className="form-field">
+              <label className="form-label">Term / Semester</label>
+              <select
+                className="form-select"
+                value={form.term}
+                onChange={(e) => setForm({ ...form, term: e.target.value })}>
+                <option value="1st Term">1st Term</option>
+                <option value="2nd Term">2nd Term</option>
+                <option value="Summer">Summer</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="form-field">
+            <label className="form-label">Primary Curriculum (Optional)</label>
+            <select
+              className="form-select"
+              value={form.curriculumId}
+              onChange={(e) =>
+                setForm({ ...form, curriculumId: e.target.value })
+              }>
+              <option value="">None / To be assigned...</option>
+              {curricula.map((c) => (
+                <option key={c._id} value={c._id}>
+                  {c.courseCode} - {c.courseTitle}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="spec-modal-footer">
+            <button
+              type="button"
+              className="spec-btn-secondary"
+              onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="spec-btn-primary"
+              disabled={submitting}>
+              {submitting ? "Creating..." : "Create Block Section"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function EditSectionModal({ section, onClose, onUpdated, curricula }) {
+  const [form, setForm] = useState({
+    sectionIdentifier: section.sectionIdentifier || "",
+    program: section.program || "IT",
+    yearLevel: section.yearLevel || "1st Year",
+    term: section.term || "1st Term",
+    academicYear: section.academicYear || "2025-2026",
+    status: section.status || "Active",
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const res = await apiFetch(`/api/scheduling/sections/${section._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to update section");
+
+      toast.success("Section details updated.");
+      onUpdated(data);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="spec-modal-backdrop" onClick={onClose}>
+      <div className="spec-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="spec-modal-header">
+          <div>
+            <h2 className="spec-modal-title">Edit Section Details</h2>
+            <p className="spec-modal-sub">
+              Modify basic information for {section.sectionIdentifier}.
+            </p>
+          </div>
+          <button onClick={onClose} className="spec-modal-close">
+            <FiX />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="spec-modal-body">
+          <div className="modal-grid">
+            <div className="form-field">
+              <label className="form-label">Section Name</label>
+              <input
+                className="form-input"
+                value={form.sectionIdentifier}
+                onChange={(e) =>
+                  setForm({ ...form, sectionIdentifier: e.target.value })
+                }
+                required
+              />
+            </div>
+            <div className="form-field">
+              <label className="form-label">Status</label>
+              <select
+                className="form-select"
+                value={form.status}
+                onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                <option value="Active">Active</option>
+                <option value="Archived">Archived</option>
+                <option value="Open">Open</option>
+                <option value="Closed">Closed</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="modal-grid">
+            <div className="form-field">
+              <label className="form-label">Program</label>
+              <select
+                className="form-select"
+                value={form.program}
+                onChange={(e) => setForm({ ...form, program: e.target.value })}
+                required>
+                <option value="IT">BSIT</option>
+                <option value="CS">BSCS</option>
+                <option value="General">General</option>
+              </select>
+            </div>
+            <div className="form-field">
+              <label className="form-label">Year Level</label>
+              <select
+                className="form-select"
+                value={form.yearLevel}
+                onChange={(e) => setForm({ ...form, yearLevel: e.target.value })}
+                required>
+                <option value="1st Year">1st Year</option>
+                <option value="2nd Year">2nd Year</option>
+                <option value="3rd Year">3rd Year</option>
+                <option value="4th Year">4th Year</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="modal-grid">
+            <div className="form-field">
+              <label className="form-label">Academic Year</label>
+              <input
+                className="form-input"
+                value={form.academicYear}
+                onChange={(e) =>
+                  setForm({ ...form, academicYear: e.target.value })
+                }
                 required
               />
             </div>
@@ -112,6 +313,7 @@ function CreateSectionModal({ onClose, onCreated, curricula }) {
               </select>
             </div>
           </div>
+
           <div className="spec-modal-footer">
             <button
               type="button"
@@ -123,7 +325,7 @@ function CreateSectionModal({ onClose, onCreated, curricula }) {
               type="submit"
               className="spec-btn-primary"
               disabled={submitting}>
-              {submitting ? "Creating..." : "Initialize Section"}
+              {submitting ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </form>
@@ -533,10 +735,13 @@ export default function SectionsPage() {
   const [timeBlocks, setTimeBlocks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
   const [assignTarget, setAssignTarget] = useState(null);
   const [rosterTarget, setRosterTarget] = useState(null);
   const [syllabusSectionId, setSyllabusSectionId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [programFilter, setProgramFilter] = useState("All");
+  const [yearLevelFilter, setYearLevelFilter] = useState("All");
   const [termFilter, setTermFilter] = useState("All");
   const [yearFilter, setYearFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -608,15 +813,26 @@ export default function SectionsPage() {
         s.sectionIdentifier.toLowerCase().includes(q) ||
         s.curriculumId?.courseTitle?.toLowerCase().includes(q) ||
         s.curriculumId?.courseCode?.toLowerCase().includes(q);
+      const matchesProgram =
+        programFilter === "All" || s.program === programFilter;
+      const matchesYearLevel =
+        yearLevelFilter === "All" || s.yearLevel === yearLevelFilter;
       const matchesTerm =
         termFilter === "All" || String(s.term || "") === termFilter;
       const matchesYear =
         yearFilter === "All" || String(s.academicYear || "") === yearFilter;
       const matchesStatus =
         statusFilter === "All" || String(s.status || "") === statusFilter;
-      return matchesSearch && matchesTerm && matchesYear && matchesStatus;
+      return (
+        matchesSearch &&
+        matchesProgram &&
+        matchesYearLevel &&
+        matchesTerm &&
+        matchesYear &&
+        matchesStatus
+      );
     });
-  }, [sections, searchTerm, termFilter, yearFilter, statusFilter]);
+  }, [sections, searchTerm, programFilter, yearLevelFilter, termFilter, yearFilter, statusFilter]);
 
   const totalPages = Math.max(
     Math.ceil(filteredSections.length / PAGE_SIZE),
@@ -683,6 +899,25 @@ export default function SectionsPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
+            <select
+              className="filter-select curriculum-select"
+              value={programFilter}
+              onChange={(e) => setProgramFilter(e.target.value)}>
+              <option value="All">All Programs</option>
+              <option value="IT">BSIT</option>
+              <option value="CS">BSCS</option>
+              <option value="General">General</option>
+            </select>
+            <select
+              className="filter-select curriculum-select"
+              value={yearLevelFilter}
+              onChange={(e) => setYearLevelFilter(e.target.value)}>
+              <option value="All">All Years</option>
+              <option value="1st Year">1st Year</option>
+              <option value="2nd Year">2nd Year</option>
+              <option value="3rd Year">3rd Year</option>
+              <option value="4th Year">4th Year</option>
+            </select>
             <select
               className="filter-select curriculum-select"
               value={termFilter}
@@ -793,10 +1028,23 @@ export default function SectionsPage() {
               </div>
 
               <h3 className="section-course-title">
-                {section.curriculumId?.courseTitle}
+                {section.program} - {section.yearLevel}
               </h3>
-              <div className="section-course-code">
-                <FiBook size={14} /> {section.curriculumId?.courseCode}
+              
+              <div className="capacity-progress-container">
+                <div className="capacity-progress-bar-bg">
+                  <div 
+                    className={`capacity-progress-bar-fill ${
+                      section.currentEnrollmentCount <= 45 ? "safe" : 
+                      section.currentEnrollmentCount < 55 ? "warning" : "danger"
+                    }`}
+                    style={{ width: `${Math.min((section.currentEnrollmentCount / 55) * 100, 100)}%` }}
+                  />
+                </div>
+                <div className="capacity-label">
+                  <span>Capacity</span>
+                  <span><strong>{section.currentEnrollmentCount}</strong> / 55</span>
+                </div>
               </div>
 
               <div className="section-meta-row">
@@ -805,10 +1053,6 @@ export default function SectionsPage() {
                 </div>
                 <div className="meta-item">
                   <FiGrid size={14} /> {section.academicYear}
-                </div>
-                <div className="meta-item">
-                  <FiUser size={14} /> {section.currentEnrollmentCount ?? 0}{" "}
-                  enrolled
                 </div>
               </div>
 
@@ -848,8 +1092,13 @@ export default function SectionsPage() {
               <div className="section-actions">
                 <button
                   className="btn-assign"
+                  onClick={() => setEditTarget(section)}>
+                  <FiSettings /> Edit
+                </button>
+                <button
+                  className="btn-assign"
                   onClick={() => setAssignTarget(section)}>
-                  <FiSettings /> {isAdmin ? "Resources" : "View Resources"}
+                  <FiClock /> Manage Schedule
                 </button>
                 <button
                   className="btn-assign btn-roster-action"
@@ -934,7 +1183,20 @@ export default function SectionsPage() {
           onCreated={(newSec) => {
             setSections([newSec, ...sections]);
             setShowCreate(false);
-            setAssignTarget(newSec); // Open resource assignment immediately
+          }}
+        />
+      )}
+
+      {editTarget && (
+        <EditSectionModal
+          section={editTarget}
+          curricula={curricula}
+          onClose={() => setEditTarget(null)}
+          onUpdated={(updated) => {
+            setSections(
+              sections.map((s) => (s._id === updated._id ? updated : s))
+            );
+            setEditTarget(null);
           }}
         />
       )}

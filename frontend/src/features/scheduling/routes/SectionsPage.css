@@ -96,9 +96,43 @@
   font-weight: 600;
 }
 
-.status-open { background: #ecfdf5; color: #059669; }
+.status-open, .status-active { background: #ecfdf5; color: #059669; }
 .status-closed { background: #fef2f2; color: #dc2626; }
 .status-waitlisted { background: #fffbeb; color: #d97706; }
+.status-archived { background: #f1f5f9; color: #64748b; }
+
+.capacity-progress-container {
+  margin: 1rem 0;
+}
+
+.capacity-progress-bar-bg {
+  height: 8px;
+  background: #f1f5f9;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.4rem;
+}
+
+.capacity-progress-bar-fill {
+  height: 100%;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.capacity-progress-bar-fill.safe { background-color: #10b981; }
+.capacity-progress-bar-fill.warning { background-color: #f59e0b; }
+.capacity-progress-bar-fill.danger { background-color: #ef4444; }
+
+.capacity-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.capacity-label strong {
+  color: #334155;
+}
 
 .section-course-title {
   font-size: 1.1rem;

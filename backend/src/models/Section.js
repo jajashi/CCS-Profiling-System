@@ -30,13 +30,22 @@ const sectionSchema = new mongoose.Schema(
     sectionIdentifier: {
       type: String,
       required: true,
-      unique: true,
+      trim: true,
+    },
+    program: {
+      type: String,
+      required: true,
+      enum: ['IT', 'CS', 'General'],
+    },
+    yearLevel: {
+      type: String,
+      required: true,
       trim: true,
     },
     curriculumId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Curriculum',
-      required: true,
+      required: false, // Made optional for Block Sections
       index: true,
     },
     term: {
@@ -49,17 +58,22 @@ const sectionSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    capacity: {
+      type: Number,
+      default: 55,
+      immutable: true, // Hard limit of 55
+    },
     status: {
       type: String,
-      enum: ['Open', 'Closed', 'Waitlisted', 'Archived'],
-      default: 'Open',
+      enum: ['Active', 'Archived', 'Open', 'Closed', 'Waitlisted'],
+      default: 'Active',
       index: true,
     },
     currentEnrollmentCount: {
       type: Number,
       default: 0,
     },
-    /** Students officially enrolled in this course section (scheduling), distinct from cohort `Student.section`. */
+    /** Students officially enrolled in this cohort group. */
     enrolledStudentIds: {
       type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Student' }],
       default: [],
@@ -72,6 +86,12 @@ const sectionSchema = new mongoose.Schema(
   {
     timestamps: true,
   },
+);
+
+// Uniqueness: Section name must be unique within same program, yearLevel, academicYear
+sectionSchema.index(
+  { sectionIdentifier: 1, program: 1, yearLevel: 1, academicYear: 1 },
+  { unique: true }
 );
 
 sectionSchema.index({ curriculumId: 1, term: 1, academicYear: 1 });

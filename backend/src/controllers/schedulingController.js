@@ -261,6 +261,22 @@ async function listSections(req, res, next) {
       query.curriculumId = curriculumId;
     }
 
+    if (req.query.program) {
+      query.program = req.query.program;
+    }
+
+    if (req.query.yearLevel) {
+      query.yearLevel = req.query.yearLevel;
+    }
+
+    if (req.query.academicYear) {
+      query.academicYear = req.query.academicYear;
+    }
+
+    if (req.query.term) {
+      query.term = req.query.term;
+    }
+
     const sections = await Section.find(query)
       .populate(
         "curriculumId",
@@ -512,45 +528,42 @@ async function createSection(req, res, next) {
         .json({ message: "Scheduling module is not available." });
     }
 
-    const { curriculumId, term, academicYear } = req.body;
-    if (!curriculumId)
-      return res.status(400).json({ message: "curriculumId is required." });
+    const { sectionIdentifier, program, yearLevel, term, academicYear, curriculumId } = req.body;
+    
+    if (!sectionIdentifier) return res.status(400).json({ message: "sectionIdentifier is required." });
+    if (!program) return res.status(400).json({ message: "program is required." });
+    if (!yearLevel) return res.status(400).json({ message: "yearLevel is required." });
     if (!term) return res.status(400).json({ message: "term is required." });
-    if (!academicYear)
-      return res.status(400).json({ message: "academicYear is required." });
+    if (!academicYear) return res.status(400).json({ message: "academicYear is required." });
 
-    const curriculum = await Curriculum.findById(curriculumId);
-    if (!curriculum)
-      return res.status(404).json({ message: "Curriculum not found." });
-    if (curriculum.status !== "Active") {
-      return res.status(400).json({ message: "Curriculum is not active." });
+    // Check for duplicates (same name within same program/year/academicYear)
+    const existing = await Section.findOne({
+      sectionIdentifier,
+      program,
+      yearLevel,
+      academicYear
+    });
+
+    if (existing) {
+      return res.status(409).json({ message: `Section ${sectionIdentifier} already exists for this program, year, and academic year.` });
     }
 
-    const count = await Section.countDocuments({
-      curriculumId,
-      term,
-      academicYear,
-    });
-    const sectionIndex = count + 1;
-
-    // Generate an identifier autonomously
-    const courseCode = normalizeString(curriculum.courseCode)
-      .toUpperCase()
-      .replace(/\s+/g, "-");
-    const termCode = term.substring(0, 2).toUpperCase();
-    const yearSuffix =
-      academicYear.length > 2
-        ? academicYear.substring(academicYear.length - 2)
-        : academicYear;
-
-    const sectionIdentifier = `${courseCode}-${termCode}${yearSuffix}-S${sectionIndex}`;
+    if (curriculumId) {
+      const curriculum = await Curriculum.findById(curriculumId);
+      if (!curriculum) return res.status(404).json({ message: "Curriculum not found." });
+      if (curriculum.status !== "Active") {
+        return res.status(400).json({ message: "Curriculum is not active." });
+      }
+    }
 
     const newSection = new Section({
       sectionIdentifier,
+      program,
+      yearLevel,
       curriculumId,
       term,
       academicYear,
-      status: "Open",
+      status: "Active",
       currentEnrollmentCount: 0,
       schedules: [],
     });
@@ -578,11 +591,96 @@ async function createSection(req, res, next) {
     }
     if (err && err.code === 11000) {
       return res
-        .status(400)
-        .json({
-          message: "Section identifier already exists. Please try again.",
-        });
+        .status(409)
+        .json({ message: "A section with this identifier already exists in the same scope." });
     }
+    return next(err);
+  }
+}
+
+async function updateSection(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid section id." });
+    }
+
+    const Section = await resolveSectionModel();
+    const section = await Section.findById(id);
+    if (!section) return res.status(404).json({ message: "Section not found." });
+
+    const { sectionIdentifier, program, yearLevel, term, academicYear, status } = req.body;
+
+    const updates = {};
+    let notifyStudents = false;
+
+    if (sectionIdentifier && sectionIdentifier !== section.sectionIdentifier) {
+      updates.sectionIdentifier = sectionIdentifier;
+    }
+
+    if (program && program !== section.program) {
+      updates.program = program;
+      notifyStudents = true;
+    }
+
+    if (yearLevel && yearLevel !== section.yearLevel) {
+      updates.yearLevel = yearLevel;
+      notifyStudents = true;
+    }
+
+    if (term) updates.term = term;
+    if (academicYear) updates.academicYear = academicYear;
+    if (status) updates.status = status;
+
+    // Validation for duplicates if name/program/year changed
+    if (updates.sectionIdentifier || updates.program || updates.yearLevel || updates.academicYear) {
+      const checkName = updates.sectionIdentifier || section.sectionIdentifier;
+      const checkProg = updates.program || section.program;
+      const checkYear = updates.yearLevel || section.yearLevel;
+      const checkAY = updates.academicYear || section.academicYear;
+
+      const existing = await Section.findOne({
+        _id: { $ne: id },
+        sectionIdentifier: checkName,
+        program: checkProg,
+        yearLevel: checkYear,
+        academicYear: checkAY
+      });
+
+      if (existing) {
+        return res.status(409).json({ message: "A section with this name already exists for the target program and year level." });
+      }
+    }
+
+    Object.assign(section, updates);
+    await section.save();
+
+    if (notifyStudents && section.enrolledStudentIds && section.enrolledStudentIds.length > 0) {
+      // Logic for system notifications to students (US-003)
+      // Assuming a Notification model exists or we log it
+      const Notification = mongoose.models.Notification;
+      if (Notification) {
+        const studentIds = section.enrolledStudentIds;
+        await Notification.create(studentIds.map(sid => ({
+          userId: sid, // Assuming student _id is their userId or linked
+          title: "Section Update",
+          message: `Your section ${section.sectionIdentifier} has been updated to ${section.program} Year ${section.yearLevel}.`,
+          type: "Info",
+          status: "Unread"
+        })));
+      }
+    }
+
+    await logActivity(req, {
+      action: "Updated section details",
+      module: "Scheduling",
+      target: section.sectionIdentifier,
+      status: "Completed",
+      metadata: updates
+    });
+
+    return res.status(200).json(section.toJSON());
+  } catch (err) {
     return next(err);
   }
 }
@@ -1413,6 +1511,7 @@ async function upsertSectionAttendance(req, res, next) {
 module.exports = {
   listSections,
   createSection,
+  updateSection,
   updateSectionResources,
   getSectionById,
   getScheduleMatrix,
