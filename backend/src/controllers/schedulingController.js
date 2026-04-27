@@ -1225,85 +1225,89 @@ async function getSectionRoster(req, res, next) {
 }
 
 async function patchSectionRoster(req, res, next) {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: "Invalid section id." });
     }
     const Section = await resolveSectionModel();
-    if (!Section)
-      return res
-        .status(503)
-        .json({ message: "Scheduling module is not available." });
+    const section = await Section.findById(id).session(session);
+    if (!section) return res.status(404).json({ message: "Section not found." });
 
-    const section = await Section.findById(id);
-    if (!section)
-      return res.status(404).json({ message: "Section not found." });
     if (section.status === "Archived") {
-      return res
-        .status(400)
-        .json({ message: "Cannot modify roster for an archived section." });
+      return res.status(400).json({ message: "Cannot modify roster for an archived section." });
     }
 
-    const gate = await assertStaffCanManageSectionRoster(req, section);
-    if (!gate.ok)
-      return res.status(gate.status).json({ message: gate.message });
-
-    const add = req.body?.add;
-    const remove = req.body?.remove;
+    const { add, remove, removalReason } = req.body;
     if (!Array.isArray(add) && !Array.isArray(remove)) {
-      return res
-        .status(400)
-        .json({
-          message: "Provide add and/or remove as arrays of student ids.",
-        });
+      return res.status(400).json({ message: "Provide add and/or remove as arrays of student ids." });
     }
 
-    const addIds = await resolveStudentObjectIdsFromBody(
-      Array.isArray(add) ? add : [],
-    );
-    const removeIds = await resolveStudentObjectIdsFromBody(
-      Array.isArray(remove) ? remove : [],
-    );
+    const addIds = await resolveStudentObjectIdsFromBody(Array.isArray(add) ? add : []);
+    const removeIds = await resolveStudentObjectIdsFromBody(Array.isArray(remove) ? remove : []);
 
-    const set = new Set(
-      (section.enrolledStudentIds || []).map((x) => x.toString()),
-    );
-    for (const r of removeIds) set.delete(r.toString());
-    for (const a of addIds) set.add(a.toString());
+    // Capacity Check for Additions
+    const currentIds = new Set((section.enrolledStudentIds || []).map(x => x.toString()));
+    const newAddIds = addIds.filter(aid => !currentIds.has(aid.toString()));
+    
+    if (currentIds.size - removeIds.length + newAddIds.length > 55) {
+      await session.abortTransaction();
+      return res.status(400).json({ message: "Enrollment failed: Section capacity (55) would be exceeded." });
+    }
 
-    section.enrolledStudentIds = [...set].map(
-      (s) => new mongoose.Types.ObjectId(s),
-    );
+    // Process Removals
+    for (const rid of removeIds) {
+      if (currentIds.has(rid.toString())) {
+        currentIds.delete(rid.toString());
+        await Student.findByIdAndUpdate(rid, 
+          { sectionId: null, section: "" }, 
+          { session, runValidators: true }
+        );
+        
+        await logActivity(req, {
+          action: "Removed student from section",
+          module: "Scheduling",
+          target: section.sectionIdentifier,
+          status: "Completed",
+          metadata: { studentId: rid, reason: removalReason || "Not specified" }
+        });
+      }
+    }
+
+    // Process Additions
+    for (const aid of newAddIds) {
+      // 1. Check if student was in another section and remove them from there
+      const student = await Student.findById(aid).session(session);
+      if (student && student.sectionId && student.sectionId.toString() !== id) {
+        const prevSection = await Section.findById(student.sectionId).session(session);
+        if (prevSection) {
+          prevSection.enrolledStudentIds = prevSection.enrolledStudentIds.filter(
+            sid => sid.toString() !== aid.toString()
+          );
+          prevSection.currentEnrollmentCount = prevSection.enrolledStudentIds.length;
+          await prevSection.save({ session });
+        }
+      }
+
+      currentIds.add(aid.toString());
+      await Student.findByIdAndUpdate(aid, 
+        { sectionId: id, section: section.sectionIdentifier }, 
+        { session, runValidators: true }
+      );
+    }
+
+    section.enrolledStudentIds = Array.from(currentIds).map(s => new mongoose.Types.ObjectId(s));
     section.currentEnrollmentCount = section.enrolledStudentIds.length;
+    await section.save({ session });
 
-    // Using top-level Student
-    await Promise.all(
-      addIds.map((studentId) =>
-        Student.findByIdAndUpdate(
-          studentId,
-          { sectionId: section._id, section: section.sectionIdentifier },
-          { new: true, runValidators: true },
-        ),
-      ),
-    );
-
-    await Promise.all(
-      removeIds.map((studentId) =>
-        Student.findOneAndUpdate(
-          { _id: studentId, sectionId: section._id },
-          { sectionId: null, section: "" },
-          { new: true, runValidators: true },
-        ),
-      ),
-    );
-
-    await section.save();
+    await session.commitTransaction();
 
     const populated = await Section.findById(id)
       .populate("curriculumId", "courseCode courseTitle")
       .lean();
-    // Using top-level Student
+    
     const ids2 = populated.enrolledStudentIds || [];
     const docs = await Student.find({ _id: { $in: ids2 } }).lean();
     const byId = new Map(docs.map((d) => [d._id.toString(), d]));
@@ -1314,17 +1318,12 @@ async function patchSectionRoster(req, res, next) {
       module: "Scheduling",
       target: populated?.sectionIdentifier || section.sectionIdentifier,
       status: "Completed",
-      metadata: { enrolledCount: ordered.length },
+      metadata: { enrolledCount: ordered.length, added: newAddIds.length, removed: removeIds.length }
     });
 
     return res.status(200).json({
       section: {
-        sectionId: populated._id.toString(),
-        sectionIdentifier: populated.sectionIdentifier,
-        term: populated.term,
-        academicYear: populated.academicYear,
-        courseCode: populated.curriculumId?.courseCode,
-        courseTitle: populated.curriculumId?.courseTitle,
+        ...populated,
         enrolledCount: ordered.length,
       },
       students: ordered.map((st) => ({
@@ -1339,7 +1338,78 @@ async function patchSectionRoster(req, res, next) {
       })),
     });
   } catch (err) {
+    await session.abortTransaction();
     return next(err);
+  } finally {
+    session.endSession();
+  }
+}
+
+async function transferStudent(req, res, next) {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const { studentId, targetSectionId } = req.body;
+    if (!mongoose.Types.ObjectId.isValid(studentId) || !mongoose.Types.ObjectId.isValid(targetSectionId)) {
+      return res.status(400).json({ message: "Invalid studentId or targetSectionId." });
+    }
+
+    const Section = await resolveSectionModel();
+    const targetSection = await Section.findById(targetSectionId).session(session);
+    if (!targetSection) return res.status(404).json({ message: "Target section not found." });
+
+    if (targetSection.currentEnrollmentCount >= 55) {
+      await session.abortTransaction();
+      return res.status(400).json({ message: "Transfer failed: Target section is full." });
+    }
+
+    const student = await Student.findById(studentId).session(session);
+    if (!student) return res.status(404).json({ message: "Student not found." });
+
+    const prevSectionId = student.sectionId;
+    if (prevSectionId && prevSectionId.toString() === targetSectionId) {
+      await session.abortTransaction();
+      return res.status(400).json({ message: "Student is already in the target section." });
+    }
+
+    // 1. Remove from previous section
+    if (prevSectionId) {
+      const prevSection = await Section.findById(prevSectionId).session(session);
+      if (prevSection) {
+        prevSection.enrolledStudentIds = prevSection.enrolledStudentIds.filter(
+          id => id.toString() !== studentId
+        );
+        prevSection.currentEnrollmentCount = prevSection.enrolledStudentIds.length;
+        await prevSection.save({ session });
+      }
+    }
+
+    // 2. Add to target section
+    targetSection.enrolledStudentIds.push(new mongoose.Types.ObjectId(studentId));
+    targetSection.currentEnrollmentCount = targetSection.enrolledStudentIds.length;
+    await targetSection.save({ session });
+
+    // 3. Update student
+    student.sectionId = targetSectionId;
+    student.section = targetSection.sectionIdentifier;
+    await student.save({ session });
+
+    await session.commitTransaction();
+
+    await logActivity(req, {
+      action: "Transferred student between sections",
+      module: "Scheduling",
+      target: student.id,
+      status: "Completed",
+      metadata: { from: prevSectionId, to: targetSectionId }
+    });
+
+    return res.status(200).json({ message: "Student transferred successfully.", student });
+  } catch (err) {
+    await session.abortTransaction();
+    return next(err);
+  } finally {
+    session.endSession();
   }
 }
 
@@ -1520,6 +1590,7 @@ module.exports = {
   getMySchedule,
   getSectionRoster,
   patchSectionRoster,
+  transferStudent,
   getSectionAttendance,
   upsertSectionAttendance,
   listTimeBlocks,
