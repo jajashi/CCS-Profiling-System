@@ -40,7 +40,8 @@ function CreateSectionModal({ onClose, onCreated, curricula }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.sectionIdentifier) return toast.error("Section name is required.");
+    if (!form.sectionIdentifier)
+      return toast.error("Section name is required.");
 
     setSubmitting(true);
     try {
@@ -109,7 +110,9 @@ function CreateSectionModal({ onClose, onCreated, curricula }) {
               <select
                 className="form-select"
                 value={form.yearLevel}
-                onChange={(e) => setForm({ ...form, yearLevel: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, yearLevel: e.target.value })
+                }
                 required>
                 <option value="1st Year">1st Year</option>
                 <option value="2nd Year">2nd Year</option>
@@ -119,12 +122,7 @@ function CreateSectionModal({ onClose, onCreated, curricula }) {
             </div>
             <div className="form-field">
               <label className="form-label">Capacity (Hard Limit)</label>
-              <input
-                className="form-input"
-                value="55"
-                disabled
-                readOnly
-              />
+              <input className="form-input" value="55" disabled readOnly />
             </div>
           </div>
 
@@ -163,11 +161,12 @@ function CreateSectionModal({ onClose, onCreated, curricula }) {
                 setForm({ ...form, curriculumId: e.target.value })
               }>
               <option value="">None / To be assigned...</option>
-              {curricula.map((c) => (
-                <option key={c._id} value={c._id}>
-                  {c.courseCode} - {c.courseTitle}
-                </option>
-              ))}
+              {curricula &&
+                curricula.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.courseCode} - {c.courseTitle}
+                  </option>
+                ))}
             </select>
           </div>
 
@@ -191,7 +190,7 @@ function CreateSectionModal({ onClose, onCreated, curricula }) {
   );
 }
 
-function EditSectionModal({ section, onClose, onUpdated, curricula }) {
+function EditSectionModal({ section, onClose, onUpdated }) {
   const [form, setForm] = useState({
     sectionIdentifier: section.sectionIdentifier || "",
     program: section.program || "IT",
@@ -282,7 +281,9 @@ function EditSectionModal({ section, onClose, onUpdated, curricula }) {
               <select
                 className="form-select"
                 value={form.yearLevel}
-                onChange={(e) => setForm({ ...form, yearLevel: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, yearLevel: e.target.value })
+                }
                 required>
                 <option value="1st Year">1st Year</option>
                 <option value="2nd Year">2nd Year</option>
@@ -364,11 +365,11 @@ function MassEnrollModal({ section, onClose, onUpdated }) {
         if (res.ok) {
           // Filter out students already in this section
           const filtered = (data.students || []).filter(
-            (s) => s.sectionId !== section._id
+            (s) => s.sectionId !== section._id,
           );
           setAvailableStudents(filtered);
         }
-      } catch (err) {
+      } catch {
         toast.error("Failed to load students.");
       } finally {
         setLoading(false);
@@ -388,21 +389,27 @@ function MassEnrollModal({ section, onClose, onUpdated }) {
 
   const handleEnroll = async () => {
     if (selectedIds.size === 0) return;
-    
+
     const newTotal = section.currentEnrollmentCount + selectedIds.size;
     if (newTotal > 55) {
-      return toast.error("Cannot enroll: Capacity limit (55) would be exceeded.");
+      return toast.error(
+        "Cannot enroll: Capacity limit (55) would be exceeded.",
+      );
     }
 
     setSubmitting(true);
     try {
-      const res = await apiFetch(`/api/scheduling/sections/${section._id}/roster`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ add: Array.from(selectedIds) }),
-      });
+      const res = await apiFetch(
+        `/api/scheduling/sections/${section._id}/roster`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ add: Array.from(selectedIds) }),
+        },
+      );
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to enroll students.");
+      if (!res.ok)
+        throw new Error(data.message || "Failed to enroll students.");
 
       toast.success(`${selectedIds.size} students enrolled successfully.`);
       onUpdated(data.section);
@@ -419,33 +426,56 @@ function MassEnrollModal({ section, onClose, onUpdated }) {
 
   return (
     <div className="spec-modal-backdrop" onClick={onClose}>
-      <div className="spec-modal spec-modal--wide" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="spec-modal spec-modal--wide"
+        onClick={(e) => e.stopPropagation()}>
         <div className="spec-modal-header">
           <div>
-            <h2 className="spec-modal-title">Mass Enrollment: {section.sectionIdentifier}</h2>
-            <p className="spec-modal-sub">Select multiple students to add to this cohort.</p>
+            <h2 className="spec-modal-title">
+              Mass Enrollment: {section.sectionIdentifier}
+            </h2>
+            <p className="spec-modal-sub">
+              Select multiple students to add to this cohort.
+            </p>
           </div>
-          <button onClick={onClose} className="spec-modal-close"><FiX /></button>
+          <button onClick={onClose} className="spec-modal-close">
+            <FiX />
+          </button>
         </div>
         <div className="spec-modal-body">
           <div className="capacity-warning">
-            <FiInfo /> Currently <strong>{currentCapacity}/55</strong> enrolled. 
-            {remaining <= 5 && <span style={{ color: "#ef4444", fontWeight: 700, marginLeft: "0.5rem" }}>Warning: Approaching capacity!</span>}
+            <FiInfo /> Currently <strong>{currentCapacity}/55</strong> enrolled.
+            {remaining <= 5 && (
+              <span
+                style={{
+                  color: "#ef4444",
+                  fontWeight: 700,
+                  marginLeft: "0.5rem",
+                }}>
+                Warning: Approaching capacity!
+              </span>
+            )}
           </div>
 
           <div className="section-filters-row enrollment-search-box">
-            <input 
-              className="form-input" 
-              placeholder="Search by name or ID..." 
+            <input
+              className="form-input"
+              placeholder="Search by name or ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <select className="form-select" value={programFilter} onChange={(e) => setProgramFilter(e.target.value)}>
+            <select
+              className="form-select"
+              value={programFilter}
+              onChange={(e) => setProgramFilter(e.target.value)}>
               <option value="All">All Programs</option>
               <option value="IT">BSIT</option>
               <option value="CS">BSCS</option>
             </select>
-            <select className="form-select" value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
+            <select
+              className="form-select"
+              value={yearFilter}
+              onChange={(e) => setYearFilter(e.target.value)}>
               <option value="All">All Years</option>
               <option value="1st Year">1st Year</option>
               <option value="2nd Year">2nd Year</option>
@@ -454,22 +484,37 @@ function MassEnrollModal({ section, onClose, onUpdated }) {
             </select>
           </div>
 
-          {loading ? <div className="spec-loading">Searching students...</div> : (
+          {loading ? (
+            <div className="spec-loading">Searching students...</div>
+          ) : (
             <div className="student-selection-list">
-              {availableStudents.length === 0 ? <p style={{ padding: "1rem", textAlign: "center" }}>No available students found.</p> : 
-                availableStudents.map(s => (
-                <div 
-                  key={s._id} 
-                  className={`student-select-item ${selectedIds.has(s._id) ? "selected" : ""}`}
-                  onClick={() => toggleSelect(s._id)}
-                >
-                  <input type="checkbox" checked={selectedIds.has(s._id)} readOnly />
-                  <div className="student-info-brief">
-                    <span className="student-name-id">{s.lastName}, {s.firstName} ({s.id})</span>
-                    <span className="student-prog-year">{s.program} - {s.yearLevel} {s.section ? `[Currently in ${s.section}]` : ""}</span>
+              {availableStudents.length === 0 ? (
+                <p style={{ padding: "1rem", textAlign: "center" }}>
+                  No available students found.
+                </p>
+              ) : (
+                availableStudents.map((s) => (
+                  <div
+                    key={s._id}
+                    className={`student-select-item ${selectedIds.has(s._id) ? "selected" : ""}`}
+                    onClick={() => toggleSelect(s._id)}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(s._id)}
+                      readOnly
+                    />
+                    <div className="student-info-brief">
+                      <span className="student-name-id">
+                        {s.lastName}, {s.firstName} ({s.id})
+                      </span>
+                      <span className="student-prog-year">
+                        {s.program} - {s.yearLevel}{" "}
+                        {s.section ? `[Currently in ${s.section}]` : ""}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           )}
         </div>
@@ -477,13 +522,20 @@ function MassEnrollModal({ section, onClose, onUpdated }) {
           <span style={{ flex: 1, fontSize: "0.875rem", color: "#64748b" }}>
             {selectedIds.size} students selected
           </span>
-          <button className="spec-btn-secondary" onClick={onClose}>Cancel</button>
-          <button 
-            className="spec-btn-primary" 
-            onClick={handleEnroll} 
-            disabled={submitting || selectedIds.size === 0 || (currentCapacity + selectedIds.size > 55)}
-          >
-            {submitting ? "Enrolling..." : `Enroll ${selectedIds.size} Students`}
+          <button className="spec-btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            className="spec-btn-primary"
+            onClick={handleEnroll}
+            disabled={
+              submitting ||
+              selectedIds.size === 0 ||
+              currentCapacity + selectedIds.size > 55
+            }>
+            {submitting
+              ? "Enrolling..."
+              : `Enroll ${selectedIds.size} Students`}
           </button>
         </div>
       </div>
@@ -504,9 +556,9 @@ function TransferStudentModal({ student, fromSection, onClose, onUpdated }) {
         const data = await res.json();
         if (res.ok) {
           // Filter out current section and full sections
-          setSections(data.filter(s => s._id !== fromSection._id));
+          setSections(data.filter((s) => s._id !== fromSection._id));
         }
-      } catch (err) {
+      } catch {
         toast.error("Failed to load available sections.");
       } finally {
         setLoading(false);
@@ -522,7 +574,10 @@ function TransferStudentModal({ student, fromSection, onClose, onUpdated }) {
       const res = await apiFetch("/api/scheduling/sections/transfer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studentId: student._id, targetSectionId: targetId }),
+        body: JSON.stringify({
+          studentId: student._id,
+          targetSectionId: targetId,
+        }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -544,37 +599,49 @@ function TransferStudentModal({ student, fromSection, onClose, onUpdated }) {
         <div className="spec-modal-header">
           <div>
             <h2 className="spec-modal-title">Transfer Student</h2>
-            <p className="spec-modal-sub">Move {student.firstName} {student.lastName} to another section.</p>
+            <p className="spec-modal-sub">
+              Move {student.firstName} {student.lastName} to another section.
+            </p>
           </div>
-          <button onClick={onClose} className="spec-modal-close"><FiX /></button>
+          <button onClick={onClose} className="spec-modal-close">
+            <FiX />
+          </button>
         </div>
         <div className="spec-modal-body">
           <p style={{ fontSize: "0.875rem", marginBottom: "1rem" }}>
             Current Section: <strong>{fromSection.sectionIdentifier}</strong>
           </p>
           <label className="form-label">Select Target Section</label>
-          {loading ? <div className="spec-loading">Loading sections...</div> : (
+          {loading ? (
+            <div className="spec-loading">Loading sections...</div>
+          ) : (
             <div className="transfer-target-list">
-              {sections.map(s => (
-                <div 
-                  key={s._id} 
+              {sections.map((s) => (
+                <div
+                  key={s._id}
                   className={`target-section-card ${targetId === s._id ? "selected" : ""} ${s.currentEnrollmentCount >= 55 ? "disabled" : ""}`}
-                  onClick={() => s.currentEnrollmentCount < 55 && setTargetId(s._id)}
-                >
-                  <span className="target-section-info">{s.sectionIdentifier}</span>
-                  <span className="target-section-cap">Capacity: {s.currentEnrollmentCount}/55</span>
+                  onClick={() =>
+                    s.currentEnrollmentCount < 55 && setTargetId(s._id)
+                  }>
+                  <span className="target-section-info">
+                    {s.sectionIdentifier}
+                  </span>
+                  <span className="target-section-cap">
+                    Capacity: {s.currentEnrollmentCount}/55
+                  </span>
                 </div>
               ))}
             </div>
           )}
         </div>
         <div className="spec-modal-footer">
-          <button className="spec-btn-secondary" onClick={onClose}>Cancel</button>
-          <button 
-            className="spec-btn-primary" 
-            onClick={handleTransfer} 
-            disabled={submitting || !targetId}
-          >
+          <button className="spec-btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            className="spec-btn-primary"
+            onClick={handleTransfer}
+            disabled={submitting || !targetId}>
             {submitting ? "Transferring..." : "Complete Transfer"}
           </button>
         </div>
@@ -595,9 +662,12 @@ function ManageRosterModal({ section, onClose, onUpdated }) {
   const loadRoster = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await apiFetch(`/api/scheduling/sections/${encodeURIComponent(section._id)}/roster`);
+      const res = await apiFetch(
+        `/api/scheduling/sections/${encodeURIComponent(section._id)}/roster`,
+      );
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to load section roster.");
+      if (!res.ok)
+        throw new Error(data.message || "Failed to load section roster.");
       setStudents(Array.isArray(data.students) ? data.students : []);
     } catch (err) {
       console.error("[ManageRosterModal] loadRoster", err);
@@ -628,7 +698,11 @@ function ManageRosterModal({ section, onClose, onUpdated }) {
       return;
     }
 
-    if (!window.confirm(`Are you sure you want to remove ${selectedRemovals.size} student(s) from this section?`)) {
+    if (
+      !window.confirm(
+        `Are you sure you want to remove ${selectedRemovals.size} student(s) from this section?`,
+      )
+    ) {
       return;
     }
 
@@ -662,29 +736,38 @@ function ManageRosterModal({ section, onClose, onUpdated }) {
 
   return (
     <div className="spec-modal-backdrop" onClick={onClose}>
-      <div className="spec-modal spec-modal--wide" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="spec-modal spec-modal--wide"
+        onClick={(e) => e.stopPropagation()}>
         <div className="spec-modal-header">
           <div>
-            <h2 className="spec-modal-title">Manage Roster: {section.sectionIdentifier}</h2>
-            <p className="spec-modal-sub">Modify student enrollment for this cohort.</p>
+            <h2 className="spec-modal-title">
+              Manage Roster: {section.sectionIdentifier}
+            </h2>
+            <p className="spec-modal-sub">
+              Modify student enrollment for this cohort.
+            </p>
           </div>
-          <button onClick={onClose} className="spec-modal-close"><FiX /></button>
+          <button onClick={onClose} className="spec-modal-close">
+            <FiX />
+          </button>
         </div>
         <div className="spec-modal-body">
           {error && <div className="spec-alert spec-alert--error">{error}</div>}
-          
+
           <div className="roster-actions-top">
-            <button 
-              type="button" 
-              className="spec-btn-primary" 
-              onClick={() => setShowMassEnroll(true)}
-            >
+            <button
+              type="button"
+              className="spec-btn-primary"
+              onClick={() => setShowMassEnroll(true)}>
               <FiPlus /> Mass Enroll Students
             </button>
           </div>
 
           <div className="form-field">
-            <label className="form-label">Currently Enrolled (Capacity: {section.currentEnrollmentCount}/55)</label>
+            <label className="form-label">
+              Currently Enrolled (Capacity: {section.currentEnrollmentCount}/55)
+            </label>
             {loading ? (
               <div className="spec-loading">Loading roster...</div>
             ) : students.length === 0 ? (
@@ -712,15 +795,21 @@ function ManageRosterModal({ section, onClose, onUpdated }) {
                           />
                         </td>
                         <td>{student.id}</td>
-                        <td>{student.lastName}, {student.firstName}</td>
-                        <td>{student.program} - {student.yearLevel}</td>
                         <td>
-                          <button 
-                            type="button" 
-                            className="btn-assign" 
-                            style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
-                            onClick={() => setTransferStudent(student)}
-                          >
+                          {student.lastName}, {student.firstName}
+                        </td>
+                        <td>
+                          {student.program} - {student.yearLevel}
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="btn-assign"
+                            style={{
+                              padding: "0.25rem 0.5rem",
+                              fontSize: "0.75rem",
+                            }}
+                            onClick={() => setTransferStudent(student)}>
                             <FiArrowRight /> Transfer
                           </button>
                         </td>
@@ -733,10 +822,12 @@ function ManageRosterModal({ section, onClose, onUpdated }) {
           </div>
           {selectedRemovals.size > 0 && (
             <div className="form-field" style={{ marginTop: "1rem" }}>
-              <label className="form-label">Removal Reason (Required for removals)</label>
-              <input 
-                className="form-input" 
-                placeholder="e.g. Withdrawal, Section Adjustment..." 
+              <label className="form-label">
+                Removal Reason (Required for removals)
+              </label>
+              <input
+                className="form-input"
+                placeholder="e.g. Withdrawal, Section Adjustment..."
                 value={removalReason}
                 onChange={(e) => setRemovalReason(e.target.value)}
                 required
@@ -745,24 +836,30 @@ function ManageRosterModal({ section, onClose, onUpdated }) {
           )}
         </div>
         <div className="spec-modal-footer">
-          <button type="button" className="spec-btn-secondary" onClick={onClose}>Close</button>
+          <button
+            type="button"
+            className="spec-btn-secondary"
+            onClick={onClose}>
+            Close
+          </button>
           {selectedRemovals.size > 0 && (
-            <button 
-              type="button" 
-              className="spec-btn-danger" 
+            <button
+              type="button"
+              className="spec-btn-danger"
               onClick={handleSubmit}
-              disabled={submitting || !removalReason}
-            >
-              {submitting ? "Removing..." : `Remove ${selectedRemovals.size} Selected`}
+              disabled={submitting || !removalReason}>
+              {submitting
+                ? "Removing..."
+                : `Remove ${selectedRemovals.size} Selected`}
             </button>
           )}
         </div>
       </div>
 
       {showMassEnroll && (
-        <MassEnrollModal 
-          section={section} 
-          onClose={() => setShowMassEnroll(false)} 
+        <MassEnrollModal
+          section={section}
+          onClose={() => setShowMassEnroll(false)}
           onUpdated={(updatedSection) => {
             onUpdated(updatedSection);
             loadRoster();
@@ -771,10 +868,10 @@ function ManageRosterModal({ section, onClose, onUpdated }) {
       )}
 
       {transferStudent && (
-        <TransferStudentModal 
-          student={transferStudent} 
-          fromSection={section} 
-          onClose={() => setTransferStudent(null)} 
+        <TransferStudentModal
+          student={transferStudent}
+          fromSection={section}
+          onClose={() => setTransferStudent(null)}
           onUpdated={() => {
             onUpdated();
             loadRoster();
@@ -824,7 +921,7 @@ export default function SectionsPage() {
       setRooms(await roomRes.json());
       setFaculty(await facRes.json());
       setTimeBlocks(await tbRes.json());
-    } catch (err) {
+    } catch {
       toast.error("Failed to load scheduling data.");
     } finally {
       setLoading(false);
@@ -892,7 +989,15 @@ export default function SectionsPage() {
         matchesStatus
       );
     });
-  }, [sections, searchTerm, programFilter, yearLevelFilter, termFilter, yearFilter, statusFilter]);
+  }, [
+    sections,
+    searchTerm,
+    programFilter,
+    yearLevelFilter,
+    termFilter,
+    yearFilter,
+    statusFilter,
+  ]);
 
   const totalPages = Math.max(
     Math.ceil(filteredSections.length / PAGE_SIZE),
@@ -1090,26 +1195,34 @@ export default function SectionsPage() {
               <h3 className="section-course-title">
                 {section.program} - {section.yearLevel}
               </h3>
-              
+
               <div className="capacity-progress-container">
                 <div className="capacity-progress-bar-bg">
-                  <div 
+                  <div
                     className={`capacity-progress-bar-fill ${
-                      section.currentEnrollmentCount <= 45 ? "safe" : 
-                      section.currentEnrollmentCount < 55 ? "warning" : "danger"
+                      section.currentEnrollmentCount <= 45
+                        ? "safe"
+                        : section.currentEnrollmentCount < 55
+                          ? "warning"
+                          : "danger"
                     }`}
-                    style={{ width: `${Math.min((section.currentEnrollmentCount / 55) * 100, 100)}%` }}
+                    style={{
+                      width: `${Math.min((section.currentEnrollmentCount / 55) * 100, 100)}%`,
+                    }}
                   />
                 </div>
                 <div className="capacity-label">
                   <span>Capacity</span>
-                  <span><strong>{section.currentEnrollmentCount}</strong> / 55</span>
+                  <span>
+                    <strong>{section.currentEnrollmentCount}</strong> / 55
+                  </span>
                 </div>
               </div>
 
               <div className="section-meta-row" style={{ marginTop: "0.5rem" }}>
                 <div className="meta-item badge-subjects">
-                  <FiBook size={12} /> <strong>{(section.schedules || []).length}</strong> Subjects
+                  <FiBook size={12} />{" "}
+                  <strong>{(section.schedules || []).length}</strong> Subjects
                 </div>
               </div>
 
@@ -1158,6 +1271,37 @@ export default function SectionsPage() {
                 </ul>
               </div>
 
+              <div className="section-students-preview">
+                <h4>
+                  <FiUser size={14} /> Enrolled Students (
+                  {section.currentEnrollmentCount || 0})
+                </h4>
+                {section.enrolledStudentIds &&
+                section.enrolledStudentIds.length > 0 ? (
+                  <div className="student-list-mini">
+                    {section.enrolledStudentIds.slice(0, 6).map((student) => (
+                      <div key={student._id} className="student-chip">
+                        <span className="student-chip-name">
+                          {student.firstName} {student.lastName}
+                        </span>
+                        <span className="student-chip-id">({student.id})</span>
+                      </div>
+                    ))}
+                    {section.enrolledStudentIds.length > 6 && (
+                      <div className="student-chip">
+                        <span className="student-chip-name">
+                          +{section.enrolledStudentIds.length - 6} more
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="no-students-message">
+                    No students enrolled yet
+                  </div>
+                )}
+              </div>
+
               <div className="section-actions">
                 <button
                   className="btn-assign"
@@ -1167,19 +1311,19 @@ export default function SectionsPage() {
                 <button
                   className="btn-assign"
                   onClick={() => setAssignTarget(section)}>
-                  <FiClock /> Manage Schedule
+                  <FiClock /> Schedule
                 </button>
                 <button
                   className="btn-assign btn-roster-action"
                   onClick={() => setRosterTarget(section)}>
-                  <FiUser /> Manage Roster
+                  <FiUser /> Roster
                 </button>
                 {isAdmin &&
                   (section.syllabusId ? (
                     <Link
                       to={`/dashboard/instruction/syllabi/${section.syllabusId}`}
                       className="btn-assign btn-syllabus-action">
-                      <FiBook /> View Syllabus
+                      <FiBook /> Syllabus
                     </Link>
                   ) : (
                     <button
@@ -1263,7 +1407,7 @@ export default function SectionsPage() {
           onClose={() => setEditTarget(null)}
           onUpdated={(updated) => {
             setSections(
-              sections.map((s) => (s._id === updated._id ? updated : s))
+              sections.map((s) => (s._id === updated._id ? updated : s)),
             );
             setEditTarget(null);
           }}
