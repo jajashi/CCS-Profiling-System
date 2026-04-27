@@ -7,6 +7,7 @@ const {
   getSectionById,
   getScheduleMatrix,
   getRoomUtilization,
+  getSchedulingAnalytics,
   getMyClasses,
   getMySchedule,
   getStudentSchedule,
@@ -41,6 +42,7 @@ router.put('/sections/:id/attendance', authenticate, requireRoles('admin', 'facu
 router.patch('/sections/:id/resources', authenticate, requireRoles('admin', 'faculty'), updateSectionResources);
 
 router.get('/matrix', authenticate, requireRoles('admin', 'faculty'), getScheduleMatrix);
+router.get('/analytics', authenticate, requireRoles('admin'), getSchedulingAnalytics);
 router.get('/room-utilization', authenticate, requireRoles('admin', 'faculty'), getRoomUtilization);
 router.get('/my-classes', authenticate, requireRoles('faculty'), getMyClasses);
 router.get('/my-schedule', authenticate, requireRoles('admin', 'faculty'), getMySchedule);

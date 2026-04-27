@@ -1794,6 +1794,62 @@ async function getStudentSchedule(req, res, next) {
   }
 }
 
+async function getSchedulingAnalytics(req, res, next) {
+  try {
+    const Section = await resolveSectionModel();
+    if (!Section) {
+      return res.status(503).json({ message: "Scheduling module is not available." });
+    }
+
+    const sections = await Section.find({ status: { $ne: "Archived" } }).lean();
+
+    const stats = {
+      totalSections: sections.length,
+      nearingCapacity: sections.filter(s => s.currentEnrollmentCount >= 50).length,
+      emptySections: sections.filter(s => s.currentEnrollmentCount === 0).length,
+      totalStudents: sections.reduce((acc, s) => acc + (s.currentEnrollmentCount || 0), 0),
+      avgUtilization: 0,
+      programDistribution: {},
+      facultyCoverage: { assigned: 0, missing: 0 },
+      yearLevelDistribution: {}
+    };
+
+    if (stats.totalSections > 0) {
+      stats.avgUtilization = (stats.totalStudents / (stats.totalSections * 55)) * 100;
+    }
+
+    sections.forEach(s => {
+      // Program dist
+      stats.programDistribution[s.program] = (stats.programDistribution[s.program] || 0) + 1;
+      
+      // Year level dist
+      stats.yearLevelDistribution[s.yearLevel] = (stats.yearLevelDistribution[s.yearLevel] || 0) + 1;
+
+      // Faculty coverage
+      if (s.schedules && s.schedules.length > 0) {
+        s.schedules.forEach(sched => {
+          if (sched.facultyId) stats.facultyCoverage.assigned++;
+          else stats.facultyCoverage.missing++;
+        });
+      }
+    });
+
+    // identified sections
+    const alerts = {
+      nearingCapacity: sections
+        .filter(s => s.currentEnrollmentCount >= 50)
+        .map(s => ({ id: s._id, identifier: s.sectionIdentifier, count: s.currentEnrollmentCount })),
+      empty: sections
+        .filter(s => s.currentEnrollmentCount === 0)
+        .map(s => ({ id: s._id, identifier: s.sectionIdentifier }))
+    };
+
+    return res.status(200).json({ stats, alerts });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   listSections,
   createSection,
@@ -1802,6 +1858,7 @@ module.exports = {
   getSectionById,
   getScheduleMatrix,
   getRoomUtilization,
+  getSchedulingAnalytics,
   getMyClasses,
   getMySchedule,
   getStudentSchedule,

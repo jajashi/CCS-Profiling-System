@@ -17,6 +17,7 @@ import TimeBlocksPage from './features/scheduling/routes/TimeBlocksPage';
 import RoomsPage from './features/scheduling/routes/RoomsPage';
 import SectionsPage from './features/scheduling/routes/SectionsPage';
 import MySchedulePage from './features/scheduling/routes/MySchedulePage';
+import SchedulingAnalyticsPage from './features/scheduling/routes/SchedulingAnalyticsPage';
 import SchedulingDashboard from './features/scheduling/routes/SchedulingDashboard';
 import EventCreationPage from './features/events/routes/EventCreationPage';
 import EventListPage from './features/events/routes/EventListPage';
@@ -344,6 +345,7 @@ function App() {
           <Route path="rooms" element={<RoomsPage />} />
           <Route path="sections" element={<SectionsPage />} />
           <Route path="my-schedule" element={<MySchedulePage />} />
+          <Route path="analytics" element={<AdminRoute><SchedulingAnalyticsPage /></AdminRoute>} />
           <Route path="overview" element={<AdminRoute><SchedulingDashboard /></AdminRoute>} />
         </Route>
         <Route path="events" element={<ProtectedRoute><EventListPage /></ProtectedRoute>} />
