@@ -2,6 +2,7 @@ const express = require('express');
 const {
   listSections,
   createSection,
+  updateSection,
   updateSectionResources,
   getSectionById,
   getScheduleMatrix,
@@ -10,6 +11,9 @@ const {
   getMySchedule,
   getSectionRoster,
   patchSectionRoster,
+  transferStudent,
+  batchLevelUp,
+  graduateSections,
   getSectionAttendance,
   upsertSectionAttendance,
   listTimeBlocks,
@@ -28,6 +32,8 @@ router.post('/sections', authenticate, requireRoles('admin'), createSection);
 router.put('/sections/:id', authenticate, requireRoles('admin'), updateSection);
 router.get('/sections/:id/roster', authenticate, requireRoles('admin', 'faculty'), getSectionRoster);
 router.patch('/sections/:id/roster', authenticate, requireRoles('admin', 'faculty'), patchSectionRoster);
+router.post('/sections/batch-levelup', authenticate, requireRoles('admin'), batchLevelUp);
+router.post('/sections/batch-graduate', authenticate, requireRoles('admin'), graduateSections);
 router.post('/sections/transfer', authenticate, requireRoles('admin'), transferStudent);
 router.get('/sections/:id/attendance', authenticate, requireRoles('admin', 'faculty'), getSectionAttendance);
 router.put('/sections/:id/attendance', authenticate, requireRoles('admin', 'faculty'), upsertSectionAttendance);

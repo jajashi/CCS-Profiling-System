@@ -1606,6 +1606,145 @@ async function upsertSectionAttendance(req, res, next) {
   }
 }
 
+async function batchLevelUp(req, res, next) {
+  try {
+    const { sectionIds, nextAcademicYear } = req.body;
+    if (!Array.isArray(sectionIds) || sectionIds.length === 0) {
+      return res.status(400).json({ message: "sectionIds array is required." });
+    }
+    if (!nextAcademicYear) {
+      return res.status(400).json({ message: "nextAcademicYear is required." });
+    }
+
+    const Section = await resolveSectionModel();
+    const Student = require("../models/Student");
+
+    const yearLevels = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
+    const results = { success: [], failure: [] };
+
+    for (const id of sectionIds) {
+      try {
+        const section = await Section.findById(id);
+        if (!section) {
+          results.failure.push({ id, reason: "Not found" });
+          continue;
+        }
+
+        const currentIndex = yearLevels.indexOf(section.yearLevel);
+        if (currentIndex === -1) {
+          results.failure.push({ 
+            id, 
+            identifier: section.sectionIdentifier, 
+            reason: "Unknown current year level" 
+          });
+          continue;
+        }
+        
+        if (currentIndex === yearLevels.length - 1) {
+          results.failure.push({ 
+            id, 
+            identifier: section.sectionIdentifier, 
+            reason: "Cannot level up final year section (use Graduation instead)" 
+          });
+          continue;
+        }
+
+        const nextYearLevel = yearLevels[currentIndex + 1];
+        
+        // Update section name: e.g. BSIT-1A -> BSIT-2A
+        let nextIdentifier = section.sectionIdentifier;
+        const yearDigitMatch = section.sectionIdentifier.match(/-(\d)/);
+        if (yearDigitMatch) {
+          const currentDigit = parseInt(yearDigitMatch[1]);
+          nextIdentifier = section.sectionIdentifier.replace(`-${currentDigit}`, `-${currentDigit + 1}`);
+        }
+
+        section.yearLevel = nextYearLevel;
+        section.sectionIdentifier = nextIdentifier;
+        section.academicYear = nextAcademicYear;
+        section.schedules = []; // US-010: Previous schedule assignments are cleared
+        section.term = "1st Term"; // Reset to 1st term of new year
+        
+        await section.save();
+
+        // Update student year levels
+        if (section.enrolledStudentIds && section.enrolledStudentIds.length > 0) {
+          await Student.updateMany(
+            { _id: { $in: section.enrolledStudentIds } },
+            { $set: { yearLevel: nextYearLevel } }
+          );
+        }
+
+        results.success.push({ id, identifier: section.sectionIdentifier, from: section.yearLevel, to: nextYearLevel });
+      } catch (err) {
+        results.failure.push({ id, reason: err.message });
+      }
+    }
+
+    await logActivity(req, {
+      action: "Batch Level-Up Sections",
+      module: "Scheduling",
+      target: `Bulk: ${sectionIds.length} sections`,
+      status: "Completed",
+      metadata: results,
+    });
+
+    return res.status(200).json(results);
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function graduateSections(req, res, next) {
+  try {
+    const { sectionIds } = req.body;
+    if (!Array.isArray(sectionIds) || sectionIds.length === 0) {
+      return res.status(400).json({ message: "sectionIds array is required." });
+    }
+
+    const Section = await resolveSectionModel();
+    const Student = require("../models/Student");
+    const results = { success: [], failure: [] };
+    const graduationDate = new Date().toISOString();
+
+    for (const id of sectionIds) {
+      try {
+        const section = await Section.findById(id);
+        if (!section) {
+          results.failure.push({ id, reason: "Not found" });
+          continue;
+        }
+
+        section.status = "Graduated";
+        await section.save();
+
+        if (section.enrolledStudentIds && section.enrolledStudentIds.length > 0) {
+          await Student.updateMany(
+            { _id: { $in: section.enrolledStudentIds } },
+            { $set: { status: "Graduated" } }
+          );
+        }
+
+        results.success.push({ id, identifier: section.sectionIdentifier });
+      } catch (err) {
+        results.failure.push({ id, reason: err.message });
+      }
+    }
+
+    await logActivity(req, {
+      action: "Batch Graduate Sections",
+      module: "Scheduling",
+      target: `Bulk: ${sectionIds.length} sections`,
+      status: "Completed",
+      metadata: { graduationDate, results },
+    });
+
+    return res.status(200).json(results);
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   listSections,
   createSection,

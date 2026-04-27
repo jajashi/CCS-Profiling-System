@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { FiCalendar, FiGrid, FiLayers, FiArrowRight } from 'react-icons/fi';
 import MasterScheduleMatrix from '../components/MasterScheduleMatrix';
 import AssignResourcesModal from '../components/AssignResourcesModal';
+import LevelUpWizardModal from '../components/LevelUpWizardModal';
 import { apiFetch } from '../../../lib/api';
+import { FiCalendar, FiGrid, FiLayers, FiArrowRight, FiActivity } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import './SchedulingDashboard.css';
 
@@ -19,12 +20,15 @@ export default function SchedulingDashboard() {
   const [curricula, setCurricula] = useState([]);
   const [timeBlocks, setTimeBlocks] = useState([]);
   const [loadingResources, setLoadingResources] = useState(false);
+  const [sections, setSections] = useState([]);
+  const [showWizard, setShowWizard] = useState(false);
 
   useEffect(() => {
     apiFetch('/api/scheduling/sections?status=All')
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
+          setSections(data);
           const terms = [...new Set(data.map(s => String(s.term || '').trim()).filter(Boolean))];
           const years = [...new Set(data.map(s => String(s.academicYear || '').trim()).filter(Boolean))];
           if (terms.length > 0) {
@@ -103,6 +107,9 @@ export default function SchedulingDashboard() {
           </select>
         </div>
         <div className="quick-actions">
+          <button className="quick-action-link" onClick={() => setShowWizard(true)}>
+            <FiActivity /> Lifecycle Wizard <FiArrowRight size={14} />
+          </button>
           <Link to="/dashboard/scheduling/sections" className="quick-action-link">
             <FiLayers /> Manage Sections <FiArrowRight size={14} />
           </Link>
@@ -138,6 +145,17 @@ export default function SchedulingDashboard() {
           faculty={faculty}
           curricula={curricula}
           timeBlocks={timeBlocks}
+        />
+      )}
+
+      {showWizard && (
+        <LevelUpWizardModal
+          sections={sections}
+          onClose={() => setShowWizard(false)}
+          onCompleted={() => {
+            // Trigger a data refresh
+            window.location.reload();
+          }}
         />
       )}
     </div>
