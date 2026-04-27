@@ -8,6 +8,9 @@ const {
   facultyTeachesSection: facultyTeachesSectionScoped,
   assertFacultySectionAccess,
 } = require("../services/facultyPermissionsService");
+const Student = require("../models/Student");
+const { Syllabus } = require("../models/Syllabus");
+const ClassAttendance = require("../models/ClassAttendance");
 
 const DAY_ENUM = TimeBlock.DAY_ENUM || [
   "Mon",
@@ -271,7 +274,7 @@ async function listSections(req, res, next) {
       .sort({ academicYear: -1, term: -1, updatedAt: -1 });
 
     // Link syllabi search
-    const { Syllabus } = require("../models/Syllabus");
+    // Using top-level Syllabus
     const sectionIds = sections.map((s) => s._id);
     const syllabi = await Syllabus.find({ sectionId: { $in: sectionIds } })
       .select("_id sectionId")
@@ -903,7 +906,8 @@ async function getMyClasses(req, res, next) {
         .json({ message: "Scheduling module is not available." });
     }
 
-    const { Syllabus: SyllabusModel } = require("../models/Syllabus");
+    // Using top-level Syllabus
+    const SyllabusModel = Syllabus;
 
     const baseQuery = {
       status: { $in: ["Open", "Waitlisted", "Closed"] },
@@ -988,16 +992,7 @@ async function getMySchedule(req, res, next) {
       .populate("curriculumId", "courseCode courseTitle")
       .populate("schedules.roomId", "name");
 
-    const SyllabusModel =
-      mongoose.models.Syllabus ||
-      (await (async () => {
-        try {
-          const m = require("../models/Syllabus");
-          return m.Syllabus || m;
-        } catch {
-          return null;
-        }
-      })());
+    const SyllabusModel = Syllabus;
 
     const myEvents = [];
     for (const sec of sections) {
@@ -1050,7 +1045,7 @@ async function assertStaffCanManageSectionRoster(req, sectionDoc) {
 }
 
 async function resolveStudentObjectIdsFromBody(ids) {
-  const Student = require("../models/Student");
+  // Using top-level Student
   const out = [];
   const seen = new Set();
   if (!Array.isArray(ids)) return out;
@@ -1098,7 +1093,7 @@ async function getSectionRoster(req, res, next) {
     if (!gate.ok)
       return res.status(gate.status).json({ message: gate.message });
 
-    const Student = require("../models/Student");
+    // Using top-level Student
     const ids = Array.isArray(section.enrolledStudentIds)
       ? section.enrolledStudentIds
       : [];
@@ -1184,7 +1179,7 @@ async function patchSectionRoster(req, res, next) {
     );
     section.currentEnrollmentCount = section.enrolledStudentIds.length;
 
-    const Student = require("../models/Student");
+    // Using top-level Student
     await Promise.all(
       addIds.map((studentId) =>
         Student.findByIdAndUpdate(
@@ -1210,7 +1205,7 @@ async function patchSectionRoster(req, res, next) {
     const populated = await Section.findById(id)
       .populate("curriculumId", "courseCode courseTitle")
       .lean();
-    const Student = require("../models/Student");
+    // Using top-level Student
     const ids2 = populated.enrolledStudentIds || [];
     const docs = await Student.find({ _id: { $in: ids2 } }).lean();
     const byId = new Map(docs.map((d) => [d._id.toString(), d]));
@@ -1276,7 +1271,7 @@ async function getSectionAttendance(req, res, next) {
     if (!gate.ok)
       return res.status(gate.status).json({ message: gate.message });
 
-    const ClassAttendance = require("../models/ClassAttendance");
+    // Using top-level ClassAttendance
     const row = await ClassAttendance.findOne({
       sectionId: section._id,
       sessionDate,
@@ -1371,7 +1366,7 @@ async function upsertSectionAttendance(req, res, next) {
       });
     }
 
-    const ClassAttendance = require("../models/ClassAttendance");
+    // Using top-level ClassAttendance
     const saved = await ClassAttendance.findOneAndUpdate(
       { sectionId: section._id, sessionDate },
       {
