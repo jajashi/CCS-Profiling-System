@@ -131,7 +131,6 @@ export default function AddStudentForm({
   const [showPreview, setShowPreview] = useState(false);
   const [avatarInputMode, setAvatarInputMode] = useState("url");
   const [sections, setSections] = useState([]);
-  const [sectionsLoading, setSectionsLoading] = useState(true);
 
   const controlClass = "add-student-control mt-1 block";
   const labelClass = "add-student-label";
@@ -170,7 +169,6 @@ export default function AddStudentForm({
     let cancelled = false;
     async function loadSections() {
       try {
-        setSectionsLoading(true);
         const res = await apiFetch("/api/scheduling/sections?status=All");
         if (!res.ok) {
           throw new Error("Failed to load available sections.");
@@ -183,10 +181,6 @@ export default function AddStudentForm({
         console.error("[AddStudentForm] loadSections", err);
         if (!cancelled) {
           setSections([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setSectionsLoading(false);
         }
       }
     }
@@ -225,7 +219,7 @@ export default function AddStudentForm({
       { key: "lastName", label: "Last Name", required: true },
       { key: "program", label: "Program", required: true },
       { key: "yearLevel", label: "Year Level", required: true },
-      { key: "section", label: "Section", required: true },
+      { key: "section", label: "Section", required: false }, // Made optional
       { key: "status", label: "Enrollment Status", required: true },
       { key: "email", label: "Email Address", required: true },
       { key: "contact", label: "Contact Number", required: true },
@@ -668,7 +662,8 @@ export default function AddStudentForm({
 
                     <div>
                       <label htmlFor="sectionId" className={labelClass}>
-                        Section <span className="text-red-600">*</span>
+                        Section{" "}
+                        <span className="text-gray-500">(optional)</span>
                       </label>
                       {sections.length > 0 ? (
                         <select
@@ -678,7 +673,9 @@ export default function AddStudentForm({
                           onChange={handleChange}
                           className={controlClass}
                           aria-invalid={Boolean(errors.section)}>
-                          <option value="">Select section</option>
+                          <option value="">
+                            No section assigned (can be added later)
+                          </option>
                           {availableSections.map((section) => (
                             <option key={section._id} value={section._id}>
                               {section.sectionIdentifier || section._id}
@@ -699,9 +696,7 @@ export default function AddStudentForm({
                           aria-invalid={Boolean(errors.section)}
                           disabled={!formData.program || !formData.yearLevel}>
                           <option value="">
-                            {!formData.program || !formData.yearLevel
-                              ? "Select program and year level first"
-                              : "Select section"}
+                            No section assigned (can be added later)
                           </option>
                           {availableSections.map((section) => (
                             <option

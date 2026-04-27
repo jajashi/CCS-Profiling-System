@@ -235,14 +235,13 @@ async function updateStudent(req, res, next) {
     const mongoId = req.params.id;
     const payload = req.body || {};
 
-    // Same required fields as create, so the form stays consistent.
+    // Same required fields as create, but section is now optional
     const requiredFields = [
       "id",
       "firstName",
       "lastName",
       "program",
       "yearLevel",
-      "section",
       "status",
       "email",
       "contact",
