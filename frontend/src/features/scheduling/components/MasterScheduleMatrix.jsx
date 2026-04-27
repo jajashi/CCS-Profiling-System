@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { FiEdit2 } from "react-icons/fi";
 import { apiFetch } from "../../../lib/api";
 import "./MasterScheduleMatrix.css";
 
@@ -32,7 +33,7 @@ const extractYearLevelFromSection = (sectionIdentifier) => {
   return "Unknown";
 };
 
-export default function MasterScheduleMatrix({ term, academicYear }) {
+export default function MasterScheduleMatrix({ term, academicYear, onEditSection }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState("DayTime"); // 'DayTime' | 'RoomTime' | 'FacultyTime'
@@ -278,6 +279,18 @@ export default function MasterScheduleMatrix({ term, academicYear }) {
                           style={getEventStyle(e)}>
                           <div className="event-title">
                             {e.sectionIdentifier}
+                            {onEditSection && (
+                              <button 
+                                className="matrix-edit-btn" 
+                                onClick={(ev) => {
+                                  ev.stopPropagation();
+                                  onEditSection(e.sectionId);
+                                }}
+                                title="Edit Section Schedule"
+                              >
+                                <FiEdit2 size={10} />
+                              </button>
+                            )}
                           </div>
                           <div className="event-time">
                             {formatTime12(e.startTime)} -{" "}

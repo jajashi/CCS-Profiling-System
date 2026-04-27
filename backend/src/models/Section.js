@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const scheduleSchema = new mongoose.Schema({
+  curriculumId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Curriculum',
+    required: true,
+  },
   roomId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Room',

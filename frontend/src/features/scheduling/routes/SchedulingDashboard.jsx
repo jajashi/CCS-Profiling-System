@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { FiCalendar, FiGrid, FiLayers, FiArrowRight } from 'react-icons/fi';
 import MasterScheduleMatrix from '../components/MasterScheduleMatrix';
+import AssignResourcesModal from '../components/AssignResourcesModal';
 import { apiFetch } from '../../../lib/api';
+import toast from 'react-hot-toast';
 import './SchedulingDashboard.css';
 
 export default function SchedulingDashboard() {
@@ -10,6 +12,13 @@ export default function SchedulingDashboard() {
   const [yearOptions, setYearOptions] = useState(['2024-2025', '2025-2026', '2026-2027']);
   const [term, setTerm] = useState('');
   const [academicYear, setAcademicYear] = useState('');
+  
+  const [editSection, setEditSection] = useState(null);
+  const [rooms, setRooms] = useState([]);
+  const [faculty, setFaculty] = useState([]);
+  const [curricula, setCurricula] = useState([]);
+  const [timeBlocks, setTimeBlocks] = useState([]);
+  const [loadingResources, setLoadingResources] = useState(false);
 
   useEffect(() => {
     apiFetch('/api/scheduling/sections?status=All')
@@ -36,6 +45,35 @@ export default function SchedulingDashboard() {
         setTerm('1st Term');
         setAcademicYear('2025-2026');
       });
+
+    // Pre-fetch resources for scheduling modal
+    setLoadingResources(true);
+    Promise.all([
+      apiFetch("/api/curricula?status=Active"),
+      apiFetch("/api/scheduling/rooms?status=Active"),
+      apiFetch("/api/faculty?status=Active"),
+      apiFetch("/api/scheduling/timeblocks"),
+    ]).then(async ([curRes, roomRes, facRes, tbRes]) => {
+      setCurricula(await curRes.json());
+      setRooms(await roomRes.json());
+      setFaculty(await facRes.json());
+      setTimeBlocks(await tbRes.json());
+    }).catch(err => {
+      console.error("Failed to load resources", err);
+    }).finally(() => {
+      setLoadingResources(false);
+    });
+  }, []);
+
+  const handleEditSection = useCallback(async (sectionId) => {
+    try {
+      const res = await apiFetch(`/api/scheduling/sections/${sectionId}`);
+      if (!res.ok) throw new Error("Failed to fetch section details.");
+      const data = await res.json();
+      setEditSection(data);
+    } catch (err) {
+      toast.error(err.message);
+    }
   }, []);
 
   return (
@@ -77,9 +115,31 @@ export default function SchedulingDashboard() {
       <div className="dashboard-section matrix-section">
         <h3>Master Schedule Matrix</h3>
         <div className="matrix-wrapper">
-          <MasterScheduleMatrix term={term} academicYear={academicYear} />
+          <MasterScheduleMatrix 
+            term={term} 
+            academicYear={academicYear} 
+            onEditSection={handleEditSection}
+          />
         </div>
       </div>
+
+      {editSection && (
+        <AssignResourcesModal
+          section={editSection}
+          onClose={() => setEditSection(null)}
+          onUpdated={() => {
+            setEditSection(null);
+            // Refresh matrix by triggering a state change if needed, 
+            // but MasterScheduleMatrix already reacts to term/academicYear.
+            // We might need a refresh key or just let the user toggle filters.
+            window.location.reload(); // Simple refresh for now to ensure matrix updates
+          }}
+          rooms={rooms}
+          faculty={faculty}
+          curricula={curricula}
+          timeBlocks={timeBlocks}
+        />
+      )}
     </div>
   );
 }

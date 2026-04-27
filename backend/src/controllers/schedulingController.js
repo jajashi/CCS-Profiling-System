@@ -707,11 +707,19 @@ async function updateSectionResources(req, res, next) {
     const section = await Section.findById(id);
     if (!section)
       return res.status(404).json({ message: "Section not found." });
+    
     if (section.status === "Archived") {
-      return res
-        .status(400)
-        .json({ message: "Archived sections cannot be modified." });
+      return res.status(400).json({ message: "Archived sections cannot be modified." });
     }
+
+    // US-008: Populate section before assigning faculty and rooms
+    if (section.currentEnrollmentCount === 0) {
+      return res.status(400).json({ 
+        message: "Please populate this section with students before assigning faculty and rooms." 
+      });
+    }
+
+    const oldFacultyIds = new Set(section.schedules.map(s => s.facultyId.toString()));
 
     // Validation & Conflict Check
     const activeSections = await Section.find({
@@ -800,11 +808,29 @@ async function updateSectionResources(req, res, next) {
     section.schedules = schedules;
     await section.save();
 
+    // US-008: Notify newly assigned faculty
+    const newFacultyIds = new Set(schedules.map(s => s.facultyId.toString()));
+    const addedFacultyIds = Array.from(newFacultyIds).filter(fid => !oldFacultyIds.has(fid));
+    
+    if (addedFacultyIds.length > 0) {
+      const Notification = mongoose.models.Notification;
+      if (Notification) {
+        await Notification.create(addedFacultyIds.map(fid => ({
+          userId: fid, // Assuming faculty _id is their userId
+          title: "New Class Assignment",
+          message: `You have been assigned to teach a new subject in section ${section.sectionIdentifier}.`,
+          type: "Assignment",
+          status: "Unread"
+        })));
+      }
+    }
+
     const populated = await Section.findById(id)
       .populate(
         "curriculumId",
         "courseCode courseTitle curriculumYear creditUnits courseLearningOutcomes status",
       )
+      .populate("schedules.curriculumId", "courseCode courseTitle")
       .populate("schedules.roomId", "name type maximumCapacity status")
       .populate(
         "schedules.facultyId",
@@ -846,9 +872,10 @@ async function getScheduleMatrix(req, res, next) {
     const sections = await Section.find({
       term,
       academicYear,
-      status: { $in: ["Open", "Waitlisted", "Closed"] },
+      status: { $in: ["Active", "Open", "Waitlisted", "Closed"] },
     })
       .populate("curriculumId", "courseCode courseTitle")
+      .populate("schedules.curriculumId", "courseCode courseTitle")
       .populate("schedules.roomId", "name maximumCapacity")
       .populate("schedules.facultyId", "firstName lastName employeeId");
 
@@ -858,12 +885,13 @@ async function getScheduleMatrix(req, res, next) {
         sec.schedules.forEach((sched) => {
           const room = sched.roomId;
           const faculty = sched.facultyId;
+          const course = sched.curriculumId || sec.curriculumId;
 
           matrixEvents.push({
             sectionId: sec._id,
             sectionIdentifier: sec.sectionIdentifier,
-            courseCode: sec.curriculumId?.courseCode,
-            courseTitle: sec.curriculumId?.courseTitle,
+            courseCode: course?.courseCode || "N/A",
+            courseTitle: course?.courseTitle || "N/A",
             roomId: room?._id || room,
             roomName: room?.name || "Unknown Room",
             facultyId: faculty?._id || faculty,
