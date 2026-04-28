@@ -37,7 +37,7 @@ const SYLLABUS_STEPS = [
   { id: 'lessons', label: 'Lesson Plan' },
 ];
 
-function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
+function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, initialSectionId, onSuccess }) {
   const [formData, setFormData] = useState(buildDefaultFormData);
   const [options, setOptions] = useState({
     curricula: [],
@@ -59,6 +59,8 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
   const formRef = useRef(null);
   const preferredSectionIdRef = useRef('');
   const headerDirtyRef = useRef(false);
+  const [clonableSyllabi, setClonableSyllabi] = useState([]);
+  const [selectedCloneId, setSelectedCloneId] = useState('');
 
   const loadOptions = useCallback(async () => {
     try {
@@ -81,6 +83,54 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
       });
     } catch {
       toast.error('Failed to load dropdown options');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loadClonableSyllabi = useCallback(async (curId) => {
+    try {
+      const res = await apiFetch(`/api/syllabi?curriculumId=${encodeURIComponent(curId)}`);
+      const data = await res.json();
+      if (res.ok && Array.isArray(data)) {
+        setClonableSyllabi(data);
+      }
+    } catch {
+      setClonableSyllabi([]);
+    }
+  }, []);
+
+  const handleCloneSelect = useCallback(async (cloneId) => {
+    setSelectedCloneId(cloneId);
+    if (!cloneId) return;
+    try {
+      setLoading(true);
+      const res = await apiFetch(`/api/syllabi/${cloneId}`);
+      const data = await res.json();
+      if (res.ok) {
+        setFormData((prev) => ({
+          ...prev,
+          description: data.description || '',
+          gradingSystem: data.gradingSystem || '',
+          coursePolicies: data.coursePolicies || '',
+          weeklyLessons: data.weeklyLessons?.length
+            ? data.weeklyLessons.map((l, index) => ({
+                weekNumber: Number(l.weekNumber) || index + 1,
+                topic: l.topic || '',
+                objectives: l.objectives || [],
+                materials: l.materials || [],
+                assessments: l.assessments || '',
+                timeAllocation: {
+                  lectureMinutes: l.timeAllocation?.lectureMinutes || 0,
+                  labMinutes: l.timeAllocation?.labMinutes || 0,
+                },
+              }))
+            : prev.weeklyLessons,
+        }));
+        toast.success(`Imported content from ${data.curriculumId?.courseCode || 'selected'} syllabus`);
+      }
+    } catch {
+      toast.error('Failed to import syllabus content');
     } finally {
       setLoading(false);
     }
@@ -147,6 +197,29 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
     }
   }, []);
 
+  const loadSection = useCallback(async (sectionId) => {
+    try {
+      setLoading(true);
+      const res = await apiFetch(`/api/scheduling/sections/${sectionId}`);
+      const section = await res.json();
+      if (res.ok) {
+        const curId = section.curriculumId?._id || section.curriculumId || '';
+        const facId = section.schedules?.[0]?.facultyId?._id || section.schedules?.[0]?.facultyId || '';
+        setFormData((prev) => ({
+          ...prev,
+          curriculumId: curId,
+          facultyId: facId,
+        }));
+        preferredSectionIdRef.current = String(sectionId);
+        headerDirtyRef.current = true;
+      }
+    } catch {
+      toast.error('Failed to pre-fill section data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (isOpen) {
       setActiveStep(0);
@@ -155,6 +228,11 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
         headerDirtyRef.current = false;
         setSyllabusReady(false);
         loadSyllabus(editSyllabusId);
+      } else if (initialSectionId) {
+        headerDirtyRef.current = false;
+        setSyllabusReady(true);
+        setFormData(buildDefaultFormData());
+        loadSection(initialSectionId);
       } else {
         headerDirtyRef.current = false;
         setSyllabusReady(true);
@@ -185,7 +263,7 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
       setIsActiveWarning(false);
       setSyllabusReady(true);
     }
-  }, [isOpen, editSyllabusId, loadOptions, loadSyllabus]);
+  }, [isOpen, editSyllabusId, initialSectionId, loadOptions, loadSyllabus, loadSection, loadClonableSyllabi]);
 
   useEffect(() => {
     if (!isOpen || isArchived || !syllabusReady) return undefined;
@@ -259,13 +337,18 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
       preferredSectionIdRef.current = '';
       headerDirtyRef.current = true;
     }
+    if (field === 'curriculumId') {
+      setSelectedCloneId('');
+      if (value) loadClonableSyllabi(value);
+      else setClonableSyllabi([]);
+    }
     setFormData((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => {
       const newErrors = { ...prev };
       delete newErrors[field];
       return newErrors;
     });
-  }, []);
+  }, [loadClonableSyllabi]);
 
   const addLesson = useCallback(() => {
     setFormData((prev) => ({
@@ -665,6 +748,29 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, onSuccess }) {
                     <span className="field-error">{errors.facultyId}</span>
                   )}
                 </div>
+
+                {/* Clone from existing (Smart Link) */}
+                {!isEditMode && formData.curriculumId && clonableSyllabi.length > 0 && (
+                  <div className="form-field form-field--highlight">
+                    <label htmlFor="cloneSyllabusId" className="form-label">
+                      Reuse content from... <span className="field-hint">(Optional: clones lesson plan & policies)</span>
+                    </label>
+                    <select
+                      id="cloneSyllabusId"
+                      className="form-select form-select--smart"
+                      value={selectedCloneId}
+                      onChange={(e) => handleCloneSelect(e.target.value)}
+                      disabled={isDisabled}
+                    >
+                      <option value="">— Don't clone (Start from scratch) —</option>
+                      {clonableSyllabi.map((s) => (
+                        <option key={s._id} value={s._id}>
+                          {s.sectionId?.sectionIdentifier || 'Previous'} ({s.sectionId?.term || 'N/A'}, {s.sectionId?.academicYear || 'N/A'}) — {s.facultyId?.lastName || 'Staff'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {isEditMode && (
                   <div className="form-field">
