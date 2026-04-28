@@ -11,6 +11,11 @@ const {
 const Student = require("../models/Student");
 const { Syllabus } = require("../models/Syllabus");
 const ClassAttendance = require("../models/ClassAttendance");
+const { 
+  checkRoomConflict, 
+  checkFacultyConflict, 
+  checkCohortConflict 
+} = require("../services/conflictValidationService");
 
 const DAY_ENUM = TimeBlock.DAY_ENUM || [
   "Mon",
@@ -805,46 +810,55 @@ async function updateSectionResources(req, res, next) {
         }
       }
 
-      // Check external system state conflicts
-      for (const existingSec of activeSections) {
-        if (!existingSec.schedules || !Array.isArray(existingSec.schedules))
-          continue;
+      // Check external system state conflicts using validation service
+      const roomConflict = await checkRoomConflict(
+        s.roomId,
+        s.dayOfWeek,
+        s.startTime,
+        s.endTime,
+        section.academicYear,
+        section.term,
+        section._id,
+      );
+      if (roomConflict.conflict) {
+        return res.status(409).json({
+          message: roomConflict.message,
+          conflictType: "ROOM_DOUBLE_BOOKED",
+        });
+      }
 
-        for (const ex of existingSec.schedules) {
-          if (s.dayOfWeek !== ex.dayOfWeek) continue;
+      const facultyConflict = await checkFacultyConflict(
+        s.facultyId,
+        s.dayOfWeek,
+        s.startTime,
+        s.endTime,
+        section.academicYear,
+        section.term,
+        section._id,
+      );
+      if (facultyConflict.conflict) {
+        return res.status(409).json({
+          message: facultyConflict.message,
+          conflictType: "FACULTY_DOUBLE_BOOKED",
+        });
+      }
 
-          const eStart = parseTimeToMinutes(ex.startTime);
-          const eEnd = parseTimeToMinutes(ex.endTime);
-
-          if (eStart == null || eEnd == null) continue;
-
-          if (nStart < eEnd && nEnd > eStart) {
-            if (
-              s.roomId &&
-              ex.roomId &&
-              s.roomId.toString() === ex.roomId.toString()
-            ) {
-              return res.status(409).json({
-                message:
-                  "Conflict detected: Room is already booked for this time.",
-                conflictType: "ROOM_DOUBLE_BOOKED",
-                sectionIdentifier: existingSec.sectionIdentifier,
-              });
-            }
-            if (
-              s.facultyId &&
-              ex.facultyId &&
-              s.facultyId.toString() === ex.facultyId.toString()
-            ) {
-              return res.status(409).json({
-                message:
-                  "Conflict detected: Faculty is already booked for this time.",
-                conflictType: "FACULTY_DOUBLE_BOOKED",
-                sectionIdentifier: existingSec.sectionIdentifier,
-              });
-            }
-          }
-        }
+      const cohortConflict = await checkCohortConflict(
+        section.program,
+        section.yearLevel,
+        section.sectionIdentifier,
+        s.dayOfWeek,
+        s.startTime,
+        s.endTime,
+        section.academicYear,
+        section.term,
+        section._id,
+      );
+      if (cohortConflict.conflict) {
+        return res.status(409).json({
+          message: cohortConflict.message,
+          conflictType: "COHORT_CONFLICT",
+        });
       }
     }
 

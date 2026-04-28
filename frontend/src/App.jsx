@@ -32,158 +32,24 @@ import FacultyClassAttendancePage from "./features/faculty/routes/FacultyClassAt
 import FacultyPortalDashboardPage from "./features/faculty/routes/FacultyPortalDashboardPage";
 import ReportsPage from "./features/reports/ReportsPage";
 import StudentDossier from "./features/reports/components/StudentDossier";
+import PasswordRequestPage from "./features/accounts/routes/PasswordRequestPage";
+import ReferenceOptionManagement from "./features/accounts/routes/ReferenceOptionManagement";
 import { useAuth } from "./providers/AuthContext";
 
-// Protected Route Wrapper
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  return children;
-};
-
-const PasswordReadyRoute = ({ children }) => {
-  const { isAuthenticated, mustChangePassword } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  if (mustChangePassword) {
-    return <Navigate to="/change-password" replace />;
-  }
-  return children;
-};
-
-const ForcePasswordChangeRoute = () => {
-  const { isAuthenticated, mustChangePassword } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  if (!mustChangePassword) {
-    return <Navigate to="/dashboard" replace />;
-  }
-  return <ChangePasswordPage />;
-};
-
-const AdminRoute = ({ children }) => {
-  const { isAuthenticated, isAdmin } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  if (!isAdmin) {
-    return <Navigate to="/dashboard" replace />;
-  }
-  return children;
-};
-
-const NonStudentRoute = ({ children }) => {
-  const { isAuthenticated, isStudent } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  if (isStudent) {
-    return <Navigate to="/dashboard" replace />;
-  }
-  return children;
-};
-
-/** Faculty-only pages (e.g. class management); admins use other scheduling tools. */
-const FacultyOnlyRoute = ({ children }) => {
-  const { isAuthenticated, isFaculty, isStudent } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  if (isStudent) {
-    return <Navigate to="/dashboard" replace />;
-  }
-  if (!isFaculty) {
-    return <Navigate to="/dashboard" replace />;
-  }
-  return children;
-};
-
-/** Students may not use the full directory index; send them to their profile. */
-const StudentDirectoryRoute = ({ children }) => {
-  const { isAuthenticated, isStudent, user } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  if (isStudent && user?.studentId) {
-    return (
-      <Navigate to={`/dashboard/student-info/${user.studentId}`} replace />
-    );
-  }
-  return children;
-};
-
-/** Students may only open their own profile URL. */
-const StudentProfileRoute = ({ children }) => {
-  const { id } = useParams();
-  const { isAuthenticated, isStudent, user } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  if (isStudent && user?.studentId && String(id) !== String(user.studentId)) {
-    return (
-      <Navigate to={`/dashboard/student-info/${user.studentId}`} replace />
-    );
-  }
-  return children;
-};
-
-/** Faculty may not browse the full directory index; open their own profile. */
-const FacultyDirectoryRoute = ({ children }) => {
-  const { isAuthenticated, isFaculty, user } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  if (isFaculty && user?.employeeId) {
-    return (
-      <Navigate
-        to={`/dashboard/faculty/directory/${encodeURIComponent(user.employeeId)}`}
-        replace
-      />
-    );
-  }
-  return children;
-};
-
-/** Faculty may only open their own faculty profile URL. */
-const FacultyProfileRoute = ({ children }) => {
-  const { employeeId } = useParams();
-  const { isAuthenticated, isFaculty, user } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  if (
-    isFaculty &&
-    user?.employeeId &&
-    String(employeeId || "").toLowerCase() !==
-      String(user.employeeId).toLowerCase()
-  ) {
-    return (
-      <Navigate
-        to={`/dashboard/faculty/directory/${encodeURIComponent(user.employeeId)}`}
-        replace
-      />
-    );
-  }
-  return children;
-};
-
-/** Legacy /faculty/profile → own directory URL for faculty, or full directory for admin. */
-const FacultyProfileIndexRedirect = () => {
-  const { isFaculty, user } = useAuth();
-  if (isFaculty && user?.employeeId) {
-    return (
-      <Navigate
-        to={`/dashboard/faculty/directory/${encodeURIComponent(user.employeeId)}`}
-        replace
-      />
-    );
-  }
-  return <Navigate to="/dashboard/faculty/directory" replace />;
-};
+import PublicRoute from "./components/guards/PublicRoute";
+import {
+  ProtectedRoute,
+  PasswordReadyRoute,
+  ForcePasswordChangeRoute,
+  AdminRoute,
+  NonStudentRoute,
+  FacultyOnlyRoute,
+  StudentDirectoryRoute,
+  StudentProfileRoute,
+  FacultyDirectoryRoute,
+  FacultyProfileRoute,
+  FacultyProfileIndexRedirect
+} from "./components/guards/AuthGuard";
 
 function DashboardIndex() {
   const { isFaculty } = useAuth();
@@ -196,7 +62,14 @@ function DashboardIndex() {
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<LoginPage />} />
+      <Route
+        path="/"
+        element={
+          <PublicRoute>
+            <LoginPage />
+          </PublicRoute>
+        }
+      />
       <Route path="/change-password" element={<ForcePasswordChangeRoute />} />
       <Route
         path="/dashboard"
@@ -269,14 +142,22 @@ function App() {
             </AdminRoute>
           }
         />
-        <Route
-          path="accounts"
-          element={
-            <AdminRoute>
-              <AccountManagementPage />
-            </AdminRoute>
-          }
-        />
+          <Route
+            path="accounts"
+            element={
+              <AdminRoute>
+                <AccountManagementPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="accounts/options"
+            element={
+              <AdminRoute>
+                <ReferenceOptionManagement />
+              </AdminRoute>
+            }
+          />
         <Route
           path="faculty/profile"
           element={<FacultyProfileIndexRedirect />}
@@ -453,6 +334,7 @@ function App() {
         />
         <Route path="events/calendar" element={<GlobalCalendarPage />} />
         <Route path="my-events" element={<MyEventsPage />} />
+        <Route path="security" element={<PasswordRequestPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

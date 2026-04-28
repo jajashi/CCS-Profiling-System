@@ -3,6 +3,7 @@ import { apiFetch } from '../../../lib/api';
 import './AddFacultyForm.css';
 
 const emptyForm = {
+  employeeId: '',
   firstName: '',
   middleName: '',
   lastName: '',
@@ -25,6 +26,13 @@ const emptyForm = {
   fieldOfStudy: '',
   certifications: '',
   specializations: [],
+  address: {
+    street: '',
+    city: '',
+    province: '',
+    postalCode: '',
+  },
+  internalNotes: '',
 };
 
 const INACTIVE_REASON_PRESETS = ['Resigned', 'Retired', 'On Leave', 'Terminated', 'Other'];
@@ -98,6 +106,7 @@ export default function AddFacultyForm({
   onCreated,
   onUpdated,
   nextEmployeeId = '',
+  isAdmin = false,
 }) {
   const isEditMode = mode === 'edit';
   const [formData, setFormData] = useState(emptyForm);
@@ -144,6 +153,7 @@ export default function AddFacultyForm({
           ? parseInactiveFieldsFromReason(initialData.inactiveReason)
           : { inactiveReasonCategory: '', inactiveReasonOther: '' };
       setFormData({
+        employeeId: String(initialData.employeeId || targetEmployeeId || ''),
         firstName: String(initialData.firstName || ''),
         middleName: String(initialData.middleName || ''),
         lastName: String(initialData.lastName || ''),
@@ -170,10 +180,17 @@ export default function AddFacultyForm({
               .map((s) => (s && typeof s === 'object' ? String(s._id || '') : String(s || '')))
               .filter(Boolean)
           : [],
+        address: {
+          street: String(initialData.address?.street || ''),
+          city: String(initialData.address?.city || ''),
+          province: String(initialData.address?.province || ''),
+          postalCode: String(initialData.address?.postalCode || ''),
+        },
+        internalNotes: String(initialData.internalNotes || ''),
       });
       setOriginalUpdatedAt(String(initialData.updatedAt || ''));
     } else {
-      setFormData(emptyForm);
+      setFormData({ ...emptyForm, employeeId: nextEmployeeId || '' });
       setOriginalUpdatedAt('');
     }
     setErrors({});
@@ -198,6 +215,7 @@ export default function AddFacultyForm({
   const validate = () => {
     const next = {};
     const requiredFields = [
+      ['employeeId', 'Employee ID'],
       ['firstName', 'First Name'],
       ['lastName', 'Last Name'],
       ['dob', 'Date of Birth'],
@@ -280,6 +298,17 @@ export default function AddFacultyForm({
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      setFormData((prev) => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: value,
+        },
+      }));
+      return;
+    }
     setFormData((prev) => {
       if (name === 'status' && value === 'Active') {
         return { ...prev, status: value, inactiveReasonCategory: '', inactiveReasonOther: '' };
@@ -341,6 +370,14 @@ export default function AddFacultyForm({
     try {
       const payload = {
         ...formData,
+        address: {
+          street: String(formData.address?.street || '').trim(),
+          city: String(formData.address?.city || '').trim(),
+          province: String(formData.address?.province || '').trim(),
+          postalCode: String(formData.address?.postalCode || '').trim(),
+        },
+        internalNotes: String(formData.internalNotes || '').trim(),
+        employeeId: formData.employeeId.trim(),
         firstName: formData.firstName.trim(),
         middleName: formData.middleName.trim(),
         lastName: formData.lastName.trim(),
@@ -451,18 +488,21 @@ export default function AddFacultyForm({
                   <h4 className="faculty-section-title">Personal Information</h4>
                   <div className="faculty-section-grid">
                     <div>
-                      <label htmlFor="employeeIdPlaceholder" className={labelClass}>Employee ID</label>
+                      <label htmlFor="employeeId" className={labelClass}>Employee ID <span className="text-red-600">*</span></label>
                       <input
-                        id="employeeIdPlaceholder"
-                        value={isEditMode ? targetEmployeeId || '' : nextEmployeeId || ''}
-                        readOnly
+                        id="employeeId"
+                        name="employeeId"
+                        value={formData.employeeId}
+                        onChange={handleChange}
                         className={controlClass}
+                        placeholder="e.g. EMP-2024-001"
                       />
-                      <p className="faculty-readonly-note">
-                        {isEditMode
-                          ? 'Employee ID is read-only and cannot be changed.'
-                          : 'Preview of next ID. Backend confirms final value.'}
-                      </p>
+                      <FieldError name="employeeId" />
+                      {!isEditMode && (
+                        <p className="faculty-readonly-note">
+                          Leave as is to use the auto-generated ID, or provide a custom one.
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label htmlFor="firstName" className={labelClass}>First Name <span className="text-red-600">*</span></label>
@@ -602,6 +642,39 @@ export default function AddFacultyForm({
                       <label htmlFor="emergencyContactNumber" className={labelClass}>Emergency Contact Number</label>
                       <input id="emergencyContactNumber" name="emergencyContactNumber" type="tel" placeholder="09XXXXXXXXX" value={formData.emergencyContactNumber} onChange={handleChange} className={controlClass} />
                       <FieldError name="emergencyContactNumber" />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className={labelClass}>Address</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                        <input
+                          name="address.street"
+                          placeholder="Street Address"
+                          value={formData.address.street}
+                          onChange={handleChange}
+                          className={controlClass}
+                        />
+                        <input
+                          name="address.city"
+                          placeholder="City"
+                          value={formData.address.city}
+                          onChange={handleChange}
+                          className={controlClass}
+                        />
+                        <input
+                          name="address.province"
+                          placeholder="Province"
+                          value={formData.address.province}
+                          onChange={handleChange}
+                          className={controlClass}
+                        />
+                        <input
+                          name="address.postalCode"
+                          placeholder="Postal Code"
+                          value={formData.address.postalCode}
+                          onChange={handleChange}
+                          className={controlClass}
+                        />
+                      </div>
                     </div>
                   </div>
                 </section>
@@ -792,6 +865,26 @@ export default function AddFacultyForm({
                     </div>
                   </div>
                 </section>
+
+                {isAdmin && (
+                  <section className="faculty-section">
+                    <h4 className="faculty-section-title">Administrative Notes</h4>
+                    <div className="faculty-section-grid">
+                      <div className="md:col-span-2">
+                        <label htmlFor="internalNotes" className={labelClass}>Internal Notes (Admin Only)</label>
+                        <textarea
+                          id="internalNotes"
+                          name="internalNotes"
+                          rows="4"
+                          value={formData.internalNotes}
+                          onChange={handleChange}
+                          className={controlClass}
+                          placeholder="Confidential notes about the faculty member..."
+                        />
+                      </div>
+                    </div>
+                  </section>
+                )}
               </div>
             ) : (
               <div className="preview-card">
@@ -804,6 +897,14 @@ export default function AddFacultyForm({
                   <div className="preview-item preview-item-full"><span className="preview-label">Profile Avatar</span><span className="preview-value">{formData.profileAvatar || '-'}</span></div>
                   <div className="preview-item"><span className="preview-label">Institutional Email</span><span className="preview-value">{formData.institutionalEmail || '-'}</span></div>
                   <div className="preview-item"><span className="preview-label">Personal Email</span><span className="preview-value">{formData.personalEmail || '-'}</span></div>
+                  <div className="preview-item preview-item-full">
+                    <span className="preview-label">Address</span>
+                    <span className="preview-value">
+                      {formData.address.street || formData.address.city || formData.address.province || formData.address.postalCode
+                        ? [formData.address.street, formData.address.city, formData.address.province, formData.address.postalCode].filter(Boolean).join(', ')
+                        : '-'}
+                    </span>
+                  </div>
                   <div className="preview-item"><span className="preview-label">Mobile Number</span><span className="preview-value">{formData.mobileNumber || '-'}</span></div>
                   <div className="preview-item"><span className="preview-label">Emergency Contact</span><span className="preview-value">{formData.emergencyContactName || '-'} {formData.emergencyContactNumber ? `(${formData.emergencyContactNumber})` : ''}</span></div>
                   <div className="preview-item"><span className="preview-label">Position</span><span className="preview-value">{formData.position || '-'}</span></div>

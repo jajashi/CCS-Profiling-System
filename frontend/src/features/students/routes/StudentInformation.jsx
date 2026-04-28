@@ -1168,6 +1168,10 @@ const StudentInformation = () => {
                     <input className="readonly-field" type="text" value={selectedStudent.status} readOnly />
                   </div>
                   <div>
+                    <p className="label">Student Type</p>
+                    <input className="readonly-field" type="text" value={selectedStudent.studentType || 'Regular'} readOnly />
+                  </div>
+                  <div>
                     <p className="label">Scholarship</p>
                     <input className="readonly-field" type="text" value={selectedStudent.scholarship} readOnly />
                   </div>
@@ -1189,9 +1193,23 @@ const StudentInformation = () => {
                     <p className="label">Gender</p>
                     <input className="readonly-field" type="text" value={selectedStudent.gender} readOnly />
                   </div>
-                  <div style={{ gridColumn: isStudent ? "span 1" : "span 2" }}>
+                  <div>
+                    <p className="label">Address</p>
+                    <input className="readonly-field" type="text" value={selectedStudent.address?.street ? `${selectedStudent.address.street}, ${selectedStudent.address.city}, ${selectedStudent.address.province}` : ''} readOnly />
+                  </div>
+                  <div>
                     <p className="label">Violation</p>
                     <input className="readonly-field" type="text" value={selectedStudent.violation} readOnly />
+                  </div>
+                </div>
+              </div>
+
+              <div className="profile-section">
+                <h4 className="section-title">Health Information</h4>
+                <div className="modal-grid">
+                  <div className="md:col-span-2">
+                    <p className="label">Conditions / Allergies</p>
+                    <input className="readonly-field" type="text" value={selectedStudent.healthInfo?.conditions?.join(', ') || 'None reported'} readOnly />
                   </div>
                 </div>
               </div>
@@ -1214,6 +1232,14 @@ const StudentInformation = () => {
                   <div>
                     <p className="label">Guardian Contact</p>
                     <input className="readonly-field" type="text" value={selectedStudent.guardianContact} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Emergency Contact Name</p>
+                    <input className="readonly-field" type="text" value={selectedStudent.emergencyContact?.name} readOnly />
+                  </div>
+                  <div>
+                    <p className="label">Emergency Contact Phone</p>
+                    <input className="readonly-field" type="text" value={selectedStudent.emergencyContact?.phone} readOnly />
                   </div>
                 </div>
               </div>

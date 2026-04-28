@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Faculty = require('../models/Faculty');
 const Specialization = require('../models/Specialization');
+const Section = require('../models/Section');
 const { logActivity } = require('../services/activityLogService');
 
 const MOBILE_REGEX = /^09\d{9}$/;
@@ -76,13 +77,6 @@ function validatePayload(payload, isCreate) {
   const status = normalizeString(payload.status || 'Active') || 'Active';
   if (status === 'Inactive' && !normalizeString(payload.inactiveReason)) {
     return 'inactiveReason is required when status is Inactive.';
-  }
-
-  if (!isCreate && payload.employeeId) {
-    const expected = /^FAC-\d{4}-\d{3}$/;
-    if (!expected.test(normalizeString(payload.employeeId))) {
-      return 'employeeId must follow FAC-YYYY-NNN format.';
-    }
   }
 
   return null;
@@ -277,8 +271,20 @@ async function createFaculty(req, res, next) {
     const inactiveReason =
       status === 'Active' ? '' : normalizeString(payload.inactiveReason);
 
+    const providedEmployeeId = normalizeString(payload.employeeId);
+    let finalEmployeeId = providedEmployeeId;
+
+    if (!finalEmployeeId) {
+      finalEmployeeId = await generateNextEmployeeId();
+    } else {
+      const existing = await Faculty.findOne({ employeeId: finalEmployeeId }).lean();
+      if (existing) {
+        return res.status(409).json({ message: 'A faculty member with this employeeId already exists.' });
+      }
+    }
+
     const data = {
-      employeeId: await generateNextEmployeeId(),
+      employeeId: finalEmployeeId,
       firstName: normalizeString(payload.firstName),
       middleName: normalizeString(payload.middleName),
       lastName: normalizeString(payload.lastName),
@@ -300,6 +306,12 @@ async function createFaculty(req, res, next) {
       fieldOfStudy: normalizeString(payload.fieldOfStudy),
       certifications: normalizeString(payload.certifications),
       specializations,
+      address: {
+        street: normalizeString(payload.address?.street),
+        city: normalizeString(payload.address?.city),
+        province: normalizeString(payload.address?.province),
+        postalCode: normalizeString(payload.address?.postalCode),
+      },
       internalNotes: normalizeString(payload.internalNotes),
     };
 
@@ -388,6 +400,12 @@ async function updateFaculty(req, res, next) {
       fieldOfStudy: normalizeString(payload.fieldOfStudy),
       certifications: normalizeString(payload.certifications),
       specializations,
+      address: {
+        street: normalizeString(payload.address?.street),
+        city: normalizeString(payload.address?.city),
+        province: normalizeString(payload.address?.province),
+        postalCode: normalizeString(payload.address?.postalCode),
+      },
       internalNotes: normalizeString(payload.internalNotes),
     };
 
@@ -491,6 +509,20 @@ async function getFacultyAnalytics(_req, res, next) {
       csDept: 0,
     };
 
+    const teachingStats = await Section.aggregate([
+      { $unwind: '$schedules' },
+      { $group: { _id: '$schedules.facultyId', sections: { $addToSet: '$_id' } } },
+      { $project: { facultyId: '$_id', count: { $size: '$sections' } } },
+    ]);
+
+    const totalAssignedSections = await Section.countDocuments({
+      'schedules.0': { $exists: true },
+    });
+
+    const averageLoad = teachingStats.length > 0
+      ? (teachingStats.reduce((sum, item) => sum + item.count, 0) / teachingStats.length).toFixed(1)
+      : 0;
+
     return res.status(200).json({
       totalFaculty: totals.total || 0,
       activeFaculty: totals.active || 0,
@@ -499,6 +531,8 @@ async function getFacultyAnalytics(_req, res, next) {
       partTimeFaculty: totals.partTime || 0,
       itDepartmentCount: totals.itDept || 0,
       csDepartmentCount: totals.csDept || 0,
+      totalAssignedSections,
+      averageLoad,
       departmentDistribution: summary?.departmentDistribution || [],
       employmentTypeDistribution: summary?.employmentTypeDistribution || [],
     });

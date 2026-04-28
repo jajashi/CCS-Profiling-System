@@ -980,6 +980,17 @@ const FacultyInformation = () => {
                     <p className="label">Department</p>
                     <input className="readonly-field" type="text" value={selectedFaculty.department || '-'} readOnly />
                   </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <p className="label">Address</p>
+                    <input 
+                      className="readonly-field" 
+                      type="text" 
+                      value={selectedFaculty.address?.street 
+                        ? [selectedFaculty.address.street, selectedFaculty.address.city, selectedFaculty.address.province, selectedFaculty.address.postalCode].filter(Boolean).join(', ') 
+                        : '-'} 
+                      readOnly 
+                    />
+                  </div>
                 </div>
               </CollapsibleSection>
 
@@ -1236,6 +1247,7 @@ const FacultyInformation = () => {
       {isFormOpen ? (
         <AddFacultyForm
           mode={formMode}
+          isAdmin={isAdmin}
           initialData={formTarget}
           targetEmployeeId={formTarget?.employeeId}
           nextEmployeeId={nextEmployeeId}

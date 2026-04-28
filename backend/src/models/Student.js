@@ -17,6 +17,7 @@ const studentSchema = new mongoose.Schema(
     },
     section: { type: String, default: "" },
     status: { type: String, default: "" },
+    studentType: { type: String, enum: ['Regular', 'Irregular'], default: 'Regular' },
     scholarship: { type: String, default: "" },
     profileAvatar: { type: String, default: "" },
     email: { type: String, default: "" },
@@ -26,6 +27,27 @@ const studentSchema = new mongoose.Schema(
     guardianContact: { type: String, default: "" },
     violation: { type: String, default: "" },
     skills: { type: [String], default: [] },
+    // Expanded fields Phase 2
+    address: {
+      street: { type: String, default: "" },
+      city: { type: String, default: "" },
+      province: { type: String, default: "" },
+      postalCode: { type: String, default: "" },
+    },
+    emergencyContact: {
+      name: { type: String, default: "" },
+      relationship: { type: String, default: "" },
+      phone: { type: String, default: "" },
+    },
+    academicHistory: {
+      previousSchools: { type: [String], default: [] },
+      achievements: { type: [String], default: [] },
+    },
+    healthInfo: {
+      conditions: { type: [String], default: [] },
+      medications: { type: [String], default: [] },
+      allergies: { type: [String], default: [] },
+    },
   },
   {
     id: false,

@@ -201,13 +201,22 @@ const FacultyDashboard = () => {
               </div>
             </div>
 
-            <div className="stat-card faculty-dashboard-placeholder-card">
+            <div className="stat-card">
               <div className="stat-icon events">
                 <FiLayers />
               </div>
               <div className="stat-details">
-                <p className="stat-label">Teaching Load Overview</p>
-                <h3 className="stat-value">Available once Scheduling module is integrated.</h3>
+                <p className="stat-label">Assigned Sections</p>
+                <h3 className="stat-value">{(data?.totalAssignedSections ?? 0).toLocaleString()}</h3>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon users">
+                <FiLayers />
+              </div>
+              <div className="stat-details">
+                <p className="stat-label">Avg Load / Faculty</p>
+                <h3 className="stat-value">{data?.averageLoad ?? 0} sections</h3>
               </div>
             </div>
           </div>
