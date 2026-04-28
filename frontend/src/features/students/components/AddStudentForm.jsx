@@ -378,7 +378,7 @@ export default function AddStudentForm({
         return;
       }
 
-      if (res.status === 400) {
+      if (res.status === 400 || res.status === 409) {
         setSubmitError(
           data?.message || "Please review the form and try again.",
         );

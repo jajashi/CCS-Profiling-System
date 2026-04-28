@@ -7,15 +7,15 @@ const {
   updateOption,
   deleteOption,
 } = require('../controllers/referenceOptionController');
-const { protect, adminOnly } = require('../middleware/authMiddleware');
+const { authenticate, requireRoles } = require('../middleware/authMiddleware');
 
 // Publicly available (authenticated) for fetching options in forms
-router.get('/', protect, getOptions);
+router.get('/', authenticate, getOptions);
 
 // Admin only management
-router.get('/admin', protect, adminOnly, getAllOptionsAdmin);
-router.post('/', protect, adminOnly, createOption);
-router.put('/:id', protect, adminOnly, updateOption);
-router.delete('/:id', protect, adminOnly, deleteOption);
+router.get('/admin', authenticate, requireRoles('admin'), getAllOptionsAdmin);
+router.post('/', authenticate, requireRoles('admin'), createOption);
+router.put('/:id', authenticate, requireRoles('admin'), updateOption);
+router.delete('/:id', authenticate, requireRoles('admin'), deleteOption);
 
 module.exports = router;

@@ -7,18 +7,18 @@ const {
   rejectRequest,
   getMyRequests,
 } = require('../controllers/passwordChangeController');
-const { protect, adminOnly } = require('../middleware/authMiddleware');
+const { authenticate, requireRoles } = require('../middleware/authMiddleware');
 
 // All routes require authentication
-router.use(protect);
+router.use(authenticate);
 
 // User routes
 router.post('/request', createRequest);
 router.get('/my-requests', getMyRequests);
 
 // Admin routes
-router.get('/pending', adminOnly, getPendingRequests);
-router.put('/:id/approve', adminOnly, approveRequest);
-router.put('/:id/reject', adminOnly, rejectRequest);
+router.get('/pending', requireRoles('admin'), getPendingRequests);
+router.put('/:id/approve', requireRoles('admin'), approveRequest);
+router.put('/:id/reject', requireRoles('admin'), rejectRequest);
 
 module.exports = router;

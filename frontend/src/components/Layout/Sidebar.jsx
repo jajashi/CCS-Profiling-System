@@ -19,6 +19,7 @@ import {
   FiGrid,
   FiShield,
   FiFileText,
+  FiKey,
 } from "react-icons/fi";
 import { useAuth } from "../../providers/AuthContext";
 import logoSrc from "../../assets/images/ccs-logo.jpg";

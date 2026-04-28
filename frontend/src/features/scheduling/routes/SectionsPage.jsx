@@ -1013,6 +1013,8 @@ export default function SectionsPage() {
     termFilter,
     yearFilter,
     statusFilter,
+  ]);
+
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [isBulkMode, setIsBulkMode] = useState(false);
   const [deletingId, setDeletingId] = useState("");

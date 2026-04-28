@@ -190,11 +190,11 @@ async function createStudent(req, res, next) {
 
     if (!finalId) {
       finalId = await generateNextStudentId();
-    } else {
-      const existing = await Student.findOne({ id: finalId });
-      if (existing) {
-        return res.status(409).json({ message: "A student with this ID already exists." });
-      }
+    }
+
+    const existing = await Student.findOne({ id: finalId });
+    if (existing) {
+      return res.status(409).json({ message: `A student with ID ${finalId} already exists.` });
     }
 
     // Normalize key fields.
@@ -257,9 +257,10 @@ async function createStudent(req, res, next) {
   } catch (err) {
     // Duplicate `id` (unique index) -> 400 with friendly message
     if (err && err.code === 11000) {
+      const field = Object.keys(err.keyValue || {})[0] || "identifier";
       return res
-        .status(400)
-        .json({ message: "A student with this ID already exists." });
+        .status(409)
+        .json({ message: `A student with this ${field} already exists.` });
     }
 
     // Mongoose schema validation -> 400

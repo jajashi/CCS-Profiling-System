@@ -356,13 +356,8 @@ async function createFaculty(req, res, next) {
   } catch (err) {
     if (err && err.code === 11000) {
       const key = Object.keys(err.keyPattern || {})[0];
-      if (key === 'institutionalEmail') {
-        return res.status(400).json({ message: 'A faculty member with this institutionalEmail already exists.' });
-      }
-      if (key === 'employeeId') {
-        return res.status(400).json({ message: 'A faculty member with this employeeId already exists.' });
-      }
-      return res.status(400).json({ message: 'Duplicate unique value found.' });
+      const fieldName = key === 'institutionalEmail' ? 'institutional email' : 'employee ID';
+      return res.status(409).json({ message: `A faculty member with this ${fieldName} already exists.` });
     }
 
     if (err && err.name === 'ValidationError') {
@@ -454,13 +449,8 @@ async function updateFaculty(req, res, next) {
   } catch (err) {
     if (err && err.code === 11000) {
       const key = Object.keys(err.keyPattern || {})[0];
-      if (key === 'institutionalEmail') {
-        return res.status(400).json({ message: 'A faculty member with this institutionalEmail already exists.' });
-      }
-      if (key === 'employeeId') {
-        return res.status(400).json({ message: 'A faculty member with this employeeId already exists.' });
-      }
-      return res.status(400).json({ message: 'Duplicate unique value found.' });
+      const fieldName = key === 'institutionalEmail' ? 'institutional email' : 'employee ID';
+      return res.status(409).json({ message: `A faculty member with this ${fieldName} already exists.` });
     }
 
     if (err && err.name === 'ValidationError') {

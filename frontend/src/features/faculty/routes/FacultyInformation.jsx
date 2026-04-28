@@ -6,6 +6,7 @@ import AddFacultyForm from '../components/AddFacultyForm';
 import FacultyOverview from '../components/FacultyOverview';
 import '../components/FacultyOverview.css';
 import femaleImage from '../../../assets/images/female.jpg';
+import maleImage from '../../../assets/images/male.jpg';
 import { useAuth } from '../../../providers/AuthContext';
 import { apiFetch } from '../../../lib/api';
 import '../../students/routes/StudentInformation.css';
@@ -101,6 +102,7 @@ const FacultyInformation = () => {
   const [viewMode, setViewMode] = useState('grid'); // Default to grid for better aesthetics
 
   const goToDirectory = () => {
+    setSelectedFaculty(null);
     const s = searchParams.toString();
     navigate(s ? { pathname: FACULTY_DIRECTORY_PATH, search: `?${s}` } : FACULTY_DIRECTORY_PATH);
   };
@@ -408,6 +410,7 @@ const FacultyInformation = () => {
   const requestCloseDeactivateModal = () => {
     if (deactivateSubmitting) return;
     resetDeactivateModal();
+    setDeactivateModalMember(null);
   };
 
   const applyFacultyStatusChange = async (member, newStatus, inactiveReason) => {
@@ -720,7 +723,7 @@ const FacultyInformation = () => {
           ) : null}
         </div>
 
-        <div className="relative">
+        <div className="relative mt-4">
           {loading && faculty.length > 0 ? (
             <div
               className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/70"
@@ -731,15 +734,87 @@ const FacultyInformation = () => {
             </div>
           ) : null}
 
-                        Click here to add a new faculty member.
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-          </div>
+          {viewMode === 'grid' ? (
+            <FacultyOverview 
+              faculty={faculty} 
+              loading={loading} 
+              isAdmin={isAdmin}
+              onView={(m) => setSelectedFaculty(m)}
+              onEdit={(m) => openEditForm(m.employeeId)}
+              onToggleStatus={onQuickStatusClick}
+            />
+          ) : (
+            <div className="table-responsive">
+              <table className="student-table">
+                <thead>
+                  <tr>
+                    <th>Employee ID</th>
+                    <th>Name</th>
+                    <th>Department</th>
+                    <th>Employment Type</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {faculty.map((member) => (
+                    <tr key={member.employeeId} onClick={() => setSelectedFaculty(member)} className={selectedFaculty?.employeeId === member.employeeId ? 'row-selected' : ''}>
+                      <td className="id-cell">
+                        <span className="id-badge">{member.employeeId}</span>
+                      </td>
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <img 
+                            src={member.profileAvatar || ((member.gender || '').toLowerCase() === 'male' ? maleImage : femaleImage)} 
+                            alt="" 
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                          <span>{member.firstName} {member.lastName}</span>
+                        </div>
+                      </td>
+                      <td>{member.department}</td>
+                      <td>{member.employmentType}</td>
+                      <td>
+                        <span className={`status-badge status-${member.status?.toLowerCase()}`}>
+                          {member.status}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="action-buttons" onClick={(e) => e.stopPropagation()}>
+                          <button className="action-btn view" onClick={() => setSelectedFaculty(member)} title="View Profile">
+                            <FiEye />
+                          </button>
+                          {isAdmin && (
+                            <>
+                              <button className="action-btn edit" onClick={() => openEditForm(member.employeeId)} title="Edit Faculty">
+                                <FiEdit2 />
+                              </button>
+                              <button className="action-btn delete" onClick={() => onQuickStatusClick(member)} title={member.status === 'Inactive' ? 'Activate' : 'Deactivate'}>
+                                <FiPower />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {!loading && faculty.length === 0 && (
+                    <tr>
+                      <td colSpan="6" className="empty-row text-center py-12">
+                        <FiUsers className="mx-auto mb-4 text-slate-300" size={48} />
+                        <p className="text-slate-500 font-medium">No faculty members found matching your filters.</p>
+                        {isAdmin && (
+                           <button onClick={openCreateForm} className="mt-4 text-orange-500 hover:underline">
+                             Click here to add a new faculty member.
+                           </button>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 

@@ -1930,12 +1930,14 @@ async function getSchedulingAnalytics(req, res, next) {
 
     sections.forEach((s) => {
       // Program dist
-      stats.programDistribution[s.program] =
-        (stats.programDistribution[s.program] || 0) + 1;
+      const progKey = String(s.program || 'Unassigned');
+      stats.programDistribution[progKey] =
+        (stats.programDistribution[progKey] || 0) + 1;
 
       // Year level dist
-      stats.yearLevelDistribution[s.yearLevel] =
-        (stats.yearLevelDistribution[s.yearLevel] || 0) + 1;
+      const yearKey = s.yearLevel ? `Year ${s.yearLevel}` : 'Unassigned';
+      stats.yearLevelDistribution[yearKey] =
+        (stats.yearLevelDistribution[yearKey] || 0) + 1;
 
       // Faculty coverage
       if (s.schedules && s.schedules.length > 0) {
