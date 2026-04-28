@@ -40,12 +40,18 @@ export default function SchedulingAnalyticsPage() {
 
   const { stats, alerts } = data;
 
-  // Prepare chart data
-  const programData = Object.entries(stats.programDistribution).map(([name, value]) => ({ name, value }));
-  const yearData = Object.entries(stats.yearLevelDistribution).map(([name, value]) => ({ name, value }));
+  // Prepare chart data with safety checks
+  const programData = stats.programDistribution 
+    ? Object.entries(stats.programDistribution).map(([name, value]) => ({ name, value }))
+    : [];
+    
+  const yearData = stats.yearLevelDistribution
+    ? Object.entries(stats.yearLevelDistribution).map(([name, value]) => ({ name, value }))
+    : [];
+    
   const facultyData = [
-    { name: 'Assigned', value: stats.facultyCoverage.assigned },
-    { name: 'Missing', value: stats.facultyCoverage.missing }
+    { name: 'Assigned', value: stats.facultyCoverage?.assigned || 0 },
+    { name: 'Missing', value: stats.facultyCoverage?.missing || 0 }
   ];
 
   const handleExport = () => {
@@ -126,7 +132,7 @@ export default function SchedulingAnalyticsPage() {
                   ))}
                 </Pie>
                 <Tooltip />
-                <Legend />
+                <Legend layout="horizontal" verticalAlign="bottom" align="center" />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -158,13 +164,12 @@ export default function SchedulingAnalyticsPage() {
                   cy="50%"
                   outerRadius={80}
                   dataKey="value"
-                  label
                 >
                   <Cell fill="#10b981" />
                   <Cell fill="#ef4444" />
                 </Pie>
                 <Tooltip />
-                <Legend />
+                <Legend layout="horizontal" verticalAlign="bottom" align="center" />
               </PieChart>
             </ResponsiveContainer>
           </div>

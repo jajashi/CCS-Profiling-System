@@ -13,6 +13,9 @@ import CurriculaManagement from "./features/instruction/routes/CurriculaManageme
 import SyllabusListPage from "./features/instruction/routes/SyllabusListPage";
 import SyllabusDetailPage from "./features/instruction/routes/SyllabusDetailPage";
 import InstructionDashboard from "./features/instruction/routes/InstructionDashboard";
+import LessonTracker from "./features/instruction/routes/LessonTracker";
+import AdminSyllabiMonitor from "./features/instruction/routes/AdminSyllabiMonitor";
+import RecentActivitiesPage from "./features/dashboard/routes/RecentActivitiesPage";
 import TimeBlocksPage from "./features/scheduling/routes/TimeBlocksPage";
 import RoomsPage from "./features/scheduling/routes/RoomsPage";
 import SectionsPage from "./features/scheduling/routes/SectionsPage";
@@ -23,167 +26,32 @@ import EventCreationPage from "./features/events/routes/EventCreationPage";
 import EventListPage from "./features/events/routes/EventListPage";
 import EventApprovalPage from "./features/events/routes/EventApprovalPage";
 import MyEventsPage from "./features/events/routes/MyEventsPage";
-import GlobalCalendarPage from "./features/events/routes/GlobalCalendarPage";
 import StudentSchedulePage from "./features/scheduling/routes/StudentSchedulePage";
 import FacultyMyClassesPage from "./features/faculty/routes/FacultyMyClassesPage";
 import FacultyClassStudentsPage from "./features/faculty/routes/FacultyClassStudentsPage";
 import FacultyClassOverviewPage from "./features/faculty/routes/FacultyClassOverviewPage";
 import FacultyClassAttendancePage from "./features/faculty/routes/FacultyClassAttendancePage";
 import FacultyPortalDashboardPage from "./features/faculty/routes/FacultyPortalDashboardPage";
-import ReportsPage from "./features/reports/ReportsPage";
-import StudentDossier from "./features/reports/components/StudentDossier";
+import ReportsPage from './features/reports/routes/ReportsPage';
+import StudentDossierPage from './features/reports/routes/StudentDossierPage';
+import PasswordRequestPage from "./features/accounts/routes/PasswordRequestPage";
+import ReferenceOptionManagement from "./features/accounts/routes/ReferenceOptionManagement";
 import { useAuth } from "./providers/AuthContext";
 
-// Protected Route Wrapper
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  return children;
-};
-
-const PasswordReadyRoute = ({ children }) => {
-  const { isAuthenticated, mustChangePassword } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  if (mustChangePassword) {
-    return <Navigate to="/change-password" replace />;
-  }
-  return children;
-};
-
-const ForcePasswordChangeRoute = () => {
-  const { isAuthenticated, mustChangePassword } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  if (!mustChangePassword) {
-    return <Navigate to="/dashboard" replace />;
-  }
-  return <ChangePasswordPage />;
-};
-
-const AdminRoute = ({ children }) => {
-  const { isAuthenticated, isAdmin } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  if (!isAdmin) {
-    return <Navigate to="/dashboard" replace />;
-  }
-  return children;
-};
-
-const NonStudentRoute = ({ children }) => {
-  const { isAuthenticated, isStudent } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  if (isStudent) {
-    return <Navigate to="/dashboard" replace />;
-  }
-  return children;
-};
-
-/** Faculty-only pages (e.g. class management); admins use other scheduling tools. */
-const FacultyOnlyRoute = ({ children }) => {
-  const { isAuthenticated, isFaculty, isStudent } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  if (isStudent) {
-    return <Navigate to="/dashboard" replace />;
-  }
-  if (!isFaculty) {
-    return <Navigate to="/dashboard" replace />;
-  }
-  return children;
-};
-
-/** Students may not use the full directory index; send them to their profile. */
-const StudentDirectoryRoute = ({ children }) => {
-  const { isAuthenticated, isStudent, user } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  if (isStudent && user?.studentId) {
-    return (
-      <Navigate to={`/dashboard/student-info/${user.studentId}`} replace />
-    );
-  }
-  return children;
-};
-
-/** Students may only open their own profile URL. */
-const StudentProfileRoute = ({ children }) => {
-  const { id } = useParams();
-  const { isAuthenticated, isStudent, user } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  if (isStudent && user?.studentId && String(id) !== String(user.studentId)) {
-    return (
-      <Navigate to={`/dashboard/student-info/${user.studentId}`} replace />
-    );
-  }
-  return children;
-};
-
-/** Faculty may not browse the full directory index; open their own profile. */
-const FacultyDirectoryRoute = ({ children }) => {
-  const { isAuthenticated, isFaculty, user } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  if (isFaculty && user?.employeeId) {
-    return (
-      <Navigate
-        to={`/dashboard/faculty/directory/${encodeURIComponent(user.employeeId)}`}
-        replace
-      />
-    );
-  }
-  return children;
-};
-
-/** Faculty may only open their own faculty profile URL. */
-const FacultyProfileRoute = ({ children }) => {
-  const { employeeId } = useParams();
-  const { isAuthenticated, isFaculty, user } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  if (
-    isFaculty &&
-    user?.employeeId &&
-    String(employeeId || "").toLowerCase() !==
-      String(user.employeeId).toLowerCase()
-  ) {
-    return (
-      <Navigate
-        to={`/dashboard/faculty/directory/${encodeURIComponent(user.employeeId)}`}
-        replace
-      />
-    );
-  }
-  return children;
-};
-
-/** Legacy /faculty/profile → own directory URL for faculty, or full directory for admin. */
-const FacultyProfileIndexRedirect = () => {
-  const { isFaculty, user } = useAuth();
-  if (isFaculty && user?.employeeId) {
-    return (
-      <Navigate
-        to={`/dashboard/faculty/directory/${encodeURIComponent(user.employeeId)}`}
-        replace
-      />
-    );
-  }
-  return <Navigate to="/dashboard/faculty/directory" replace />;
-};
+import PublicRoute from "./components/guards/PublicRoute";
+import {
+  ProtectedRoute,
+  PasswordReadyRoute,
+  ForcePasswordChangeRoute,
+  AdminRoute,
+  NonStudentRoute,
+  FacultyOnlyRoute,
+  StudentDirectoryRoute,
+  StudentProfileRoute,
+  FacultyDirectoryRoute,
+  FacultyProfileRoute,
+  FacultyProfileIndexRedirect
+} from "./components/guards/AuthGuard";
 
 function DashboardIndex() {
   const { isFaculty } = useAuth();
@@ -196,7 +64,14 @@ function DashboardIndex() {
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<LoginPage />} />
+      <Route
+        path="/"
+        element={
+          <PublicRoute>
+            <LoginPage />
+          </PublicRoute>
+        }
+      />
       <Route path="/change-password" element={<ForcePasswordChangeRoute />} />
       <Route
         path="/dashboard"
@@ -208,6 +83,10 @@ function App() {
           </ProtectedRoute>
         }>
         <Route index element={<DashboardIndex />} />
+        <Route
+          path="activities"
+          element={<RecentActivitiesPage />}
+        />
         <Route
           path="student-info"
           element={
@@ -269,14 +148,22 @@ function App() {
             </AdminRoute>
           }
         />
-        <Route
-          path="accounts"
-          element={
-            <AdminRoute>
-              <AccountManagementPage />
-            </AdminRoute>
-          }
-        />
+          <Route
+            path="accounts"
+            element={
+              <AdminRoute>
+                <AccountManagementPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="accounts/options"
+            element={
+              <AdminRoute>
+                <ReferenceOptionManagement />
+              </AdminRoute>
+            }
+          />
         <Route
           path="faculty/profile"
           element={<FacultyProfileIndexRedirect />}
@@ -360,10 +247,10 @@ function App() {
           }
         />
         <Route
-          path="reports/student/:id"
+          path="reports/dossier/:id"
           element={
             <NonStudentRoute>
-              <StudentDossier />
+              <StudentDossierPage />
             </NonStudentRoute>
           }
         />
@@ -400,6 +287,22 @@ function App() {
           }
         />
         <Route
+          path="instruction/tracking"
+          element={
+            <FacultyOnlyRoute>
+              <LessonTracker />
+            </FacultyOnlyRoute>
+          }
+        />
+        <Route
+          path="instruction/monitor"
+          element={
+            <AdminRoute>
+              <AdminSyllabiMonitor />
+            </AdminRoute>
+          }
+        />
+        <Route
           path="scheduling"
           element={
             <NonStudentRoute>
@@ -407,6 +310,9 @@ function App() {
             </NonStudentRoute>
           }>
           <Route index element={<TimeBlocksPage />} />
+          <Route path="activity-log" element={<RecentActivitiesPage />} />
+          <Route path="reports" element={<ReportsPage />} />
+          <Route path="faculty" element={<FacultyInformation />} />
           <Route path="rooms" element={<RoomsPage />} />
           <Route path="sections" element={<SectionsPage />} />
           <Route path="my-schedule" element={<MySchedulePage />} />
@@ -451,8 +357,9 @@ function App() {
             </AdminRoute>
           }
         />
-        <Route path="events/calendar" element={<GlobalCalendarPage />} />
         <Route path="my-events" element={<MyEventsPage />} />
+        <Route path="activities" element={<AdminRoute><RecentActivitiesPage /></AdminRoute>} />
+        <Route path="security" element={<PasswordRequestPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

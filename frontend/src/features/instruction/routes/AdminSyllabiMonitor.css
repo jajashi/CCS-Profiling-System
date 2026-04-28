@@ -1,0 +1,82 @@
+.monitor-table th {
+  background: #f8fafc;
+}
+
+.course-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.course-code-small {
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--primary-color);
+}
+
+.course-title-small {
+  font-size: 0.85rem;
+  color: #1e293b;
+  font-weight: 500;
+  max-width: 250px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.faculty-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.tiny-icon {
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+.monitor-progress-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 120px;
+}
+
+.progress-bar-bg.small {
+  height: 6px;
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.progress-bar-fill.small {
+  border-radius: 3px;
+}
+
+.progress-text-small {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.status-select {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: #475569;
+  background: white;
+  cursor: pointer;
+}
+
+.status-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}

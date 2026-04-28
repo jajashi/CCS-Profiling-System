@@ -38,6 +38,11 @@ const roomSchema = new mongoose.Schema(
       enum: ROOM_STATUS_ENUM,
       default: 'Active',
     },
+    description: {
+      type: String,
+      trim: true,
+      default: '',
+    },
   },
   {
     timestamps: true,

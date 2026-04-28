@@ -12,6 +12,8 @@ const { logActivity } = require("../services/activityLogService");
 const CURRENT_ACADEMIC_YEAR = process.env.CURRENT_ACADEMIC_YEAR || "2024-2025";
 const CURRENT_TERM = process.env.CURRENT_TERM || "First Semester";
 
+const toObjectId = (id) => (mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : null);
+
 async function getStudentsForReports(req, res, next) {
   try {
     const {
@@ -37,13 +39,25 @@ async function getStudentsForReports(req, res, next) {
 
     // 1. Basic Student model filters
     if (search && search.trim() !== "") {
-      const pattern = new RegExp(search.trim(), "i");
-      filter.$or = [
-        { id: pattern },
-        { firstName: pattern },
-        { lastName: pattern },
-        { email: pattern },
-      ];
+      const terms = search.trim().split(/\s+/);
+      if (terms.length > 1) {
+        // Multi-term search (e.g. "Justin Rain")
+        filter.$and = terms.map(term => ({
+          $or: [
+            { firstName: new RegExp(term, "i") },
+            { lastName: new RegExp(term, "i") },
+            { id: new RegExp(term, "i") }
+          ]
+        }));
+      } else {
+        const pattern = new RegExp(search.trim(), "i");
+        filter.$or = [
+          { id: pattern },
+          { firstName: pattern },
+          { lastName: pattern },
+          { email: pattern },
+        ];
+      }
     }
 
     if (program && program.trim() !== "") filter.program = program.trim();
@@ -237,7 +251,7 @@ async function getStudentDossier(req, res, next) {
       // Stage 4: Project and shape final output with RBAC
       {
         $project: {
-          // Personal Information
+          // Identity & Personal Information
           _id: 1,
           id: 1,
           firstName: 1,
@@ -252,17 +266,22 @@ async function getStudentDossier(req, res, next) {
           yearLevel: 1,
           section: 1,
           status: 1,
+          studentType: 1,
           scholarship: 1,
           dateEnrolled: 1,
 
-          // Contact Information (visible to all authorized roles)
+          // Contact & Location
           email: 1,
           contact: 1,
+          address: 1,
           guardian: 1,
           guardianContact: 1,
+          emergencyContact: 1,
 
-          // Skills (visible to all authorized roles)
+          // Skills & Background
           skills: 1,
+          academicHistory: 1,
+          healthInfo: 1,
 
           // Violation records - RBAC filtered
           violation: {
@@ -410,13 +429,18 @@ async function exportStudentProfilePDF(req, res, next) {
           yearLevel: 1,
           section: 1,
           status: 1,
+          studentType: 1,
           scholarship: 1,
           dateEnrolled: 1,
           email: 1,
           contact: 1,
+          address: 1,
           guardian: 1,
           guardianContact: 1,
+          emergencyContact: 1,
           skills: 1,
+          academicHistory: 1,
+          healthInfo: 1,
           violation: {
             $cond: {
               if: { $eq: [requestingUserRole, "admin"] },
@@ -511,20 +535,31 @@ async function exportStudentProfilePDF(req, res, next) {
       doc.text(`Date Enrolled: ${studentData.dateEnrolled}`);
       yPosition += 30;
 
-      // Section 2: Contact & Emergency Information
-      checkPageBreak(80);
+      // Section 2: Contact, Location & Emergency Info
+      checkPageBreak(120);
       doc
         .fontSize(14)
         .font("Helvetica-Bold")
-        .text("Section 2: Contact & Emergency Information");
+        .text("Section 2: Contact, Location & Emergency Info");
       yPosition += 20;
 
       doc.fontSize(11).font("Helvetica");
       doc.text(`Student Email: ${studentData.email}`);
       doc.text(`Student Contact: ${studentData.contact}`);
+      
+      const addr = studentData.address;
+      if (addr) {
+        doc.text(`Address: ${addr.street || ''} ${addr.city || ''} ${addr.province || ''} ${addr.postalCode || ''}`);
+      }
+      
       doc.text(`Guardian: ${studentData.guardian}`);
       doc.text(`Guardian Contact: ${studentData.guardianContact}`);
-      yPosition += 30;
+
+      const ec = studentData.emergencyContact;
+      if (ec && ec.name) {
+        doc.text(`Emergency Contact: ${ec.name} (${ec.relationship || 'N/A'}) - ${ec.phone || 'N/A'}`);
+      }
+      yPosition += 40;
 
       // Section 3: Current Term Schedule
       if (
@@ -587,43 +622,42 @@ async function exportStudentProfilePDF(req, res, next) {
         });
       }
 
-      // Section 5: Administrative Records (Conditional)
-      if (requestingUserRole === "admin") {
-        checkPageBreak(100);
-        doc
-          .fontSize(14)
-          .font("Helvetica-Bold")
-          .text("Section 5: Administrative Records");
-        yPosition += 20;
+      // Section 5: Skills, Medical & Academic Background
+      checkPageBreak(150);
+      doc
+        .fontSize(14)
+        .font("Helvetica-Bold")
+        .text("Section 5: Skills, Medical & Academic Background");
+      yPosition += 20;
 
-        doc.fontSize(11).font("Helvetica");
+      doc.fontSize(11).font("Helvetica");
+      
+      // Skills
+      if (studentData.skills && studentData.skills.length > 0) {
+        doc.text(`Skills: ${studentData.skills.join(', ')}`);
+      }
 
-        // Skills
-        if (studentData.skills && studentData.skills.length > 0) {
-          doc.text("Skills:");
-          studentData.skills.forEach((skill) => {
-            doc.text(`  • ${skill}`);
-          });
-          yPosition += 20;
+      // Medical Info
+      const hi = studentData.healthInfo;
+      if (hi && (hi.conditions?.length > 0 || hi.allergies?.length > 0)) {
+        doc.text(`Medical Conditions: ${hi.conditions?.join(', ') || 'None'}`);
+        doc.text(`Allergies: ${hi.allergies?.join(', ') || 'None'}`);
+      }
+
+      // Academic History
+      const ah = studentData.academicHistory;
+      if (ah && (ah.previousSchools?.length > 0 || ah.achievements?.length > 0)) {
+        if (ah.previousSchools?.length > 0) {
+          doc.text(`Previous Schools: ${ah.previousSchools.join(', ')}`);
         }
-
-        // Violations
-        if (studentData.violation && studentData.violation.trim() !== "") {
-          doc.text("Disciplinary Records:");
-          doc.text(`  ${studentData.violation}`);
+        if (ah.achievements?.length > 0) {
+          doc.text(`Achievements: ${ah.achievements.join(', ')}`);
         }
-      } else if (studentData.skills && studentData.skills.length > 0) {
-        checkPageBreak(80);
-        doc
-          .fontSize(14)
-          .font("Helvetica-Bold")
-          .text("Section 5: Skills & Competencies");
-        yPosition += 20;
+      }
 
-        doc.fontSize(11).font("Helvetica");
-        studentData.skills.forEach((skill) => {
-          doc.text(`• ${skill}`);
-        });
+      // Violations (Conditional)
+      if (requestingUserRole === "admin" && studentData.violation) {
+        doc.fillColor('red').text(`Disciplinary Records: ${studentData.violation}`).fillColor('black');
       }
 
       // Footer
@@ -649,8 +683,71 @@ async function exportStudentProfilePDF(req, res, next) {
   }
 }
 
+async function getFacultyForReports(req, res, next) {
+  try {
+    const { search, page = 1, limit = 50 } = req.query;
+    const filter = {};
+    if (search && search.trim() !== "") {
+      const terms = search.trim().split(/\s+/);
+      if (terms.length > 1) {
+        // Multi-term search (e.g. "Justin Rain")
+        filter.$and = terms.map(term => ({
+          $or: [
+            { firstName: new RegExp(term, "i") },
+            { lastName: new RegExp(term, "i") },
+            { employeeId: new RegExp(term, "i") }
+          ]
+        }));
+      } else {
+        const pattern = new RegExp(search.trim(), "i");
+        filter.$or = [
+          { employeeId: pattern },
+          { firstName: pattern },
+          { lastName: pattern },
+          { email: pattern },
+        ];
+      }
+    }
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const total = await Faculty.countDocuments(filter);
+    
+    const faculty = await Faculty.aggregate([
+      { $match: filter },
+      {
+        $lookup: {
+          from: "sections",
+          localField: "_id",
+          foreignField: "schedules.facultyId",
+          as: "teachingAssignments",
+          pipeline: [
+            { $match: { academicYear: CURRENT_ACADEMIC_YEAR, term: CURRENT_TERM } }
+          ]
+        }
+      },
+      { $sort: { lastName: 1 } },
+      { $skip: skip },
+      { $limit: parseInt(limit) }
+    ]);
+
+    return res.status(200).json({
+      faculty: faculty.map(f => ({
+        ...f,
+        sectionCount: f.teachingAssignments?.length || 0
+      })),
+      pagination: {
+        page: parseInt(page),
+        total,
+        totalPages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   getStudentsForReports,
   getStudentDossier,
   exportStudentProfilePDF,
+  getFacultyForReports
 };

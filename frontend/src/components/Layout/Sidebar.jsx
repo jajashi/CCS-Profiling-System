@@ -19,6 +19,7 @@ import {
   FiGrid,
   FiShield,
   FiFileText,
+  FiKey,
 } from "react-icons/fi";
 import { useAuth } from "../../providers/AuthContext";
 import logoSrc from "../../assets/images/ccs-logo.jpg";
@@ -42,6 +43,7 @@ const Sidebar = () => {
     if (pathname.startsWith(FACULTY_PREFIX)) return "faculty";
     if (pathname.startsWith(INSTRUCTION_PREFIX)) return "instruction";
     if (pathname.startsWith(SCHEDULING_PREFIX)) return "scheduling";
+    if (pathname.startsWith("/dashboard/accounts")) return "accounts";
     return null;
   };
   const [openGroup, setOpenGroup] = useState(() =>
@@ -499,7 +501,7 @@ const Sidebar = () => {
               </NavLink>
             </li>
           ) : null}
-          {isAdmin || isFaculty ? (
+          {isAdmin ? (
             <li className="nav-item">
               <NavLink
                 to="/dashboard/reports"
@@ -515,20 +517,59 @@ const Sidebar = () => {
             </li>
           ) : null}
           {isAdmin ? (
-            <li className="nav-item">
-              <NavLink
-                to="/dashboard/accounts"
-                end
-                className={({ isActive }) =>
-                  isActive ? "nav-link active" : "nav-link"
-                }>
+            <li
+              className={`nav-item nav-group${location.pathname.startsWith("/dashboard/accounts") ? " nav-group--open" : ""}`}>
+              <button
+                type="button"
+                className={`nav-link nav-group-toggle${location.pathname.startsWith("/dashboard/accounts") ? " nav-group-toggle--within" : ""}`}
+                onClick={() => handleToggleGroup("accounts")}>
                 <span className="nav-icon">
                   <FiShield />
                 </span>
-                <span className="nav-text">Account Management</span>
-              </NavLink>
+                <span className="nav-text">Accounts</span>
+                <span className="nav-group-chevron" aria-hidden>
+                  {openGroup === "accounts" ? <FiChevronUp /> : <FiChevronDown />}
+                </span>
+              </button>
+              {openGroup === "accounts" || location.pathname.startsWith("/dashboard/accounts") ? (
+                <ul className="nav-sublist">
+                  <li className="nav-subitem">
+                    <NavLink
+                      to="/dashboard/accounts"
+                      end
+                      className={({ isActive }) =>
+                        isActive ? "nav-link nav-sublink active" : "nav-link nav-sublink"
+                      }>
+                      <span className="nav-text">Account Management</span>
+                    </NavLink>
+                  </li>
+                  <li className="nav-subitem">
+                    <NavLink
+                      to="/dashboard/accounts/options"
+                      end
+                      className={({ isActive }) =>
+                        isActive ? "nav-link nav-sublink active" : "nav-link nav-sublink"
+                      }>
+                      <span className="nav-text">Reference Options</span>
+                    </NavLink>
+                  </li>
+                </ul>
+              ) : null}
             </li>
           ) : null}
+          <li className="nav-item">
+            <NavLink
+              to="/dashboard/security"
+              end
+              className={({ isActive }) =>
+                isActive ? "nav-link active" : "nav-link"
+              }>
+              <span className="nav-icon">
+                <FiKey />
+              </span>
+              <span className="nav-text">Security</span>
+            </NavLink>
+          </li>
         </ul>
       </nav>
 

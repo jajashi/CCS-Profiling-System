@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiEdit2, FiEye, FiInfo, FiPlus, FiSearch, FiUserCheck, FiUsers, FiX, FiPower, FiChevronLeft, FiChevronRight, FiFilter, FiChevronDown, FiChevronUp, FiLoader } from 'react-icons/fi';
+import { FiEdit2, FiEye, FiInfo, FiPlus, FiSearch, FiUserCheck, FiUsers, FiX, FiPower, FiChevronLeft, FiChevronRight, FiFilter, FiChevronDown, FiChevronUp, FiLoader, FiGrid, FiList } from 'react-icons/fi';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import FilterDropdown from '../../../components/Elements/FilterDropdown';
 import AddFacultyForm from '../components/AddFacultyForm';
+import FacultyOverview from '../components/FacultyOverview';
+import '../components/FacultyOverview.css';
 import femaleImage from '../../../assets/images/female.jpg';
+import maleImage from '../../../assets/images/male.jpg';
 import { useAuth } from '../../../providers/AuthContext';
 import { apiFetch } from '../../../lib/api';
 import '../../students/routes/StudentInformation.css';
@@ -96,8 +99,10 @@ const FacultyInformation = () => {
   const [deactivateReasonOther, setDeactivateReasonOther] = useState('');
   const [deactivateModalError, setDeactivateModalError] = useState('');
   const [deactivateSubmitting, setDeactivateSubmitting] = useState(false);
+  const [viewMode, setViewMode] = useState('grid'); // Default to grid for better aesthetics
 
   const goToDirectory = () => {
+    setSelectedFaculty(null);
     const s = searchParams.toString();
     navigate(s ? { pathname: FACULTY_DIRECTORY_PATH, search: `?${s}` } : FACULTY_DIRECTORY_PATH);
   };
@@ -405,6 +410,7 @@ const FacultyInformation = () => {
   const requestCloseDeactivateModal = () => {
     if (deactivateSubmitting) return;
     resetDeactivateModal();
+    setDeactivateModalMember(null);
   };
 
   const applyFacultyStatusChange = async (member, newStatus, inactiveReason) => {
@@ -547,6 +553,22 @@ const FacultyInformation = () => {
                 <span className="filter-badge">{activeFilterCount}</span>
               )}
             </button>
+            <div className="flex items-center gap-2">
+              <button 
+                className={`view-toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                onClick={() => setViewMode('grid')}
+                title="Grid view"
+              >
+                <FiGrid />
+              </button>
+              <button 
+                className={`view-toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
+                onClick={() => setViewMode('list')}
+                title="List view"
+              >
+                <FiList />
+              </button>
+            </div>
             {isAdmin ? (
               <button
                 type="button"
@@ -701,7 +723,7 @@ const FacultyInformation = () => {
           ) : null}
         </div>
 
-        <div className="relative">
+        <div className="relative mt-4">
           {loading && faculty.length > 0 ? (
             <div
               className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/70"
@@ -712,130 +734,87 @@ const FacultyInformation = () => {
             </div>
           ) : null}
 
-          <div className={`table-responsive ${loading && faculty.length > 0 ? 'min-h-[120px]' : ''}`}>
-          <table className="student-table">
-            <thead>
-              <tr>
-                <th>Employee ID</th>
-                <th>Full Name</th>
-                <th>Department</th>
-                <th>Position</th>
-                <th>Employment Type</th>
-                <th>Specializations</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && faculty.length === 0
-                ? Array.from({ length: 6 }).map((_, i) => (
-                    <tr key={`sk-${i}`} className="skeleton-row">
-                      <td><span className="skeleton-block" style={{ width: '88px' }} /></td>
-                      <td><span className="skeleton-block" style={{ width: '160px' }} /></td>
-                      <td><span className="skeleton-block" style={{ width: '48px' }} /></td>
-                      <td><span className="skeleton-block" style={{ width: '120px' }} /></td>
-                      <td><span className="skeleton-block" style={{ width: '72px' }} /></td>
-                      <td><span className="skeleton-block" style={{ width: '100px' }} /></td>
-                      <td><span className="skeleton-block" style={{ width: '64px' }} /></td>
-                      <td><span className="skeleton-block" style={{ width: '72px' }} /></td>
+          {viewMode === 'grid' ? (
+            <FacultyOverview 
+              faculty={faculty} 
+              loading={loading} 
+              isAdmin={isAdmin}
+              onView={(m) => setSelectedFaculty(m)}
+              onEdit={(m) => openEditForm(m.employeeId)}
+              onToggleStatus={onQuickStatusClick}
+            />
+          ) : (
+            <div className="table-responsive">
+              <table className="student-table">
+                <thead>
+                  <tr>
+                    <th>Employee ID</th>
+                    <th>Name</th>
+                    <th>Department</th>
+                    <th>Employment Type</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {faculty.map((member) => (
+                    <tr key={member.employeeId} onClick={() => setSelectedFaculty(member)} className={selectedFaculty?.employeeId === member.employeeId ? 'row-selected' : ''}>
+                      <td className="id-cell">
+                        <span className="id-badge">{member.employeeId}</span>
+                      </td>
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <img 
+                            src={member.profileAvatar || ((member.gender || '').toLowerCase() === 'male' ? maleImage : femaleImage)} 
+                            alt="" 
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                          <span>{member.firstName} {member.lastName}</span>
+                        </div>
+                      </td>
+                      <td>{member.department}</td>
+                      <td>{member.employmentType}</td>
+                      <td>
+                        <span className={`status-badge status-${member.status?.toLowerCase()}`}>
+                          {member.status}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="action-buttons" onClick={(e) => e.stopPropagation()}>
+                          <button className="action-btn view" onClick={() => setSelectedFaculty(member)} title="View Profile">
+                            <FiEye />
+                          </button>
+                          {isAdmin && (
+                            <>
+                              <button className="action-btn edit" onClick={() => openEditForm(member.employeeId)} title="Edit Faculty">
+                                <FiEdit2 />
+                              </button>
+                              <button className="action-btn delete" onClick={() => onQuickStatusClick(member)} title={member.status === 'Inactive' ? 'Activate' : 'Deactivate'}>
+                                <FiPower />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
                     </tr>
-                  ))
-                : null}
-              {!loading && faculty.map((member) => (
-                <tr
-                  key={member.employeeId || member._id}
-                  onClick={() => navigate(facultyProfilePath(member.employeeId))}
-                  className={[
-                    member.status === 'Inactive' ? 'grayscale opacity-60' : '',
-                    String(selectedEmployeeId || '') === String(member.employeeId || '') ? 'row-selected' : '',
-                  ].filter(Boolean).join(' ')}
-                >
-                  <td className="id-cell">
-                    <span className="id-badge">{member.employeeId || '-'}</span>
-                  </td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={member.status === 'Inactive' ? 'faculty-directory-name-inactive' : undefined}
-                      >
-                        {[member.firstName, member.middleName, member.lastName].filter(Boolean).join(' ') || '-'}
-                      </span>
-                    </div>
-                  </td>
-                  <td>{member.department || '-'}</td>
-                  <td>{member.position || '-'}</td>
-                  <td>{member.employmentType || '-'}</td>
-                  <td>
-                    {member.specializations?.length
-                      ? member.specializations
-                          .map((s) => {
-                            const name = typeof s === 'object' ? (s.name || '') : String(s);
-                            const desc =
-                              typeof s === 'object' && String(s.description || '').trim()
-                                ? ` (${s.description})`
-                                : '';
-                            return name + desc;
-                          })
-                          .join(', ')
-                      : '-'}
-                  </td>
-                  <td>
-                    <span className={`status-badge status-${String(member.status || 'active').toLowerCase()}`}>
-                      {member.status || 'Active'}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="action-buttons flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        className="action-btn view"
-                        type="button"
-                        aria-label="View faculty"
-                        title="View faculty"
-                        onClick={() => navigate(facultyProfilePath(member.employeeId))}
-                      >
-                        <FiEye />
-                      </button>
-                      {isAdmin ? (
-                        <>
-                          <button
-                            className="action-btn edit"
-                            type="button"
-                            aria-label="Edit faculty"
-                            title="Edit faculty"
-                            onClick={() => openEditForm(member.employeeId)}
-                          >
-                            <FiEdit2 />
-                          </button>
-                          <button
-                            className="action-btn delete"
-                            type="button"
-                            aria-label={member.status === 'Inactive' ? 'Activate faculty' : 'Deactivate faculty'}
-                            title={member.status === 'Inactive' ? 'Mark Active' : 'Mark Inactive'}
-                            onClick={() => onQuickStatusClick(member)}
-                          >
-                            <FiPower />
-                          </button>
-                        </>
-                      ) : null}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {!loading && !faculty.length ? (
-                <tr>
-                  <td colSpan="8" className="empty-row text-center py-8">
-                    No faculty records found. <br />
-                    {isAdmin && (
-                      <button onClick={openCreateForm} className="text-orange-500 underline mt-2 hover:text-orange-600">
-                        Click here to add a new faculty member.
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-          </div>
+                  ))}
+                  {!loading && faculty.length === 0 && (
+                    <tr>
+                      <td colSpan="6" className="empty-row text-center py-12">
+                        <FiUsers className="mx-auto mb-4 text-slate-300" size={48} />
+                        <p className="text-slate-500 font-medium">No faculty members found matching your filters.</p>
+                        {isAdmin && (
+                           <button onClick={openCreateForm} className="mt-4 text-orange-500 hover:underline">
+                             Click here to add a new faculty member.
+                           </button>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
@@ -980,6 +959,17 @@ const FacultyInformation = () => {
                     <p className="label">Department</p>
                     <input className="readonly-field" type="text" value={selectedFaculty.department || '-'} readOnly />
                   </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <p className="label">Address</p>
+                    <input 
+                      className="readonly-field" 
+                      type="text" 
+                      value={selectedFaculty.address?.street 
+                        ? [selectedFaculty.address.street, selectedFaculty.address.city, selectedFaculty.address.province, selectedFaculty.address.postalCode].filter(Boolean).join(', ') 
+                        : '-'} 
+                      readOnly 
+                    />
+                  </div>
                 </div>
               </CollapsibleSection>
 
@@ -1094,9 +1084,30 @@ const FacultyInformation = () => {
               ) : null}
 
               <CollapsibleSection title="Teaching Load Summary">
-                <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '8px', color: '#64748b', textAlign: 'center', fontStyle: 'italic' }}>
-                  Teaching load data will be available once the Scheduling module is integrated.
-                </div>
+                {selectedFaculty.teachingLoad?.length > 0 ? (
+                  <div className="teaching-load-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {selectedFaculty.teachingLoad.map((load, idx) => (
+                      <div key={load.sectionId || idx} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{load.courseCode} - {load.sectionIdentifier}</span>
+                          <span style={{ fontSize: '0.85rem', color: '#64748b' }}>{load.academicYear} | {load.term}</span>
+                        </div>
+                        <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#475569' }}>{load.courseTitle}</p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                          {load.schedules.map((sched, sIdx) => (
+                            <div key={sIdx} style={{ fontSize: '0.8rem', background: '#fff', padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
+                              <strong>{sched.dayOfWeek}</strong> {sched.startTime} - {sched.endTime} ({sched.room})
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '8px', color: '#64748b', textAlign: 'center', fontStyle: 'italic' }}>
+                    No teaching assignments found for this faculty member.
+                  </div>
+                )}
               </CollapsibleSection>
             </div>
           </div>
@@ -1236,6 +1247,7 @@ const FacultyInformation = () => {
       {isFormOpen ? (
         <AddFacultyForm
           mode={formMode}
+          isAdmin={isAdmin}
           initialData={formTarget}
           targetEmployeeId={formTarget?.employeeId}
           nextEmployeeId={nextEmployeeId}

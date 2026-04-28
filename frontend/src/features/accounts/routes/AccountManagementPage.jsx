@@ -12,6 +12,7 @@ export default function AccountManagementPage() {
   const PAGE_SIZE = 20;
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('students');
+  const [requests, setRequests] = useState([]);
   const [rows, setRows] = useState([]);
   const [totalRows, setTotalRows] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -53,6 +54,19 @@ export default function AccountManagementPage() {
       params.set('page', String(currentPage));
       params.set('limit', String(PAGE_SIZE));
       let path = '/api/accounts';
+      if (activeTab === 'password-requests') {
+        const res = await apiFetch('/api/password-change/pending');
+        const data = await res.json().catch(() => []);
+        if (latestLoadTokenRef.current !== loadToken) return;
+        if (!res.ok) {
+          setError(normalizePayloadError(data, 'Failed to load password requests.'));
+          setRequests([]);
+        } else {
+          setRequests(data);
+        }
+        setLoading(false);
+        return;
+      }
       if (activeTab === 'students') path = '/api/accounts/profiles/students';
       if (activeTab === 'faculty') path = '/api/accounts/profiles/faculty';
       if (activeTab === 'admin') {
@@ -372,6 +386,10 @@ export default function AccountManagementPage() {
         <button type="button" className={activeTab === 'admin' ? 'is-active' : ''} onClick={() => setActiveTab('admin')}>Admin</button>
         <button type="button" className={activeTab === 'students' ? 'is-active' : ''} onClick={() => setActiveTab('students')}>Students</button>
         <button type="button" className={activeTab === 'faculty' ? 'is-active' : ''} onClick={() => setActiveTab('faculty')}>Faculty</button>
+        <button type="button" className={activeTab === 'password-requests' ? 'is-active' : ''} onClick={() => setActiveTab('password-requests')}>
+          Password Requests
+          {requests.length > 0 && <span className="tab-badge">{requests.length}</span>}
+        </button>
       </div>
 
       {notice ? <div className="account-notice">{notice}</div> : null}
@@ -433,217 +451,307 @@ export default function AccountManagementPage() {
               </button>
             ) : null}
           </div>
-
-          <div className="account-summary-bar account-controls-bottom">
-            <div className="account-results-text" aria-label="Account results summary">
-              Showing <strong>{rows.length}</strong> of <strong>{totalRows}</strong>
-              <span className="account-results-sep">|</span>
-              With account: <strong>{summary.withAccount}</strong>
-              <span className="account-results-sep">|</span>
-              No account: <strong>{summary.withoutAccount}</strong>
-            </div>
-            {totalPages > 1 ? (
-              <div className="account-pagination account-pagination-top">
-                <button
-                  className="account-pagination-btn account-pagination-btn-sm"
-                  type="button"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage <= 1 || loading}
-                  aria-label="Previous page"
-                >
-                  <FiChevronLeft />
-                </button>
-                <label className="account-pagination-input-wrap" aria-label="Top page number">
-                  <span className="account-pagination-input-label">Page</span>
-                  <input
-                    type="number"
-                    min="1"
-                    max={totalPages}
-                    inputMode="numeric"
-                    value={pageInput}
-                    onChange={(e) => setPageInput(e.target.value)}
-                    onBlur={handlePageJump}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handlePageJump();
-                      }
-                    }}
-                    className="account-pagination-page-input"
-                    disabled={loading}
-                  />
-                </label>
-                <span className="account-pagination-info-sm">of {totalPages}</span>
-                <button
-                  className="account-pagination-btn account-pagination-btn-sm"
-                  type="button"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage >= totalPages || loading}
-                  aria-label="Next page"
-                >
-                  <FiChevronRight />
-                </button>
+          {activeTab === 'password-requests' ? null : (
+            <div className="account-summary-bar account-controls-bottom">
+              <div className="account-results-text" aria-label="Account results summary">
+                Showing <strong>{rows.length}</strong> of <strong>{totalRows}</strong>
+                <span className="account-results-sep">|</span>
+                With account: <strong>{summary.withAccount}</strong>
+                <span className="account-results-sep">|</span>
+                No account: <strong>{summary.withoutAccount}</strong>
               </div>
-            ) : null}
-          </div>
+              {totalPages > 1 ? (
+                <div className="account-pagination account-pagination-top">
+                  <button
+                    className="account-pagination-btn account-pagination-btn-sm"
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage <= 1 || loading}
+                    aria-label="Previous page"
+                  >
+                    <FiChevronLeft />
+                  </button>
+                  <label className="account-pagination-input-wrap" aria-label="Top page number">
+                    <span className="account-pagination-input-label">Page</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max={totalPages}
+                      inputMode="numeric"
+                      value={pageInput}
+                      onChange={(e) => setPageInput(e.target.value)}
+                      onBlur={handlePageJump}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handlePageJump();
+                        }
+                      }}
+                      className="account-pagination-page-input"
+                      disabled={loading}
+                    />
+                  </label>
+                  <span className="account-pagination-info-sm">of {totalPages}</span>
+                  <button
+                    className="account-pagination-btn account-pagination-btn-sm"
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage >= totalPages || loading}
+                    aria-label="Next page"
+                  >
+                    <FiChevronRight />
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
 
-        <div className="account-table-wrap">
-          <table className="account-table">
-            <thead>
-              <tr>
-                <th>{activeTab === 'faculty' ? 'Employee ID' : activeTab === 'students' ? 'Student ID' : 'Username'}</th>
-                <th>Name</th>
-                <th>Login Username</th>
-                <th>Status</th>
-                <th>Password</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="account-empty">Loading records...</td>
-                </tr>
-              ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="account-empty">No records found for selected filters.</td>
-                </tr>
-              ) : (
-                rows.map((row) => (
-                  <tr key={row.id || row.profileId}>
-                    {(() => {
-                      const hasAccount = Boolean(row.account || row.id);
-                      const canOpenProfile = activeTab === 'students' || activeTab === 'faculty';
-                      const profileRoute =
-                        activeTab === 'students'
-                          ? `/dashboard/student-info/${encodeURIComponent(String(row.profileId || ''))}`
-                          : activeTab === 'faculty'
-                            ? `/dashboard/faculty/directory/${encodeURIComponent(String(row.profileId || ''))}`
-                            : '';
-                      const isActive = row.account?.isActive ?? row.isActive;
-                      const mustChangePassword = row.account?.mustChangePassword ?? row.mustChangePassword;
-                      const statusLabel = !hasAccount ? 'No account' : isActive ? 'Active' : 'Inactive';
-                      const statusClass = !hasAccount
-                        ? 'account-pill warn'
-                        : isActive
-                          ? 'account-pill active'
-                          : 'account-pill inactive';
-                      const passwordLabel = !hasAccount ? '—' : mustChangePassword ? 'Must Change' : 'Updated';
-                      const passwordClass = !hasAccount
-                        ? 'account-pill warn'
-                        : mustChangePassword
-                          ? 'account-pill warn'
-                          : 'account-pill ok';
-                      return (
-                        <>
-                    <td>
-                      {canOpenProfile && row.profileId ? (
-                        <button
-                          type="button"
-                          className="account-id-link"
-                          onClick={() => navigate(profileRoute)}
-                          title={`Open ${activeTab === 'students' ? 'student' : 'faculty'} profile`}
-                        >
-                          {row.profileId}
-                        </button>
-                      ) : (
-                        row.profileId || row.username
-                      )}
-                    </td>
-                    <td>{row.name || '-'}</td>
-                    <td>{row.account?.username || row.username || '-'}</td>
-                    <td>
-                      <span className={statusClass}>
-                        {statusLabel}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={passwordClass}>
-                        {passwordLabel}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="account-actions">
-                        {!row.account && !row.id ? (
-                          <button
-                            type="button"
-                            onClick={() => provisionFromProfile(row)}
-                            disabled={provisionBusyId === row.profileId}
-                            title="Create login account"
-                          >
-                            <FiUserPlus />
-                            {provisionBusyId === row.profileId ? 'Creating...' : 'Create Account'}
-                          </button>
-                        ) : (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => handleResetPassword(row.account?.id || row.id)}
-                              disabled={resetBusyId === (row.account?.id || row.id)}
-                              title="Reset password"
-                            >
-                              <FiKey />
-                              {resetBusyId === (row.account?.id || row.id) ? 'Resetting...' : 'Reset Password'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const currentIsActive = row.account?.isActive ?? row.isActive;
-                                const nextIsActive = !currentIsActive;
-                                handleToggleStatus(row.account?.id || row.id, nextIsActive);
-                              }}
-                              disabled={
-                                statusBusyId === (row.account?.id || row.id) ||
-                                (activeTab === 'admin' &&
-                                  row.role === 'admin' &&
-                                  (row.account?.isActive ?? row.isActive) &&
-                                  activeAdminCount <= 1)
-                              }
-                              title={
-                                activeTab === 'admin' &&
-                                row.role === 'admin' &&
-                                (row.account?.isActive ?? row.isActive) &&
-                                activeAdminCount <= 1
-                                  ? 'At least one active admin is required.'
-                                  : (row.account?.isActive ?? row.isActive)
-                                    ? 'Deactivate account'
-                                    : 'Activate account'
-                              }
-                            >
-                              <FiRefreshCw />
-                              {statusBusyId === (row.account?.id || row.id)
-                                ? 'Saving...'
-                                : (row.account?.isActive ?? row.isActive)
-                                  ? 'Deactivate'
-                                  : 'Activate'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setDeleteConfirm(row);
-                                setDeleteConfirmInput('');
-                                setError('');
-                              }}
-                              disabled={deleteBusyId === (row.account?.id || row.id)}
-                              title="Delete account"
-                            >
-                              <FiTrash2 />
-                              {deleteBusyId === (row.account?.id || row.id) ? 'Deleting...' : 'Delete'}
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                        </>
-                      );
-                    })()}
+          {activeTab === 'password-requests' ? (
+            <div className="account-requests-table-wrap">
+              <table className="account-table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Requested On</th>
+                    <th>Actions</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr><td colSpan="4" className="account-empty">Loading requests...</td></tr>
+                  ) : requests.length === 0 ? (
+                    <tr><td colSpan="4" className="account-empty">No pending password requests.</td></tr>
+                  ) : (
+                    requests.map((req) => (
+                      <tr key={req._id}>
+                        <td>
+                          <div className="flex flex-col">
+                            <span className="font-semibold">{req.userId?.name || 'Unknown'}</span>
+                            <span className="text-xs text-gray-500">@{req.userId?.username}</span>
+                          </div>
+                        </td>
+                        <td><span className="capitalize">{req.userId?.role}</span></td>
+                        <td>{new Date(req.createdAt).toLocaleString()}</td>
+                        <td>
+                          <div className="account-actions">
+                            <button
+                              type="button"
+                              className="primary"
+                              onClick={async () => {
+                                const notes = prompt('Enter approval notes (optional):');
+                                if (notes === null) return;
+                                try {
+                                  const res = await apiFetch(`/api/password-change/${req._id}/approve`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ adminNotes: notes }),
+                                  });
+                                  if (res.ok) {
+                                    setNotice('Request approved.');
+                                    loadRows();
+                                  } else {
+                                    setError('Failed to approve request.');
+                                  }
+                                } catch {
+                                  setError('Network error.');
+                                }
+                              }}
+                            >
+                              Approve
+                            </button>
+                            <button
+                              type="button"
+                              className="danger"
+                              onClick={async () => {
+                                const notes = prompt('Enter rejection reason:');
+                                if (!notes) return;
+                                try {
+                                  const res = await apiFetch(`/api/password-change/${req._id}/reject`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ adminNotes: notes }),
+                                  });
+                                  if (res.ok) {
+                                    setNotice('Request rejected.');
+                                    loadRows();
+                                  } else {
+                                    setError('Failed to reject request.');
+                                  }
+                                } catch {
+                                  setError('Network error.');
+                                }
+                              }}
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="account-table-wrap">
+              <table className="account-table">
+                <thead>
+                  <tr>
+                    <th>{activeTab === 'faculty' ? 'Employee ID' : activeTab === 'students' ? 'Student ID' : 'Username'}</th>
+                    <th>Name</th>
+                    <th>Login Username</th>
+                    <th>Status</th>
+                    <th>Password</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="account-empty">Loading records...</td>
+                    </tr>
+                  ) : rows.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="account-empty">No records found for selected filters.</td>
+                    </tr>
+                  ) : (
+                    rows.map((row) => (
+                      <tr key={row.id || row.profileId}>
+                        {(() => {
+                          const hasAccount = Boolean(row.account || row.id);
+                          const canOpenProfile = activeTab === 'students' || activeTab === 'faculty';
+                          const profileRoute =
+                            activeTab === 'students'
+                              ? `/dashboard/student-info/${encodeURIComponent(String(row.profileId || ''))}`
+                              : activeTab === 'faculty'
+                                ? `/dashboard/faculty/directory/${encodeURIComponent(String(row.profileId || ''))}`
+                                : '';
+                          const isActive = row.account?.isActive ?? row.isActive;
+                          const mustChangePassword = row.account?.mustChangePassword ?? row.mustChangePassword;
+                          const statusLabel = !hasAccount ? 'No account' : isActive ? 'Active' : 'Inactive';
+                          const statusClass = !hasAccount
+                            ? 'account-pill warn'
+                            : isActive
+                              ? 'account-pill active'
+                              : 'account-pill inactive';
+                          const passwordLabel = !hasAccount ? '—' : mustChangePassword ? 'Must Change' : 'Updated';
+                          const passwordClass = !hasAccount
+                            ? 'account-pill warn'
+                            : mustChangePassword
+                              ? 'account-pill warn'
+                              : 'account-pill ok';
+                          return (
+                            <>
+                        <td>
+                          {canOpenProfile && row.profileId ? (
+                            <button
+                              type="button"
+                              className="account-id-link"
+                              onClick={() => navigate(profileRoute)}
+                              title={`Open ${activeTab === 'students' ? 'student' : 'faculty'} profile`}
+                            >
+                              {row.profileId}
+                            </button>
+                          ) : (
+                            row.profileId || row.username
+                          )}
+                        </td>
+                        <td>{row.name || '-'}</td>
+                        <td>{row.account?.username || row.username || '-'}</td>
+                        <td>
+                          <span className={statusClass}>
+                            {statusLabel}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={passwordClass}>
+                            {passwordLabel}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="account-actions">
+                            {!row.account && !row.id ? (
+                              <button
+                                type="button"
+                                onClick={() => provisionFromProfile(row)}
+                                disabled={provisionBusyId === row.profileId}
+                                title="Create login account"
+                              >
+                                <FiUserPlus />
+                                {provisionBusyId === row.profileId ? 'Creating...' : 'Create Account'}
+                              </button>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleResetPassword(row.account?.id || row.id)}
+                                  disabled={resetBusyId === (row.account?.id || row.id)}
+                                  title="Reset password"
+                                >
+                                  <FiKey />
+                                  {resetBusyId === (row.account?.id || row.id) ? 'Resetting...' : 'Reset Password'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const currentIsActive = row.account?.isActive ?? row.isActive;
+                                    const nextIsActive = !currentIsActive;
+                                    handleToggleStatus(row.account?.id || row.id, nextIsActive);
+                                  }}
+                                  disabled={
+                                    statusBusyId === (row.account?.id || row.id) ||
+                                    (activeTab === 'admin' &&
+                                      row.role === 'admin' &&
+                                      (row.account?.isActive ?? row.isActive) &&
+                                      activeAdminCount <= 1)
+                                  }
+                                  title={
+                                    activeTab === 'admin' &&
+                                    row.role === 'admin' &&
+                                    (row.account?.isActive ?? row.isActive) &&
+                                    activeAdminCount <= 1
+                                      ? 'At least one active admin is required.'
+                                      : (row.account?.isActive ?? row.isActive)
+                                        ? 'Deactivate account'
+                                        : 'Activate account'
+                                  }
+                                >
+                                  <FiRefreshCw />
+                                  {statusBusyId === (row.account?.id || row.id)
+                                    ? 'Saving...'
+                                    : (row.account?.isActive ?? row.isActive)
+                                      ? 'Deactivate'
+                                      : 'Activate'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setDeleteConfirm(row);
+                                    setDeleteConfirmInput('');
+                                    setError('');
+                                  }}
+                                  disabled={deleteBusyId === (row.account?.id || row.id)}
+                                  title="Delete account"
+                                >
+                                  <FiTrash2 />
+                                  {deleteBusyId === (row.account?.id || row.id) ? 'Deleting...' : 'Delete'}
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                            </>
+                          );
+                        })()}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         {totalPages > 1 ? (
           <div className="account-pagination account-pagination-bottom">
             <button

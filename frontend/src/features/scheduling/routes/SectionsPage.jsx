@@ -16,6 +16,9 @@ import {
   FiChevronRight,
   FiInfo,
   FiArrowRight,
+  FiCheckSquare,
+  FiSquare,
+  FiAlertTriangle,
 } from "react-icons/fi";
 import { apiFetch } from "../../../lib/api";
 import toast from "react-hot-toast";
@@ -777,44 +780,57 @@ function ManageRosterModal({ section, onClose, onUpdated }) {
                 <table className="roster-table">
                   <thead>
                     <tr>
-                      <th />
-                      <th>ID</th>
-                      <th>Name</th>
-                      <th>Program/Year</th>
+                      <th style={{ width: "40px" }}>
+                        <FiCheckSquare style={{ color: "#94a3b8" }} />
+                      </th>
+                      <th>Student Details</th>
+                      <th>Program & Year</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {students.map((student) => (
-                      <tr key={student._id}>
-                        <td>
-                          <input
-                            type="checkbox"
-                            checked={selectedRemovals.has(student._id)}
-                            onChange={() => toggleRemoval(student._id)}
-                          />
-                        </td>
-                        <td>{student.id}</td>
-                        <td>
-                          {student.lastName}, {student.firstName}
-                        </td>
-                        <td>
-                          {student.program} - {student.yearLevel}
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            className="btn-assign"
-                            style={{
-                              padding: "0.25rem 0.5rem",
-                              fontSize: "0.75rem",
-                            }}
-                            onClick={() => setTransferStudent(student)}>
-                            <FiArrowRight /> Transfer
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {students.map((student) => {
+                      const initials = `${student.firstName?.[0] || ""}${student.lastName?.[0] || ""}`.toUpperCase();
+                      return (
+                        <tr key={student._id}>
+                          <td>
+                            <input
+                              type="checkbox"
+                              className="roster-checkbox"
+                              checked={selectedRemovals.has(student._id)}
+                              onChange={() => toggleRemoval(student._id)}
+                            />
+                          </td>
+                          <td>
+                            <div className="roster-student-cell">
+                              <div className="roster-avatar">{initials}</div>
+                              <div className="roster-student-info">
+                                <span className="roster-student-name">
+                                  {student.lastName}, {student.firstName}
+                                </span>
+                                <span className="roster-student-id">{student.id}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <div className="flex flex-col gap-1">
+                              <span className="roster-badge">{student.program}</span>
+                              <span className="text-xs text-slate-500 font-medium">{student.yearLevel}</span>
+                            </div>
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="action-btn view"
+                              style={{ width: "auto", padding: "0 0.75rem", height: "32px", fontSize: "0.8rem", gap: "0.4rem" }}
+                              onClick={() => setTransferStudent(student)}>
+                              <FiArrowRight />
+                              <span>Transfer</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -999,6 +1015,67 @@ export default function SectionsPage() {
     statusFilter,
   ]);
 
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [isBulkMode, setIsBulkMode] = useState(false);
+  const [deletingId, setDeletingId] = useState("");
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selectedIds.size === paginatedSections.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(paginatedSections.map((s) => s._id)));
+    }
+  };
+
+  const handleDeleteSection = async (id, identifier) => {
+    if (!window.confirm(`Are you sure you want to delete section ${identifier}? This will remove all student assignments and schedules.`)) return;
+    setDeletingId(id);
+    try {
+      const res = await apiFetch(`/api/scheduling/sections/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "Failed to delete section.");
+      }
+      toast.success("Section deleted successfully.");
+      setSections(sections.filter(s => s._id !== id));
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setDeletingId("");
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`Are you sure you want to delete ${selectedIds.size} sections? This action is permanent.`)) return;
+
+    try {
+      const res = await apiFetch("/api/scheduling/sections/batch-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Bulk delete failed.");
+
+      toast.success(data.message || "Sections deleted successfully.");
+      setSections(sections.filter((s) => !selectedIds.has(s._id)));
+      setSelectedIds(new Set());
+      setIsBulkMode(false);
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
   const totalPages = Math.max(
     Math.ceil(filteredSections.length / PAGE_SIZE),
     1,
@@ -1114,11 +1191,30 @@ export default function SectionsPage() {
               ))}
             </select>
           </div>
-          <button
-            className="spec-btn-primary"
-            onClick={() => setShowCreate(true)}>
-            <FiPlus /> New Section
-          </button>
+          <div className="section-toolbar-right" style={{ display: "flex", gap: "0.75rem" }}>
+            {isAdmin && (
+              <>
+                <button
+                  className={`spec-btn-secondary ${isBulkMode ? "active" : ""}`}
+                  onClick={() => {
+                    setIsBulkMode(!isBulkMode);
+                    setSelectedIds(new Set());
+                  }}>
+                  <FiCheckSquare /> {isBulkMode ? "Cancel Bulk" : "Bulk Delete"}
+                </button>
+                {isBulkMode && selectedIds.size > 0 && (
+                  <button className="spec-btn-danger" onClick={handleBulkDelete}>
+                    <FiTrash2 /> Delete Selected ({selectedIds.size})
+                  </button>
+                )}
+              </>
+            )}
+            <button
+              className="spec-btn-primary"
+              onClick={() => setShowCreate(true)}>
+              <FiPlus /> New Section
+            </button>
+          </div>
         </div>
         {!loading ? (
           <div className="results-count">
@@ -1332,7 +1428,22 @@ export default function SectionsPage() {
                       <FiBook /> Add Syllabus
                     </button>
                   ))}
+                {isAdmin && (
+                  <button
+                    className="btn-assign btn-delete-action"
+                    disabled={deletingId === section._id}
+                    onClick={() => handleDeleteSection(section._id, section.sectionIdentifier)}>
+                    <FiTrash2 /> {deletingId === section._id ? "..." : "Delete"}
+                  </button>
+                )}
               </div>
+              {isBulkMode && (
+                <div className="section-card-overlay" onClick={() => toggleSelect(section._id)}>
+                  <div className={`selection-checkbox ${selectedIds.has(section._id) ? "checked" : ""}`}>
+                    {selectedIds.has(section._id) ? <FiCheckSquare /> : <FiSquare />}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

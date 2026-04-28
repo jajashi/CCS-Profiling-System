@@ -3,16 +3,7 @@ import toast from "react-hot-toast";
 import { apiFetch } from "../../../lib/api";
 import "./AddStudentForm.css";
 
-const SKILL_OPTIONS = [
-  { value: "Programming", label: "Programming" },
-  { value: "Web Development", label: "Web Development" },
-  { value: "Database Management", label: "Database Management" },
-  { value: "UI/UX Design", label: "UI/UX Design" },
-  { value: "Data Analysis", label: "Data Analysis" },
-  { value: "Communication", label: "Communication" },
-  { value: "Leadership", label: "Leadership" },
-  { value: "Problem Solving", label: "Problem Solving" },
-];
+
 
 const SCHOLARSHIP_OPTIONS = [
   "Academic Scholar",
@@ -53,6 +44,7 @@ const emptyForm = {
   sectionId: "",
   section: "",
   status: "",
+  studentType: "Regular",
   scholarship: "",
   profileAvatar: "",
   email: "",
@@ -62,6 +54,10 @@ const emptyForm = {
   guardianContact: "",
   violation: "",
   skills: [],
+  address: { street: "", city: "", province: "", postalCode: "" },
+  emergencyContact: { name: "", relationship: "", phone: "" },
+  academicHistory: { previousSchools: [], achievements: [] },
+  healthInfo: { conditions: [], medications: [], allergies: [] },
 };
 
 function isNonEmpty(value) {
@@ -103,6 +99,7 @@ function mapStudentToFormData(student) {
     sectionId: String(student?.sectionId ?? ""),
     section: String(student?.section ?? ""),
     status: String(student?.status ?? ""),
+    studentType: String(student?.studentType ?? "Regular"),
     scholarship: String(student?.scholarship ?? ""),
     profileAvatar: String(student?.profileAvatar ?? ""),
     email: String(student?.email ?? ""),
@@ -112,6 +109,26 @@ function mapStudentToFormData(student) {
     guardianContact: String(student?.guardianContact ?? ""),
     violation: String(student?.violation ?? ""),
     skills: Array.isArray(student?.skills) ? student.skills : [],
+    address: {
+      street: String(student?.address?.street || ""),
+      city: String(student?.address?.city || ""),
+      province: String(student?.address?.province || ""),
+      postalCode: String(student?.address?.postalCode || ""),
+    },
+    emergencyContact: {
+      name: String(student?.emergencyContact?.name || ""),
+      relationship: String(student?.emergencyContact?.relationship || ""),
+      phone: String(student?.emergencyContact?.phone || ""),
+    },
+    academicHistory: {
+      previousSchools: Array.isArray(student?.academicHistory?.previousSchools) ? student.academicHistory.previousSchools : [],
+      achievements: Array.isArray(student?.academicHistory?.achievements) ? student.academicHistory.achievements : [],
+    },
+    healthInfo: {
+      conditions: Array.isArray(student?.healthInfo?.conditions) ? student.healthInfo.conditions : [],
+      medications: Array.isArray(student?.healthInfo?.medications) ? student.healthInfo.medications : [],
+      allergies: Array.isArray(student?.healthInfo?.allergies) ? student.healthInfo.allergies : [],
+    },
   };
 }
 
@@ -131,6 +148,8 @@ export default function AddStudentForm({
   const [showPreview, setShowPreview] = useState(false);
   const [avatarInputMode, setAvatarInputMode] = useState("url");
   const [sections, setSections] = useState([]);
+  const [skillOptions, setSkillOptions] = useState([]);
+  const [violationOptions, setViolationOptions] = useState([]);
 
   const controlClass = "add-student-control mt-1 block";
   const labelClass = "add-student-label";
@@ -185,6 +204,27 @@ export default function AddStudentForm({
       }
     }
     loadSections();
+
+    async function loadOptions() {
+      try {
+        const [skillRes, violationRes] = await Promise.all([
+          apiFetch("/api/reference-options?category=Skill"),
+          apiFetch("/api/reference-options?category=Violation")
+        ]);
+        if (skillRes.ok) {
+          const skills = await skillRes.json();
+          setSkillOptions(skills);
+        }
+        if (violationRes.ok) {
+          const violations = await violationRes.json();
+          setViolationOptions(violations);
+        }
+      } catch (err) {
+        console.error("[AddStudentForm] loadOptions", err);
+      }
+    }
+    loadOptions();
+
     return () => {
       cancelled = true;
     };
@@ -224,11 +264,11 @@ export default function AddStudentForm({
       { key: "email", label: "Email Address", required: true },
       { key: "contact", label: "Contact Number", required: true },
       { key: "dateEnrolled", label: "Date Enrolled", required: true },
-      { key: "guardian", label: "Guardian", required: true },
+      { key: "guardian", label: "Guardian", required: false },
       {
         key: "guardianContact",
         label: "Guardian Contact Information",
-        required: true,
+        required: false,
       },
     ];
     if (isEditMode) {
@@ -284,6 +324,18 @@ export default function AddStudentForm({
           section: selected ? selected.sectionIdentifier : prev.section,
         };
       }
+      
+      if (name.includes(".")) {
+        const [parent, child] = name.split(".");
+        return {
+          ...prev,
+          [parent]: {
+            ...(prev[parent] || {}),
+            [child]: value
+          }
+        };
+      }
+
       return {
         ...prev,
         [name]: value,
@@ -326,7 +378,7 @@ export default function AddStudentForm({
         return;
       }
 
-      if (res.status === 400) {
+      if (res.status === 400 || res.status === 409) {
         setSubmitError(
           data?.message || "Please review the form and try again.",
         );
@@ -514,9 +566,7 @@ export default function AddStudentForm({
                     <div>
                       <label htmlFor="id" className={labelClass}>
                         Student ID{" "}
-                        {isEditMode ? (
-                          <span className="text-red-600">*</span>
-                        ) : null}
+                        <span className="text-gray-500">(Leave blank to auto-generate)</span>
                       </label>
                       <input
                         id="id"
@@ -530,7 +580,6 @@ export default function AddStudentForm({
                             : "Auto-generated (e.g., 2201001)"
                         }
                         autoComplete="off"
-                        readOnly={!isEditMode}
                         aria-invalid={Boolean(errors.id)}
                       />
                       <FieldError name="id" />
@@ -725,7 +774,25 @@ export default function AddStudentForm({
                         <option value="Enrolled">Enrolled</option>
                         <option value="On Leave">On Leave</option>
                         <option value="Graduating">Graduating</option>
+                        <option value="Dropped">Dropped</option>
+                        <option value="Transferred">Transferred</option>
                       </select>
+                      <FieldError name="status" />
+                    </div>
+                    <div>
+                      <label htmlFor="studentType" className={labelClass}>
+                        Student Type <span className="text-red-600">*</span>
+                      </label>
+                      <select
+                        id="studentType"
+                        name="studentType"
+                        value={formData.studentType}
+                        onChange={handleChange}
+                        className={controlClass}>
+                        <option value="Regular">Regular</option>
+                        <option value="Irregular">Irregular</option>
+                      </select>
+                      <FieldError name="studentType" />
                     </div>
                     <div>
                       <label htmlFor="scholarship" className={labelClass}>
@@ -763,7 +830,7 @@ export default function AddStudentForm({
 
                 <section className="add-student-category">
                   <h4 className="add-student-section-heading">
-                    Contact & Guardian
+                    Contact & Address
                   </h4>
                   <div className="add-student-grid">
                     <div>
@@ -800,19 +867,50 @@ export default function AddStudentForm({
                       />
                       <FieldError name="contact" />
                     </div>
+                    
+                    <div className="md:col-span-2">
+                      <label htmlFor="address.street" className={labelClass}>Street Address</label>
+                      <input id="address.street" name="address.street" value={formData.address?.street} onChange={handleChange} className={controlClass} placeholder="123 Main St" autoComplete="off" />
+                    </div>
                     <div>
-                      <label htmlFor="guardian" className={labelClass}>
-                        Guardian <span className="text-red-600">*</span>
-                      </label>
-                      <input
-                        id="guardian"
-                        name="guardian"
-                        value={formData.guardian}
-                        onChange={handleChange}
-                        className={controlClass}
-                        placeholder="Optional"
-                        autoComplete="off"
-                      />
+                      <label htmlFor="address.city" className={labelClass}>City</label>
+                      <input id="address.city" name="address.city" value={formData.address?.city} onChange={handleChange} className={controlClass} placeholder="City" autoComplete="off" />
+                    </div>
+                    <div>
+                      <label htmlFor="address.province" className={labelClass}>Province</label>
+                      <input id="address.province" name="address.province" value={formData.address?.province} onChange={handleChange} className={controlClass} placeholder="Province" autoComplete="off" />
+                    </div>
+                  </div>
+                </section>
+
+                <section className="add-student-category">
+                  <h4 className="add-student-section-heading">
+                    Emergency Contact
+                  </h4>
+                  <div className="add-student-grid">
+                    <div>
+                      <label htmlFor="emergencyContact.name" className={labelClass}>Contact Name</label>
+                      <input id="emergencyContact.name" name="emergencyContact.name" value={formData.emergencyContact?.name} onChange={handleChange} className={controlClass} placeholder="Full Name" autoComplete="off" />
+                    </div>
+                    <div>
+                      <label htmlFor="emergencyContact.relationship" className={labelClass}>Relationship</label>
+                      <input id="emergencyContact.relationship" name="emergencyContact.relationship" value={formData.emergencyContact?.relationship} onChange={handleChange} className={controlClass} placeholder="e.g. Parent" autoComplete="off" />
+                    </div>
+                    <div>
+                      <label htmlFor="emergencyContact.phone" className={labelClass}>Contact Phone</label>
+                      <input id="emergencyContact.phone" name="emergencyContact.phone" value={formData.emergencyContact?.phone} onChange={handleChange} className={controlClass} placeholder="09XXXXXXXXX" autoComplete="off" />
+                    </div>
+                  </div>
+                </section>
+                
+                <section className="add-student-category">
+                  <h4 className="add-student-section-heading">
+                    Other Information
+                  </h4>
+                  <div className="add-student-grid">
+                    <div className="md:col-span-2">
+                      <label htmlFor="healthInfo.conditions" className={labelClass}>Health Conditions / Allergies</label>
+                      <input id="healthInfo.conditions" name="healthInfo.conditions" value={formData.healthInfo?.conditions?.join(', ') || ''} onChange={(e) => setFormData(p => ({...p, healthInfo: {...p.healthInfo, conditions: e.target.value.split(',').map(s=>s.trim())}}))} className={controlClass} placeholder="Comma-separated" autoComplete="off" />
                     </div>
 
                     <div>
@@ -851,11 +949,11 @@ export default function AddStudentForm({
                         onChange={handleChange}
                         className={controlClass}>
                         <option value="">Select violation</option>
-                        <option value="None">None</option>
-                        <option value="Warning (late)">Warning (late)</option>
-                        <option value="Academic probation">
-                          Academic probation
-                        </option>
+                        {violationOptions.map((opt) => (
+                          <option key={opt._id} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
                       </select>
                     </div>
 
@@ -864,38 +962,32 @@ export default function AddStudentForm({
                         Skills
                       </label>
                       <div className="skills-grid">
-                        {SKILL_OPTIONS.map((skill) => {
-                          const isChecked = formData.skills.includes(
-                            skill.value,
-                          );
-                          return (
+                        {skillOptions.length === 0 ? (
+                          <p className="text-xs text-gray-400 italic">No skills available.</p>
+                        ) : (
+                          skillOptions.map((skill) => (
                             <label
-                              key={skill.value}
-                              className={`skill-checkbox ${isChecked ? "checked" : ""}`}>
+                              key={skill._id}
+                              className="skill-checkbox-label">
                               <input
                                 type="checkbox"
+                                name="skills"
                                 value={skill.value}
-                                checked={isChecked}
+                                checked={formData.skills.includes(skill.value)}
                                 onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setFormData((prev) => ({
-                                      ...prev,
-                                      skills: [...prev.skills, skill.value],
-                                    }));
-                                  } else {
-                                    setFormData((prev) => ({
-                                      ...prev,
-                                      skills: prev.skills.filter(
-                                        (s) => s !== skill.value,
-                                      ),
-                                    }));
-                                  }
+                                  const { value, checked } = e.target;
+                                  setFormData((prev) => {
+                                    const skills = checked
+                                      ? [...prev.skills, value]
+                                      : prev.skills.filter((s) => s !== value);
+                                    return { ...prev, skills };
+                                  });
                                 }}
                               />
                               <span>{skill.label}</span>
                             </label>
-                          );
-                        })}
+                          ))
+                        )}
                       </div>
                     </div>
                   </div>

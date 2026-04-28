@@ -16,6 +16,8 @@ const accountRoutes = require("./routes/accountRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const advisingRoutes = require("./routes/advisingRoutes");
 const reportsRoutes = require("./routes/reports");
+const passwordChangeRoutes = require("./routes/passwordChangeRoutes");
+const referenceOptionRoutes = require("./routes/referenceOptionRoutes");
 const { startRsvpAutoCloseJob } = require("./jobs/rsvpAutoCloseJob");
 
 const app = express();
@@ -70,6 +72,8 @@ app.use("/api/accounts", accountRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/advising", advisingRoutes);
 app.use("/api/reports", reportsRoutes);
+app.use("/api/password-change", passwordChangeRoutes);
+app.use("/api/reference-options", referenceOptionRoutes);
 
 // 404 handler for undefined routes
 app.use((req, res) => {

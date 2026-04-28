@@ -10,6 +10,7 @@ import FilterDropdown from "../../../components/Elements/FilterDropdown";
 import SkillsFilter from "../../../components/Elements/SkillsFilter";
 import { useAuth } from '../../../providers/AuthContext';
 import { apiFetch } from "../../../lib/api";
+import StudentProfileTabs from "../components/StudentProfileTabs";
 import "./StudentInformation.css";
 
 const mockStudents = [
@@ -1148,93 +1149,7 @@ const StudentInformation = () => {
             </div>
 
             <div className="profile-details-container">
-              <div className="profile-section">
-                <h4 className="section-title">Academic Information</h4>
-                <div className="modal-grid">
-                  <div>
-                    <p className="label">Program / Course</p>
-                    <input className="readonly-field" type="text" value={selectedStudent.program} readOnly />
-                  </div>
-                  <div>
-                    <p className="label">Year Level</p>
-                    <input className="readonly-field" type="text" value={selectedStudent.yearLevel} readOnly />
-                  </div>
-                  <div>
-                    <p className="label">Section</p>
-                    <input className="readonly-field" type="text" value={selectedStudent.section} readOnly />
-                  </div>
-                  <div>
-                    <p className="label">Enrollment Status</p>
-                    <input className="readonly-field" type="text" value={selectedStudent.status} readOnly />
-                  </div>
-                  <div>
-                    <p className="label">Scholarship</p>
-                    <input className="readonly-field" type="text" value={selectedStudent.scholarship} readOnly />
-                  </div>
-                  <div>
-                    <p className="label">Date Enrolled</p>
-                    <input className="readonly-field" type="text" value={selectedStudent.dateEnrolled} readOnly />
-                  </div>
-                </div>
-              </div>
-
-              <div className="profile-section">
-                <h4 className="section-title">Personal Information</h4>
-                <div className="modal-grid">
-                  <div>
-                    <p className="label">Date of Birth</p>
-                    <input className="readonly-field" type="text" value={selectedStudent.dob} readOnly />
-                  </div>
-                  <div>
-                    <p className="label">Gender</p>
-                    <input className="readonly-field" type="text" value={selectedStudent.gender} readOnly />
-                  </div>
-                  <div style={{ gridColumn: isStudent ? "span 1" : "span 2" }}>
-                    <p className="label">Violation</p>
-                    <input className="readonly-field" type="text" value={selectedStudent.violation} readOnly />
-                  </div>
-                </div>
-              </div>
-
-              <div className="profile-section">
-                <h4 className="section-title">Contact & Guardian Details</h4>
-                <div className="modal-grid">
-                  <div>
-                    <p className="label">Contact Number</p>
-                    <input className="readonly-field" type="text" value={selectedStudent.contact} readOnly />
-                  </div>
-                  <div>
-                    <p className="label">Email Address</p>
-                    <input className="readonly-field" type="text" value={selectedStudent.email} readOnly />
-                  </div>
-                  <div>
-                    <p className="label">Guardian Name</p>
-                    <input className="readonly-field" type="text" value={selectedStudent.guardian} readOnly />
-                  </div>
-                  <div>
-                    <p className="label">Guardian Contact</p>
-                    <input className="readonly-field" type="text" value={selectedStudent.guardianContact} readOnly />
-                  </div>
-                </div>
-              </div>
-
-              <div className="profile-section">
-                <h4 className="section-title">Skills & Competencies</h4>
-                <div className="skills-container-full">
-                  {selectedStudent.skills && selectedStudent.skills.length > 0 ? (
-                    <div className="skills-grid">
-                      {selectedStudent.skills.map((skill, idx) => (
-                        <span key={idx} className="skill-badge">
-                          <FiAward />
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="skills-empty">No skills listed</p>
-                  )}
-                </div>
-              </div>
+              <StudentProfileTabs student={selectedStudent} />
             </div>
           </div>
         </div>

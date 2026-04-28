@@ -112,6 +112,12 @@ const facultySchema = new mongoose.Schema(
         ref: 'Specialization',
       },
     ],
+    address: {
+      street: { type: String, default: "" },
+      city: { type: String, default: "" },
+      province: { type: String, default: "" },
+      postalCode: { type: String, default: "" },
+    },
     internalNotes: { type: String, default: '', trim: true },
   },
   {

@@ -11,6 +11,11 @@ const {
 const Student = require("../models/Student");
 const { Syllabus } = require("../models/Syllabus");
 const ClassAttendance = require("../models/ClassAttendance");
+const { 
+  checkRoomConflict, 
+  checkFacultyConflict, 
+  checkCohortConflict 
+} = require("../services/conflictValidationService");
 
 const DAY_ENUM = TimeBlock.DAY_ENUM || [
   "Mon",
@@ -805,46 +810,55 @@ async function updateSectionResources(req, res, next) {
         }
       }
 
-      // Check external system state conflicts
-      for (const existingSec of activeSections) {
-        if (!existingSec.schedules || !Array.isArray(existingSec.schedules))
-          continue;
+      // Check external system state conflicts using validation service
+      const roomConflict = await checkRoomConflict(
+        s.roomId,
+        s.dayOfWeek,
+        s.startTime,
+        s.endTime,
+        section.academicYear,
+        section.term,
+        section._id,
+      );
+      if (roomConflict.conflict) {
+        return res.status(409).json({
+          message: roomConflict.message,
+          conflictType: "ROOM_DOUBLE_BOOKED",
+        });
+      }
 
-        for (const ex of existingSec.schedules) {
-          if (s.dayOfWeek !== ex.dayOfWeek) continue;
+      const facultyConflict = await checkFacultyConflict(
+        s.facultyId,
+        s.dayOfWeek,
+        s.startTime,
+        s.endTime,
+        section.academicYear,
+        section.term,
+        section._id,
+      );
+      if (facultyConflict.conflict) {
+        return res.status(409).json({
+          message: facultyConflict.message,
+          conflictType: "FACULTY_DOUBLE_BOOKED",
+        });
+      }
 
-          const eStart = parseTimeToMinutes(ex.startTime);
-          const eEnd = parseTimeToMinutes(ex.endTime);
-
-          if (eStart == null || eEnd == null) continue;
-
-          if (nStart < eEnd && nEnd > eStart) {
-            if (
-              s.roomId &&
-              ex.roomId &&
-              s.roomId.toString() === ex.roomId.toString()
-            ) {
-              return res.status(409).json({
-                message:
-                  "Conflict detected: Room is already booked for this time.",
-                conflictType: "ROOM_DOUBLE_BOOKED",
-                sectionIdentifier: existingSec.sectionIdentifier,
-              });
-            }
-            if (
-              s.facultyId &&
-              ex.facultyId &&
-              s.facultyId.toString() === ex.facultyId.toString()
-            ) {
-              return res.status(409).json({
-                message:
-                  "Conflict detected: Faculty is already booked for this time.",
-                conflictType: "FACULTY_DOUBLE_BOOKED",
-                sectionIdentifier: existingSec.sectionIdentifier,
-              });
-            }
-          }
-        }
+      const cohortConflict = await checkCohortConflict(
+        section.program,
+        section.yearLevel,
+        section.sectionIdentifier,
+        s.dayOfWeek,
+        s.startTime,
+        s.endTime,
+        section.academicYear,
+        section.term,
+        section._id,
+      );
+      if (cohortConflict.conflict) {
+        return res.status(409).json({
+          message: cohortConflict.message,
+          conflictType: "COHORT_CONFLICT",
+        });
       }
     }
 
@@ -1313,15 +1327,13 @@ async function getSectionRoster(req, res, next) {
 }
 
 async function patchSectionRoster(req, res, next) {
-  const session = await mongoose.startSession();
-  session.startTransaction();
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: "Invalid section id." });
     }
     const Section = await resolveSectionModel();
-    const section = await Section.findById(id).session(session);
+    const section = await Section.findById(id);
     if (!section)
       return res.status(404).json({ message: "Section not found." });
 
@@ -1352,7 +1364,6 @@ async function patchSectionRoster(req, res, next) {
     const newAddIds = addIds.filter((aid) => !currentIds.has(aid.toString()));
 
     if (currentIds.size - removeIds.length + newAddIds.length > 55) {
-      await session.abortTransaction();
       return res.status(400).json({
         message: "Enrollment failed: Section capacity (55) would be exceeded.",
       });
@@ -1365,7 +1376,7 @@ async function patchSectionRoster(req, res, next) {
         await Student.findByIdAndUpdate(
           rid,
           { sectionId: null, section: "" },
-          { session, runValidators: true },
+          { runValidators: true },
         );
 
         await logActivity(req, {
@@ -1384,11 +1395,9 @@ async function patchSectionRoster(req, res, next) {
     // Process Additions
     for (const aid of newAddIds) {
       // 1. Check if student was in another section and remove them from there
-      const student = await Student.findById(aid).session(session);
+      const student = await Student.findById(aid);
       if (student && student.sectionId && student.sectionId.toString() !== id) {
-        const prevSection = await Section.findById(student.sectionId).session(
-          session,
-        );
+        const prevSection = await Section.findById(student.sectionId);
         if (prevSection) {
           prevSection.enrolledStudentIds =
             prevSection.enrolledStudentIds.filter(
@@ -1396,7 +1405,7 @@ async function patchSectionRoster(req, res, next) {
             );
           prevSection.currentEnrollmentCount =
             prevSection.enrolledStudentIds.length;
-          await prevSection.save({ session });
+          await prevSection.save();
         }
       }
 
@@ -1404,7 +1413,7 @@ async function patchSectionRoster(req, res, next) {
       await Student.findByIdAndUpdate(
         aid,
         { sectionId: id, section: section.sectionIdentifier },
-        { session, runValidators: true },
+        { runValidators: true },
       );
     }
 
@@ -1412,9 +1421,7 @@ async function patchSectionRoster(req, res, next) {
       (s) => new mongoose.Types.ObjectId(s),
     );
     section.currentEnrollmentCount = section.enrolledStudentIds.length;
-    await section.save({ session });
-
-    await session.commitTransaction();
+    await section.save();
 
     const populated = await Section.findById(id)
       .populate("curriculumId", "courseCode courseTitle")
@@ -1454,16 +1461,11 @@ async function patchSectionRoster(req, res, next) {
       })),
     });
   } catch (err) {
-    await session.abortTransaction();
     return next(err);
-  } finally {
-    session.endSession();
   }
 }
 
 async function transferStudent(req, res, next) {
-  const session = await mongoose.startSession();
-  session.startTransaction();
   try {
     const { studentId, targetSectionId } = req.body;
     if (
@@ -1476,25 +1478,22 @@ async function transferStudent(req, res, next) {
     }
 
     const Section = await resolveSectionModel();
-    const targetSection =
-      await Section.findById(targetSectionId).session(session);
+    const targetSection = await Section.findById(targetSectionId);
     if (!targetSection)
       return res.status(404).json({ message: "Target section not found." });
 
     if (targetSection.currentEnrollmentCount >= 55) {
-      await session.abortTransaction();
       return res
         .status(400)
         .json({ message: "Transfer failed: Target section is full." });
     }
 
-    const student = await Student.findById(studentId).session(session);
+    const student = await Student.findById(studentId);
     if (!student)
       return res.status(404).json({ message: "Student not found." });
 
     const prevSectionId = student.sectionId;
     if (prevSectionId && prevSectionId.toString() === targetSectionId) {
-      await session.abortTransaction();
       return res
         .status(400)
         .json({ message: "Student is already in the target section." });
@@ -1502,15 +1501,14 @@ async function transferStudent(req, res, next) {
 
     // 1. Remove from previous section
     if (prevSectionId) {
-      const prevSection =
-        await Section.findById(prevSectionId).session(session);
+      const prevSection = await Section.findById(prevSectionId);
       if (prevSection) {
         prevSection.enrolledStudentIds = prevSection.enrolledStudentIds.filter(
           (id) => id.toString() !== studentId,
         );
         prevSection.currentEnrollmentCount =
           prevSection.enrolledStudentIds.length;
-        await prevSection.save({ session });
+        await prevSection.save();
       }
     }
 
@@ -1520,14 +1518,12 @@ async function transferStudent(req, res, next) {
     );
     targetSection.currentEnrollmentCount =
       targetSection.enrolledStudentIds.length;
-    await targetSection.save({ session });
+    await targetSection.save();
 
     // 3. Update student
     student.sectionId = targetSectionId;
     student.section = targetSection.sectionIdentifier;
-    await student.save({ session });
-
-    await session.commitTransaction();
+    await student.save();
 
     await logActivity(req, {
       action: "Transferred student between sections",
@@ -1541,10 +1537,7 @@ async function transferStudent(req, res, next) {
       .status(200)
       .json({ message: "Student transferred successfully.", student });
   } catch (err) {
-    await session.abortTransaction();
     return next(err);
-  } finally {
-    session.endSession();
   }
 }
 
@@ -1937,12 +1930,14 @@ async function getSchedulingAnalytics(req, res, next) {
 
     sections.forEach((s) => {
       // Program dist
-      stats.programDistribution[s.program] =
-        (stats.programDistribution[s.program] || 0) + 1;
+      const progKey = String(s.program || 'Unassigned');
+      stats.programDistribution[progKey] =
+        (stats.programDistribution[progKey] || 0) + 1;
 
       // Year level dist
-      stats.yearLevelDistribution[s.yearLevel] =
-        (stats.yearLevelDistribution[s.yearLevel] || 0) + 1;
+      const yearKey = s.yearLevel ? `Year ${s.yearLevel}` : 'Unassigned';
+      stats.yearLevelDistribution[yearKey] =
+        (stats.yearLevelDistribution[yearKey] || 0) + 1;
 
       // Faculty coverage
       if (s.schedules && s.schedules.length > 0) {
@@ -1973,12 +1968,64 @@ async function getSchedulingAnalytics(req, res, next) {
   }
 }
 
+async function deleteSection(req, res, next) {
+  try {
+    const { id } = req.params;
+    const Section = await resolveSectionModel();
+    const section = await Section.findById(id);
+    if (!section) return res.status(404).json({ message: "Section not found." });
+
+    // Logical delete or check if it can be deleted
+    // For now, allow deletion if it has no students or based on admin preference
+    await Section.findByIdAndDelete(id);
+
+    await logActivity(req, {
+      action: "Deleted section",
+      module: "Scheduling",
+      target: section.sectionIdentifier,
+      status: "Completed",
+    });
+
+    return res.status(200).json({ message: "Section deleted successfully." });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function batchDeleteSections(req, res, next) {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: "ids must be a non-empty array." });
+    }
+
+    const Section = await resolveSectionModel();
+    const result = await Section.deleteMany({ _id: { $in: ids } });
+
+    await logActivity(req, {
+      action: "Batch deleted sections",
+      module: "Scheduling",
+      target: `${result.deletedCount} sections`,
+      status: "Completed",
+    });
+
+    return res.status(200).json({
+      message: `${result.deletedCount} sections deleted successfully.`,
+      deletedCount: result.deletedCount,
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   listSections,
   createSection,
   updateSection,
   updateSectionResources,
   getSectionById,
+  deleteSection,
+  batchDeleteSections,
   getScheduleMatrix,
   getRoomUtilization,
   getSchedulingAnalytics,

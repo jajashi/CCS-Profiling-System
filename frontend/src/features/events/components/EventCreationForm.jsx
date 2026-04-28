@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { FiUser, FiX } from 'react-icons/fi';
 import './EventCreationForm.css';
 import { useAuth } from '../../../providers/AuthContext';
 import { apiFetch } from '../../../lib/api';
+import UserSearchBox from './UserSearchBox';
 
 const TARGET_ROLE_OPTIONS = [
   { value: 'student', label: 'Student' },
@@ -414,29 +416,66 @@ export default function EventCreationForm({ mode = 'create', initialData = null,
         </section>
 
         <section className="event-form-section organizers-section">
-          <h3>Organizers</h3>
-          {formData.organizers.map((org, idx) => (
-            <div key={idx} className="organizer-row">
-              <input 
-                type="text" 
-                placeholder="User ID" 
-                value={org.userId} 
-                onChange={(e) => updateOrganizer(idx, 'userId', e.target.value)} 
-                required 
-              />
-              <input 
-                type="text" 
-                placeholder="Role (e.g. Co-Organizer)" 
-                value={org.role} 
-                onChange={(e) => updateOrganizer(idx, 'role', e.target.value)} 
-                required 
-              />
-              {formData.organizers.length > 1 && (
-                <button type="button" onClick={() => removeOrganizer(idx)} className="btn-remove">X</button>
-              )}
-            </div>
-          ))}
-          <button type="button" onClick={addOrganizer} className="btn-add">Add Organizer</button>
+          <h3>Event Organizers</h3>
+          <p className="event-form-help">Search and add users as event organizers.</p>
+          
+          <div className="organizer-search-box" style={{ marginBottom: '1.5rem' }}>
+            <UserSearchBox 
+              onSelect={(user) => {
+                const alreadyAdded = formData.organizers.some(o => String(o.userId) === String(user.id));
+                if (alreadyAdded) return toast.error('User already added as organizer.');
+                
+                setFormData(prev => ({
+                  ...prev,
+                  organizers: [...prev.organizers, { userId: user.id, name: user.name, role: 'Co-Organizer' }]
+                }));
+              }}
+              excludeIds={formData.organizers.map(o => o.userId)}
+              placeholder="Search by name, student ID, or employee ID..."
+            />
+          </div>
+
+          <div className="selected-organizers-list">
+            {formData.organizers.length === 0 && (
+              <div className="spec-empty-inline">No organizers assigned.</div>
+            )}
+            {formData.organizers.map((org, idx) => (
+              <div key={idx} className="organizer-chip-row">
+                <div className="org-main-info">
+                  <div className="org-avatar">
+                    <FiUser />
+                  </div>
+                  <div className="org-text">
+                    <span className="org-name">
+                      {org.name || (org.userId === user?._id ? user.name : `User: ${org.userId}`)}
+                    </span>
+                    <span className="org-id">ID: {org.userId}</span>
+                  </div>
+                </div>
+                <div className="org-role-select">
+                  <select 
+                    value={org.role} 
+                    onChange={(e) => updateOrganizer(idx, 'role', e.target.value)}
+                    required
+                  >
+                    <option value="Lead Organizer">Lead Organizer</option>
+                    <option value="Co-Organizer">Co-Organizer</option>
+                    <option value="Technical Staff">Technical Staff</option>
+                    <option value="Volunteer">Volunteer</option>
+                    <option value="Moderator">Moderator</option>
+                  </select>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={() => removeOrganizer(idx)} 
+                  className="btn-remove-org"
+                  title="Remove Organizer"
+                >
+                  <FiX />
+                </button>
+              </div>
+            ))}
+          </div>
         </section>
 
         <section className="event-form-section organizers-section">

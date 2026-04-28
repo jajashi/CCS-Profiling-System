@@ -6,6 +6,7 @@ const Notification = require('../models/Notification');
 const User = require('../models/User');
 const Student = require('../models/Student');
 const { logActivity } = require('../services/activityLogService');
+const { checkRoomConflict } = require('../services/conflictValidationService');
 
 const RSVP_CLOSED_MESSAGE = 'Registration is already closed for this event.';
 
@@ -61,6 +62,10 @@ const canUserAccessEvent = (event, user, targetingMeta) => {
     (org) => String(org.userId?._id || org.userId) === String(user.id || user._id)
   );
   if (user.role === 'admin' || isOrganizer) return true;
+
+  // Non-admins and non-organizers can only see published events
+  if (event.status !== 'published') return false;
+
   return isUserInTargetGroups(event, targetingMeta);
 };
 
@@ -191,45 +196,32 @@ const createEvent = async (req, res) => {
 
     if (!isVirtual && roomId) {
       const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      // Assuming schedule.date is UTC Datetime mapping back identically
       const dayOfWeek = days[eventStart.getUTCDay()]; 
-
-      // Check Events overlap 
-      // events with same room, overlapping times
-      const conflictingEvents = await Event.find({
-        roomId,
-        isVirtual: false,
-        'schedule.startTime': { $lt: eventEnd },
-        'schedule.endTime': { $gt: eventStart }
-      });
-
-      if (conflictingEvents.length > 0) {
-        return res.status(409).json({ message: 'Venue Double-Booked: Overlaps with another event.', conflictingSchedule: 'Another event' });
-      }
-
-      // Check Sections overlap
-      const sections = await Section.find({ 'schedules.roomId': roomId });
-      let hasSectionConflict = false;
       
-      for (const section of sections) {
-        for (const sched of section.schedules) {
-          if (sched.roomId.toString() === roomId.toString() && sched.dayOfWeek === dayOfWeek) {
-            // section schedule times are strings like "14:30" representing local wall time. Let's compare as HH:MM strings vs UTC wall clock map or assume standard map
-            // Since Event is stored in UTC, and section schedule is string, we should map them back to strings for comparison
-            const startTimeStr = `${startHour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}`;
-            const endTimeStr = `${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}`;
-            
-            if (startTimeStr < sched.endTime && endTimeStr > sched.startTime) {
-              hasSectionConflict = true;
-              break;
-            }
-          }
-        }
-        if (hasSectionConflict) break;
-      }
+      const startTimeStr = `${eventStart.getUTCHours().toString().padStart(2, '0')}:${eventStart.getUTCMinutes().toString().padStart(2, '0')}`;
+      const endTimeStr = `${eventEnd.getUTCHours().toString().padStart(2, '0')}:${eventEnd.getUTCMinutes().toString().padStart(2, '0')}`;
 
-      if (hasSectionConflict) {
-        return res.status(409).json({ message: 'Venue Double-Booked: Overlaps with an active class schedule.', conflictingSchedule: 'Class Section' });
+      // We need academicYear and term for section checks. 
+      // For now we'll try to guess or use a default, or we might need to update Event model to include them.
+      // Given the requirement, I'll use current year/term or search all active ones.
+      // The conflict service checks sections by academicYear/term.
+      
+      const roomConflict = await checkRoomConflict(
+        roomId,
+        dayOfWeek,
+        startTimeStr,
+        endTimeStr,
+        null, // academicYear
+        null, // term
+        null, // excludeId
+        eventDate // date for event-event checks
+      );
+
+      if (roomConflict.conflict) {
+        return res.status(409).json({ 
+          message: `Venue Double-Booked: ${roomConflict.message}`,
+          conflictType: roomConflict.type === 'Section' ? 'CLASS_SCHEDULE_CONFLICT' : 'EVENT_SCHEDULE_CONFLICT'
+        });
       }
     }
 
@@ -332,24 +324,7 @@ const getEvents = async (req, res) => {
       .populate('organizers.userId', 'name username role');
 
     const filteredEvents = events
-      .filter((event) => {
-        // Check if user is an organizer
-        const isOrganizer = (event.organizers || []).some(
-          (org) => String(org.userId?._id || org.userId) === String(req.user?.id || '')
-        );
-        
-        // Admins and faculty can see all events they're eligible for
-        if (req.user?.role === 'admin' || req.user?.role === 'faculty') {
-          return canUserAccessEvent(event, req.user, targetingMeta);
-        }
-        
-        // For students and student_leaders, show events they're organizing OR targeted for
-        if (isOrganizer || canUserAccessEvent(event, req.user, targetingMeta)) {
-          return true;
-        }
-        
-        return false;
-      })
+      .filter((event) => canUserAccessEvent(event, req.user, targetingMeta))
       .map((event) => mapEventWithViewerState(event, req.user?.id));
 
     res.json(filteredEvents);

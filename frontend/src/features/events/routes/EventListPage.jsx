@@ -2,9 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../../lib/api';
 import { useAuth } from '../../../providers/AuthContext';
-import { FiRefreshCw, FiPlus, FiEye, FiEdit2, FiTool, FiX, FiTrash2, FiBarChart2, FiUsers, FiDownload, FiAward, FiStar, FiCheckCircle, FiXCircle, FiClock, FiCalendar, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiRefreshCw, FiPlus, FiEye, FiEdit2, FiTool, FiX, FiTrash2, FiBarChart2, FiUsers, FiDownload, FiAward, FiStar, FiCheckCircle, FiXCircle, FiClock, FiCalendar, FiChevronLeft, FiChevronRight, FiGrid, FiLayers, FiMapPin } from 'react-icons/fi';
+import { Calendar, momentLocalizer } from 'react-big-calendar';
+import moment from 'moment';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
 import EventCreationForm from '../components/EventCreationForm';
 import './EventListPage.css';
+
+const localizer = momentLocalizer(moment);
 
 export default function EventListPage() {
   const PAGE_SIZE = 20;
@@ -33,6 +38,7 @@ export default function EventListPage() {
   const [attendanceUpdateError, setAttendanceUpdateError] = useState('');
   const [page, setPage] = useState(1);
   const [pageInput, setPageInput] = useState('1');
+  const [viewMode, setViewMode] = useState('grid'); // Default to grid
   const isFacultyViewer = user?.role === 'faculty';
   const canManageEvents = user?.role === 'admin';
 
@@ -86,10 +92,11 @@ export default function EventListPage() {
   };
 
   const filteredEvents = events.filter(event => {
+    const searchLower = search.toLowerCase();
     const matchesSearch = !search || 
-      event.title.toLowerCase().includes(search.toLowerCase()) ||
-      (event.type === 'Other' ? (event.typeOtherLabel || 'Other') : event.type).toLowerCase().includes(search.toLowerCase()) ||
-      (event.isVirtual ? event.meetingUrl : event.roomId?.name || '').toLowerCase().includes(search.toLowerCase());
+      (event.title?.toLowerCase() || '').includes(searchLower) ||
+      (getEventTypeLabel(event)?.toLowerCase() || '').includes(searchLower) ||
+      (event.isVirtual ? (event.meetingUrl?.toLowerCase() || '') : (event.roomId?.name?.toLowerCase() || '')).includes(searchLower);
     
     const matchesType = typeFilter === 'All' || event.type === typeFilter;
     const matchesStatus = statusFilter === 'All' || event.status === statusFilter;
@@ -344,18 +351,6 @@ export default function EventListPage() {
               </div>
             ) : null}
             <div className="syllabus-toolbar-actions">
-              <button type="button" className="spec-btn-secondary" onClick={() => window.location.reload()}>
-                <FiRefreshCw />
-                <span>Refresh</span>
-              </button>
-              <button
-                type="button"
-                className="spec-btn-secondary"
-                onClick={() => navigate('/dashboard/events/calendar')}
-              >
-                <FiCalendar />
-                <span>Events Calendar</span>
-              </button>
               {!isFacultyViewer ? (
                 <button
                   type="button"
@@ -396,6 +391,27 @@ export default function EventListPage() {
             <option value="pending_approval">Pending Approval</option>
             <option value="draft">Draft</option>
           </select>
+        </div>
+
+        <div className="view-mode-toolbar">
+          <div className="view-mode-buttons">
+            <button 
+              className={`view-mode-btn ${viewMode === 'grid' ? 'active' : ''}`}
+              onClick={() => setViewMode('grid')}
+              title="Grid View"
+            >
+              <FiGrid />
+              <span>Grid</span>
+            </button>
+            <button 
+              className={`view-mode-btn ${viewMode === 'table' ? 'active' : ''}`}
+              onClick={() => setViewMode('table')}
+              title="Table View"
+            >
+              <FiLayers />
+              <span>Table</span>
+            </button>
+          </div>
         </div>
 
         {!loading ? (
@@ -450,86 +466,127 @@ export default function EventListPage() {
 
         {error ? <div className="spec-alert">{error}</div> : null}
 
-        <div className="spec-table-wrap">
-          <table className="spec-table syllabus-table scheduling-rooms-table">
-            <thead>
-              <tr>
-                <th>EVENT NAME</th>
-                <th>TYPE</th>
-                <th>DATE</th>
-                <th>TIME</th>
-                <th>VENUE</th>
-                <th>STATUS</th>
-                <th className="spec-th-actions">ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
+        {viewMode === 'table' ? (
+          <div className="spec-table-wrap">
+            <table className="spec-table syllabus-table scheduling-rooms-table">
+              <thead>
                 <tr>
-                  <td colSpan={7} className="spec-loading">
-                    Loading events…
-                  </td>
+                  <th>EVENT NAME</th>
+                  <th>TYPE</th>
+                  <th>DATE</th>
+                  <th>TIME</th>
+                  <th>VENUE</th>
+                  <th>STATUS</th>
+                  <th className="spec-th-actions">ACTIONS</th>
                 </tr>
-              ) : null}
-              {!loading && filteredEvents.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="spec-empty">
-                    No events match these filters.
-                  </td>
-                </tr>
-              ) : null}
-              {!loading && filteredEvents.length > 0 && paginatedEvents.map((event) => (
-                <tr key={event._id} className="spec-table-row-clickable">
-                  <td>{event.title}</td>
-                  <td>{getEventTypeLabel(event)}</td>
-                  <td>{formatDate(event.schedule?.date)}</td>
-                  <td>{formatTime(event.schedule?.startTime)} - {formatTime(event.schedule?.endTime)}</td>
-                  <td>{getVenueInfo(event)}</td>
-                  <td>{getStatusBadge(event.status)}</td>
-                  <td className="spec-td-actions">
-                    <div className="action-buttons">
-                      <button
-                        type="button"
-                        className="action-btn view"
-                        title="View event"
-                        aria-label="View event"
-                        onClick={() => handleOpenViewModal(event._id)}
-                      >
-                        <FiEye />
-                      </button>
-                      {!isFacultyViewer ? (
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="spec-loading">
+                      Loading events…
+                    </td>
+                  </tr>
+                ) : null}
+                {!loading && filteredEvents.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="spec-empty">
+                      No events match these filters.
+                    </td>
+                  </tr>
+                ) : null}
+                {!loading && filteredEvents.length > 0 && paginatedEvents.map((event) => (
+                  <tr key={event._id} className="spec-table-row-clickable">
+                    <td>{event.title}</td>
+                    <td>{getEventTypeLabel(event)}</td>
+                    <td>{formatDate(event.schedule?.date)}</td>
+                    <td>{formatTime(event.schedule?.startTime)} - {formatTime(event.schedule?.endTime)}</td>
+                    <td>{getVenueInfo(event)}</td>
+                    <td>{getStatusBadge(event.status)}</td>
+                    <td className="spec-td-actions">
+                      <div className="action-buttons">
                         <button
                           type="button"
-                          className="action-btn edit"
-                          title="Edit event"
-                          aria-label="Edit event"
-                          onClick={() => {
-                            setModalMode('edit');
-                            setActiveEvent(event);
-                            setIsCreateModalOpen(true);
-                          }}
+                          className="action-btn view"
+                          title="View event"
+                          aria-label="View event"
+                          onClick={() => handleOpenViewModal(event._id)}
                         >
-                          <FiEdit2 />
+                          <FiEye />
                         </button>
-                      ) : null}
-                      {canManageEvents ? (
-                        <button
-                          type="button"
-                          className="action-btn delete"
-                          title="Delete event"
-                          aria-label="Delete event"
-                          onClick={() => handleDeleteEvent(event)}
-                        >
-                          <FiTrash2 />
-                        </button>
-                      ) : null}
+                        {!isFacultyViewer ? (
+                          <button
+                            type="button"
+                            className="action-btn edit"
+                            title="Edit event"
+                            aria-label="Edit event"
+                            onClick={() => {
+                              setModalMode('edit');
+                              setActiveEvent(event);
+                              setIsCreateModalOpen(true);
+                            }}
+                          >
+                            <FiEdit2 />
+                          </button>
+                        ) : null}
+                        {canManageEvents ? (
+                          <button
+                            type="button"
+                            className="action-btn delete"
+                            title="Delete event"
+                            aria-label="Delete event"
+                            onClick={() => handleDeleteEvent(event)}
+                          >
+                            <FiTrash2 />
+                          </button>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="events-grid-view">
+            {loading ? (
+              <div className="loading-grid">Loading events...</div>
+            ) : filteredEvents.length === 0 ? (
+              <div className="empty-grid">No events found matching your criteria.</div>
+            ) : (
+              paginatedEvents.map(event => (
+                <div key={event._id} className="event-item-card" onClick={() => handleOpenViewModal(event._id)}>
+                  <div className="event-item-card-header">
+                    <span className={`event-item-type ${event.type.toLowerCase()}`}>{getEventTypeLabel(event)}</span>
+                    <span className={`event-item-status ${event.status.toLowerCase()}`}>{event.status === 'published' ? 'Live' : 'Draft'}</span>
+                  </div>
+                  <h3 className="event-item-title">{event.title}</h3>
+                  <div className="event-item-details">
+                    <div className="event-item-detail">
+                      <FiCalendar />
+                      <span>{formatDate(event.schedule?.date)}</span>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    <div className="event-item-detail">
+                      <FiClock />
+                      <span>{formatTime(event.schedule?.startTime)} - {formatTime(event.schedule?.endTime)}</span>
+                    </div>
+                    <div className="event-item-detail">
+                      <FiMapPin />
+                      <span>{getVenueInfo(event)}</span>
+                    </div>
+                  </div>
+                  <div className="event-item-card-footer">
+                    <div className="attendee-count">
+                      <FiUsers />
+                      <span>{event.attendees?.length || 0} Registered</span>
+                    </div>
+                    <button className="view-details-btn">View Details</button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
         {filteredEvents.length > PAGE_SIZE ? (
           <div className="pagination-controls">
             <div className="results-count-pagination" aria-label="Bottom pagination controls">

@@ -5,6 +5,8 @@ const {
   updateSection,
   updateSectionResources,
   getSectionById,
+  deleteSection,
+  batchDeleteSections,
   getScheduleMatrix,
   getRoomUtilization,
   getSchedulingAnalytics,
@@ -40,6 +42,8 @@ router.post('/sections/transfer', authenticate, requireRoles('admin'), transferS
 router.get('/sections/:id/attendance', authenticate, requireRoles('admin', 'faculty'), getSectionAttendance);
 router.put('/sections/:id/attendance', authenticate, requireRoles('admin', 'faculty'), upsertSectionAttendance);
 router.patch('/sections/:id/resources', authenticate, requireRoles('admin', 'faculty'), updateSectionResources);
+router.delete('/sections/:id', authenticate, requireRoles('admin'), deleteSection);
+router.post('/sections/batch-delete', authenticate, requireRoles('admin'), batchDeleteSections);
 
 router.get('/matrix', authenticate, requireRoles('admin', 'faculty'), getScheduleMatrix);
 router.get('/analytics', authenticate, requireRoles('admin'), getSchedulingAnalytics);

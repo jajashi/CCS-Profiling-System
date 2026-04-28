@@ -25,6 +25,20 @@ export default function InstructionDashboard() {
       icon: <FiLayers />,
       link: '/dashboard/instruction/syllabi',
       color: 'violet'
+    },
+    {
+      title: 'Lesson Tracking',
+      description: 'Faculty portal for recording weekly topic delivery and instructional progress.',
+      icon: <FiClock />,
+      link: '/dashboard/instruction/tracking',
+      color: 'emerald'
+    },
+    {
+      title: 'Syllabi Monitor',
+      description: 'Administrative oversight for tracking lesson delivery status across all sections.',
+      icon: <FiActivity />,
+      link: '/dashboard/instruction/monitor',
+      color: 'rose'
     }
   ];
 

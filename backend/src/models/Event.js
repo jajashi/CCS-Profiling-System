@@ -126,7 +126,7 @@ const eventSchema = new mongoose.Schema({
   attachments: [{
     name: String,
     url: String,
-    type: String
+    type: { type: String }
   }],
   organizers: [organizerSchema],
   attendees: {

@@ -158,13 +158,10 @@ async function createStudent(req, res, next) {
       "lastName",
       "program",
       "yearLevel",
-      "section",
       "status",
       "email",
       "contact",
       "dateEnrolled",
-      "guardian",
-      "guardianContact",
     ];
     const missing = requiredFields.filter((key) => {
       const value = payload[key];
@@ -188,10 +185,22 @@ async function createStudent(req, res, next) {
       });
     }
 
+    const providedId = String(payload.id || "").trim();
+    let finalId = providedId;
+
+    if (!finalId) {
+      finalId = await generateNextStudentId();
+    }
+
+    const existing = await Student.findOne({ id: finalId });
+    if (existing) {
+      return res.status(409).json({ message: `A student with ID ${finalId} already exists.` });
+    }
+
     // Normalize key fields.
     const normalized = {
       ...payload,
-      id: await generateNextStudentId(),
+      id: finalId,
       firstName: String(payload.firstName).trim(),
       lastName: String(payload.lastName).trim(),
       program: String(payload.program).trim(),
@@ -201,9 +210,40 @@ async function createStudent(req, res, next) {
       )
         ? new mongoose.Types.ObjectId(String(payload.sectionId).trim())
         : null,
+      studentType: ['Regular', 'Irregular'].includes(payload.studentType) ? payload.studentType : 'Regular',
       skills: Array.isArray(payload.skills)
         ? payload.skills.map((s) => String(s).trim()).filter(Boolean)
         : [],
+      address: {
+        street: String(payload.address?.street || "").trim(),
+        city: String(payload.address?.city || "").trim(),
+        province: String(payload.address?.province || "").trim(),
+        postalCode: String(payload.address?.postalCode || "").trim(),
+      },
+      emergencyContact: {
+        name: String(payload.emergencyContact?.name || "").trim(),
+        relationship: String(payload.emergencyContact?.relationship || "").trim(),
+        phone: String(payload.emergencyContact?.phone || "").trim(),
+      },
+      academicHistory: {
+        previousSchools: Array.isArray(payload.academicHistory?.previousSchools)
+          ? payload.academicHistory.previousSchools.map((s) => String(s).trim()).filter(Boolean)
+          : [],
+        achievements: Array.isArray(payload.academicHistory?.achievements)
+          ? payload.academicHistory.achievements.map((s) => String(s).trim()).filter(Boolean)
+          : [],
+      },
+      healthInfo: {
+        conditions: Array.isArray(payload.healthInfo?.conditions)
+          ? payload.healthInfo.conditions.map((s) => String(s).trim()).filter(Boolean)
+          : [],
+        medications: Array.isArray(payload.healthInfo?.medications)
+          ? payload.healthInfo.medications.map((s) => String(s).trim()).filter(Boolean)
+          : [],
+        allergies: Array.isArray(payload.healthInfo?.allergies)
+          ? payload.healthInfo.allergies.map((s) => String(s).trim()).filter(Boolean)
+          : [],
+      },
     };
 
     const created = await Student.create(normalized);
@@ -217,9 +257,10 @@ async function createStudent(req, res, next) {
   } catch (err) {
     // Duplicate `id` (unique index) -> 400 with friendly message
     if (err && err.code === 11000) {
+      const field = Object.keys(err.keyValue || {})[0] || "identifier";
       return res
-        .status(400)
-        .json({ message: "A student with this ID already exists." });
+        .status(409)
+        .json({ message: `A student with this ${field} already exists.` });
     }
 
     // Mongoose schema validation -> 400
@@ -229,6 +270,7 @@ async function createStudent(req, res, next) {
         .json({ message: "Please check the form fields and try again." });
     }
 
+    console.error("Error creating student:", err);
     next(err);
   }
 }
@@ -249,8 +291,6 @@ async function updateStudent(req, res, next) {
       "email",
       "contact",
       "dateEnrolled",
-      "guardian",
-      "guardianContact",
     ];
     const missing = requiredFields.filter((key) => {
       const value = payload[key];
@@ -288,6 +328,7 @@ async function updateStudent(req, res, next) {
       "guardian",
       "guardianContact",
       "violation",
+      "studentType",
     ];
 
     const normalized = {
@@ -316,6 +357,37 @@ async function updateStudent(req, res, next) {
     } else if (payload.skills === undefined || payload.skills === null) {
       normalized.skills = [];
     }
+
+    normalized.address = {
+      street: String(payload.address?.street || "").trim(),
+      city: String(payload.address?.city || "").trim(),
+      province: String(payload.address?.province || "").trim(),
+      postalCode: String(payload.address?.postalCode || "").trim(),
+    };
+    normalized.emergencyContact = {
+      name: String(payload.emergencyContact?.name || "").trim(),
+      relationship: String(payload.emergencyContact?.relationship || "").trim(),
+      phone: String(payload.emergencyContact?.phone || "").trim(),
+    };
+    normalized.academicHistory = {
+      previousSchools: Array.isArray(payload.academicHistory?.previousSchools)
+        ? payload.academicHistory.previousSchools.map((s) => String(s).trim()).filter(Boolean)
+        : [],
+      achievements: Array.isArray(payload.academicHistory?.achievements)
+        ? payload.academicHistory.achievements.map((s) => String(s).trim()).filter(Boolean)
+        : [],
+    };
+    normalized.healthInfo = {
+      conditions: Array.isArray(payload.healthInfo?.conditions)
+        ? payload.healthInfo.conditions.map((s) => String(s).trim()).filter(Boolean)
+        : [],
+      medications: Array.isArray(payload.healthInfo?.medications)
+        ? payload.healthInfo.medications.map((s) => String(s).trim()).filter(Boolean)
+        : [],
+      allergies: Array.isArray(payload.healthInfo?.allergies)
+        ? payload.healthInfo.allergies.map((s) => String(s).trim()).filter(Boolean)
+        : [],
+    };
 
     const updated = await Student.findByIdAndUpdate(mongoId, normalized, {
       new: true,

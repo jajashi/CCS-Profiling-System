@@ -9,10 +9,13 @@ const {
   resetAccountPassword,
   updateAccountStatus,
   deleteAccount,
+  searchUsers,
 } = require('../controllers/accountController');
 const { authenticate, requireRoles } = require('../middleware/authMiddleware');
 
 const router = express.Router();
+
+router.get('/search', authenticate, requireRoles('admin', 'faculty', 'student_leader'), searchUsers);
 
 router.use(authenticate, requireRoles('admin'));
 router.get('/', listAccounts);

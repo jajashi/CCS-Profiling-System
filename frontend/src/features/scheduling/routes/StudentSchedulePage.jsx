@@ -17,16 +17,24 @@ export default function StudentSchedulePage() {
       try {
         setLoading(true);
         const res = await apiFetch('/api/scheduling/student-schedule');
+        if (res.status === 404) {
+          setData(null);
+          return;
+        }
         if (!res.ok) throw new Error("Failed to load your schedule.");
         const scheduleData = await res.json();
         setData(scheduleData);
 
         // Load classmates
         const rosterRes = await apiFetch(`/api/scheduling/sections/${scheduleData.sectionId}/roster`);
-        const rosterData = await rosterRes.json();
-        setClassmates(rosterData);
+        if (rosterRes.ok) {
+          const rosterData = await rosterRes.json();
+          setClassmates(rosterData.students || []);
+        } else {
+          setClassmates([]);
+        }
       } catch (err) {
-        toast.error(err.message);
+        toast.error(err.message || "Failed to load schedule.");
       } finally {
         setLoading(false);
       }
