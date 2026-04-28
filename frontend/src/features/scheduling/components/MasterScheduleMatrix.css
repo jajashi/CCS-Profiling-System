@@ -287,3 +287,27 @@
   color: #718096;
   font-size: 1.1rem;
 }
+
+.matrix-edit-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  padding: 2px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.matrix-edit-btn:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.event-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}

@@ -40,7 +40,7 @@
 
 .section-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   gap: 1.5rem;
   margin-top: 1rem;
   padding: 0;
@@ -57,12 +57,13 @@
   background: white;
   border-radius: 12px;
   border: 1px solid #eef2f6;
-  padding: 1.25rem;
+  padding: 1.5rem;
   transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
   position: relative;
   overflow: hidden;
+  min-height: 420px;
 }
 
 .section-card:hover {
@@ -79,7 +80,7 @@
 }
 
 .section-id {
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   font-weight: 700;
   font-size: 0.875rem;
   color: var(--primary-color);
@@ -96,9 +97,64 @@
   font-weight: 600;
 }
 
-.status-open { background: #ecfdf5; color: #059669; }
-.status-closed { background: #fef2f2; color: #dc2626; }
-.status-waitlisted { background: #fffbeb; color: #d97706; }
+.status-open,
+.status-active {
+  background: #ecfdf5;
+  color: #059669;
+}
+.status-closed {
+  background: #fef2f2;
+  color: #dc2626;
+}
+.status-waitlisted {
+  background: #fffbeb;
+  color: #d97706;
+}
+.status-archived {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.capacity-progress-container {
+  margin: 1rem 0;
+}
+
+.capacity-progress-bar-bg {
+  height: 8px;
+  background: #f1f5f9;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.4rem;
+}
+
+.capacity-progress-bar-fill {
+  height: 100%;
+  transition:
+    width 0.3s ease,
+    background-color 0.3s ease;
+}
+
+.capacity-progress-bar-fill.safe {
+  background-color: #10b981;
+}
+.capacity-progress-bar-fill.warning {
+  background-color: #f59e0b;
+}
+.capacity-progress-bar-fill.danger {
+  background-color: #ef4444;
+}
+
+.capacity-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.capacity-label strong {
+  color: #334155;
+}
 
 .section-course-title {
   font-size: 1.1rem;
@@ -173,31 +229,45 @@
 }
 
 .section-actions {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 1.25rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: auto;
+  padding-top: 1rem;
 }
 
 .btn-assign {
-  flex-grow: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.6rem;
+  padding: 0.75rem 0.5rem;
   background: white;
   border: 1px solid #e2e8f0;
   color: #475569;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   font-weight: 500;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
+  min-height: 44px;
 }
 
 .btn-assign:hover {
   background: #f1f5f9;
   border-color: #cbd5e1;
+}
+
+.btn-syllabus-action {
+  border-color: rgba(37, 99, 235, 0.2);
+  color: var(--primary-color);
+  background: rgba(37, 99, 235, 0.02);
+}
+
+.btn-syllabus-action:hover {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: var(--primary-color);
 }
 
 /* Modal Specifics */
@@ -241,4 +311,281 @@
   border-color: var(--primary-color);
   color: var(--primary-color);
   background: rgba(37, 99, 235, 0.02);
+}
+
+.enrollment-search-box {
+  margin-bottom: 1rem;
+}
+
+.student-selection-list {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.student-select-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.student-select-item:hover {
+  background: #f8fafc;
+}
+
+.student-select-item.selected {
+  background: rgba(37, 99, 235, 0.05);
+}
+
+.student-info-brief {
+  flex: 1;
+}
+
+.student-name-id {
+  font-weight: 600;
+  color: #1e293b;
+  display: block;
+}
+
+.student-prog-year {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.capacity-warning {
+  padding: 0.75rem;
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  color: #92400e;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.transfer-target-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.target-section-card {
+  border: 1px solid #e2e8f0;
+  padding: 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.target-section-card:hover {
+  border-color: var(--primary-color);
+  background: rgba(37, 99, 235, 0.02);
+}
+
+.target-section-card.selected {
+  border-color: var(--primary-color);
+  background: rgba(37, 99, 235, 0.05);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.target-section-info {
+  font-weight: 600;
+  font-size: 0.875rem;
+  display: block;
+}
+
+.target-section-cap {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.roster-actions-top {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  align-items: center;
+}
+
+.badge-subjects {
+  background: #f1f5f9;
+  color: #475569;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.schedule-course-tag {
+  background: var(--primary-color);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.schedule-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: #f8fafc;
+  margin-bottom: 0.5rem;
+}
+
+.schedule-item:last-child {
+  margin-bottom: 0;
+}
+
+/* Roster Modal Improvements */
+.spec-modal--wide {
+  max-width: 900px;
+  width: 90vw;
+}
+
+.roster-table-wrapper {
+  max-height: 500px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.roster-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.roster-table th {
+  background: #f8fafc;
+  padding: 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.roster-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.roster-table tr:hover {
+  background: #f8fafc;
+}
+
+.btn-roster-action {
+  background: rgba(37, 99, 235, 0.02);
+  border-color: rgba(37, 99, 235, 0.2);
+  color: var(--primary-color);
+}
+
+.btn-roster-action:hover {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: var(--primary-color);
+}
+
+/* Student Preview Card */
+.student-preview-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.student-preview-name {
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 0.25rem;
+}
+
+.student-preview-details {
+  display: flex;
+  gap: 1rem;
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+/* Enhanced Section Cards */
+.section-students-preview {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.section-students-preview h4 {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.student-list-mini {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.student-chip {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.student-chip:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.student-chip-name {
+  font-weight: 500;
+}
+
+.student-chip-id {
+  color: #94a3b8;
+  font-size: 0.6rem;
+}
+
+.no-students-message {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-style: italic;
+  text-align: center;
+  padding: 0.5rem;
 }
