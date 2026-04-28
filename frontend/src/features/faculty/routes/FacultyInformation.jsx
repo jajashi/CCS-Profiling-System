@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiEdit2, FiEye, FiInfo, FiPlus, FiSearch, FiUserCheck, FiUsers, FiX, FiPower, FiChevronLeft, FiChevronRight, FiFilter, FiChevronDown, FiChevronUp, FiLoader } from 'react-icons/fi';
+import { FiEdit2, FiEye, FiInfo, FiPlus, FiSearch, FiUserCheck, FiUsers, FiX, FiPower, FiChevronLeft, FiChevronRight, FiFilter, FiChevronDown, FiChevronUp, FiLoader, FiGrid, FiList } from 'react-icons/fi';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import FilterDropdown from '../../../components/Elements/FilterDropdown';
 import AddFacultyForm from '../components/AddFacultyForm';
+import FacultyOverview from '../components/FacultyOverview';
+import '../components/FacultyOverview.css';
 import femaleImage from '../../../assets/images/female.jpg';
 import { useAuth } from '../../../providers/AuthContext';
 import { apiFetch } from '../../../lib/api';
@@ -96,6 +98,7 @@ const FacultyInformation = () => {
   const [deactivateReasonOther, setDeactivateReasonOther] = useState('');
   const [deactivateModalError, setDeactivateModalError] = useState('');
   const [deactivateSubmitting, setDeactivateSubmitting] = useState(false);
+  const [viewMode, setViewMode] = useState('grid'); // Default to grid for better aesthetics
 
   const goToDirectory = () => {
     const s = searchParams.toString();
@@ -547,6 +550,22 @@ const FacultyInformation = () => {
                 <span className="filter-badge">{activeFilterCount}</span>
               )}
             </button>
+            <div className="flex items-center gap-2">
+              <button 
+                className={`view-toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                onClick={() => setViewMode('grid')}
+                title="Grid view"
+              >
+                <FiGrid />
+              </button>
+              <button 
+                className={`view-toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
+                onClick={() => setViewMode('list')}
+                title="List view"
+              >
+                <FiList />
+              </button>
+            </div>
             {isAdmin ? (
               <button
                 type="button"
@@ -712,121 +731,6 @@ const FacultyInformation = () => {
             </div>
           ) : null}
 
-          <div className={`table-responsive ${loading && faculty.length > 0 ? 'min-h-[120px]' : ''}`}>
-          <table className="student-table">
-            <thead>
-              <tr>
-                <th>Employee ID</th>
-                <th>Full Name</th>
-                <th>Department</th>
-                <th>Position</th>
-                <th>Employment Type</th>
-                <th>Specializations</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && faculty.length === 0
-                ? Array.from({ length: 6 }).map((_, i) => (
-                    <tr key={`sk-${i}`} className="skeleton-row">
-                      <td><span className="skeleton-block" style={{ width: '88px' }} /></td>
-                      <td><span className="skeleton-block" style={{ width: '160px' }} /></td>
-                      <td><span className="skeleton-block" style={{ width: '48px' }} /></td>
-                      <td><span className="skeleton-block" style={{ width: '120px' }} /></td>
-                      <td><span className="skeleton-block" style={{ width: '72px' }} /></td>
-                      <td><span className="skeleton-block" style={{ width: '100px' }} /></td>
-                      <td><span className="skeleton-block" style={{ width: '64px' }} /></td>
-                      <td><span className="skeleton-block" style={{ width: '72px' }} /></td>
-                    </tr>
-                  ))
-                : null}
-              {!loading && faculty.map((member) => (
-                <tr
-                  key={member.employeeId || member._id}
-                  onClick={() => navigate(facultyProfilePath(member.employeeId))}
-                  className={[
-                    member.status === 'Inactive' ? 'grayscale opacity-60' : '',
-                    String(selectedEmployeeId || '') === String(member.employeeId || '') ? 'row-selected' : '',
-                  ].filter(Boolean).join(' ')}
-                >
-                  <td className="id-cell">
-                    <span className="id-badge">{member.employeeId || '-'}</span>
-                  </td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={member.status === 'Inactive' ? 'faculty-directory-name-inactive' : undefined}
-                      >
-                        {[member.firstName, member.middleName, member.lastName].filter(Boolean).join(' ') || '-'}
-                      </span>
-                    </div>
-                  </td>
-                  <td>{member.department || '-'}</td>
-                  <td>{member.position || '-'}</td>
-                  <td>{member.employmentType || '-'}</td>
-                  <td>
-                    {member.specializations?.length
-                      ? member.specializations
-                          .map((s) => {
-                            const name = typeof s === 'object' ? (s.name || '') : String(s);
-                            const desc =
-                              typeof s === 'object' && String(s.description || '').trim()
-                                ? ` (${s.description})`
-                                : '';
-                            return name + desc;
-                          })
-                          .join(', ')
-                      : '-'}
-                  </td>
-                  <td>
-                    <span className={`status-badge status-${String(member.status || 'active').toLowerCase()}`}>
-                      {member.status || 'Active'}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="action-buttons flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        className="action-btn view"
-                        type="button"
-                        aria-label="View faculty"
-                        title="View faculty"
-                        onClick={() => navigate(facultyProfilePath(member.employeeId))}
-                      >
-                        <FiEye />
-                      </button>
-                      {isAdmin ? (
-                        <>
-                          <button
-                            className="action-btn edit"
-                            type="button"
-                            aria-label="Edit faculty"
-                            title="Edit faculty"
-                            onClick={() => openEditForm(member.employeeId)}
-                          >
-                            <FiEdit2 />
-                          </button>
-                          <button
-                            className="action-btn delete"
-                            type="button"
-                            aria-label={member.status === 'Inactive' ? 'Activate faculty' : 'Deactivate faculty'}
-                            title={member.status === 'Inactive' ? 'Mark Active' : 'Mark Inactive'}
-                            onClick={() => onQuickStatusClick(member)}
-                          >
-                            <FiPower />
-                          </button>
-                        </>
-                      ) : null}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {!loading && !faculty.length ? (
-                <tr>
-                  <td colSpan="8" className="empty-row text-center py-8">
-                    No faculty records found. <br />
-                    {isAdmin && (
-                      <button onClick={openCreateForm} className="text-orange-500 underline mt-2 hover:text-orange-600">
                         Click here to add a new faculty member.
                       </button>
                     )}

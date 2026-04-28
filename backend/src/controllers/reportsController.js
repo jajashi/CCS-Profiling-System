@@ -649,8 +649,59 @@ async function exportStudentProfilePDF(req, res, next) {
   }
 }
 
+async function getFacultyForReports(req, res, next) {
+  try {
+    const { search, page = 1, limit = 50 } = req.query;
+    const filter = {};
+    if (search && search.trim() !== "") {
+      const pattern = new RegExp(search.trim(), "i");
+      filter.$or = [
+        { employeeId: pattern },
+        { firstName: pattern },
+        { lastName: pattern },
+        { email: pattern },
+      ];
+    }
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const total = await Faculty.countDocuments(filter);
+    
+    const faculty = await Faculty.aggregate([
+      { $match: filter },
+      {
+        $lookup: {
+          from: "sections",
+          localField: "_id",
+          foreignField: "schedules.facultyId",
+          as: "teachingAssignments",
+          pipeline: [
+            { $match: { academicYear: CURRENT_ACADEMIC_YEAR, term: CURRENT_TERM } }
+          ]
+        }
+      },
+      { $sort: { lastName: 1 } },
+      { $skip: skip },
+      { $limit: parseInt(limit) }
+    ]);
+
+    return res.status(200).json({
+      faculty: faculty.map(f => ({
+        ...f,
+        sectionCount: f.teachingAssignments?.length || 0
+      })),
+      pagination: {
+        page: parseInt(page),
+        total,
+        totalPages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   getStudentsForReports,
   getStudentDossier,
   exportStudentProfilePDF,
+  getFacultyForReports,
 };

@@ -500,7 +500,7 @@ const Sidebar = () => {
               </NavLink>
             </li>
           ) : null}
-          {isAdmin || isFaculty ? (
+          {isAdmin ? (
             <li className="nav-item">
               <NavLink
                 to="/dashboard/reports"

@@ -780,44 +780,57 @@ function ManageRosterModal({ section, onClose, onUpdated }) {
                 <table className="roster-table">
                   <thead>
                     <tr>
-                      <th />
-                      <th>ID</th>
-                      <th>Name</th>
-                      <th>Program/Year</th>
+                      <th style={{ width: "40px" }}>
+                        <FiCheckSquare style={{ color: "#94a3b8" }} />
+                      </th>
+                      <th>Student Details</th>
+                      <th>Program & Year</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {students.map((student) => (
-                      <tr key={student._id}>
-                        <td>
-                          <input
-                            type="checkbox"
-                            checked={selectedRemovals.has(student._id)}
-                            onChange={() => toggleRemoval(student._id)}
-                          />
-                        </td>
-                        <td>{student.id}</td>
-                        <td>
-                          {student.lastName}, {student.firstName}
-                        </td>
-                        <td>
-                          {student.program} - {student.yearLevel}
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            className="btn-assign"
-                            style={{
-                              padding: "0.25rem 0.5rem",
-                              fontSize: "0.75rem",
-                            }}
-                            onClick={() => setTransferStudent(student)}>
-                            <FiArrowRight /> Transfer
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {students.map((student) => {
+                      const initials = `${student.firstName?.[0] || ""}${student.lastName?.[0] || ""}`.toUpperCase();
+                      return (
+                        <tr key={student._id}>
+                          <td>
+                            <input
+                              type="checkbox"
+                              className="roster-checkbox"
+                              checked={selectedRemovals.has(student._id)}
+                              onChange={() => toggleRemoval(student._id)}
+                            />
+                          </td>
+                          <td>
+                            <div className="roster-student-cell">
+                              <div className="roster-avatar">{initials}</div>
+                              <div className="roster-student-info">
+                                <span className="roster-student-name">
+                                  {student.lastName}, {student.firstName}
+                                </span>
+                                <span className="roster-student-id">{student.id}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <div className="flex flex-col gap-1">
+                              <span className="roster-badge">{student.program}</span>
+                              <span className="text-xs text-slate-500 font-medium">{student.yearLevel}</span>
+                            </div>
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="action-btn view"
+                              style={{ width: "auto", padding: "0 0.75rem", height: "32px", fontSize: "0.8rem", gap: "0.4rem" }}
+                              onClick={() => setTransferStudent(student)}>
+                              <FiArrowRight />
+                              <span>Transfer</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

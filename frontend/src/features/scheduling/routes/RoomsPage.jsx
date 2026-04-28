@@ -28,6 +28,7 @@ function emptyForm() {
     maximumCapacity: 40,
     building: '',
     status: 'Active',
+    description: '',
   };
 }
 
@@ -39,6 +40,7 @@ function roomToForm(row) {
     maximumCapacity: row.maximumCapacity ?? 40,
     building: row.building || '',
     status: row.status || 'Active',
+    description: row.description || '',
   };
 }
 
@@ -82,6 +84,7 @@ function RoomFormModal({ mode, initial, onClose, onSaved }) {
         maximumCapacity: Number(form.maximumCapacity),
         building: String(form.building || '').trim(),
         status: form.status,
+        description: String(form.description || '').trim(),
       };
       const isEdit = mode === 'edit' && initial?._id;
       const res = await apiFetch(isEdit ? `/api/scheduling/rooms/${initial._id}` : '/api/scheduling/rooms', {
@@ -206,6 +209,17 @@ function RoomFormModal({ mode, initial, onClose, onSaved }) {
                 ))}
               </select>
               {errors.status ? <span className="field-error">{errors.status}</span> : null}
+            </div>
+            <div className="form-field form-grid--span-2">
+              <label className="form-label" htmlFor="room-desc">Description (Optional)</label>
+              <textarea
+                id="room-desc"
+                className="form-input"
+                style={{ minHeight: '80px', paddingTop: '0.6rem' }}
+                value={form.description}
+                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                placeholder="e.g. Equipped with 40 workstations and a smart projector."
+              />
             </div>
           </div>
           <div className="spec-modal-footer rooms-modal-footer">
@@ -724,6 +738,10 @@ export default function RoomsPage() {
                 <div>
                   <p className="label">Status</p>
                   <input className="readonly-field" type="text" value={viewRow.status || '—'} readOnly />
+                </div>
+                <div className="form-grid--span-2">
+                  <p className="label">Description</p>
+                  <textarea className="readonly-field" style={{ minHeight: '80px' }} value={viewRow.description || 'No description provided.'} readOnly />
                 </div>
               </div>
             </div>

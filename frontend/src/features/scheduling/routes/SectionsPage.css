@@ -653,3 +653,109 @@
   background: rgba(239, 68, 68, 0.05) !important;
   border-color: #ef4444 !important;
 }
+/* ===== Roster Table Styles ===== */
+.roster-table-wrapper {
+  margin-top: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.roster-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.roster-table th {
+  background: #f8fafc;
+  padding: 0.85rem 1rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  border-bottom: 2px solid #f1f5f9;
+  text-align: left;
+}
+
+.roster-table td {
+  padding: 1rem;
+  vertical-align: middle;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.9rem;
+  color: #1e293b;
+}
+
+.roster-table tr:last-child td {
+  border-bottom: none;
+}
+
+.roster-table tr:hover td {
+  background: #fbfdff;
+}
+
+.roster-student-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.roster-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  color: #c2410c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.85rem;
+  border: 1px solid #fed7aa;
+  flex-shrink: 0;
+}
+
+.roster-student-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.roster-student-name {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.roster-student-id {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.roster-badge {
+  display: inline-flex;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.roster-checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 2px solid #cbd5e1;
+  cursor: pointer;
+  accent-color: #ff5f00;
+}
+
+.roster-actions-top {
+  margin-bottom: 1.25rem;
+  display: flex;
+  justify-content: flex-end;
+}

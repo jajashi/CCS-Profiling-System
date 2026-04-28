@@ -15,6 +15,7 @@ import SyllabusDetailPage from "./features/instruction/routes/SyllabusDetailPage
 import InstructionDashboard from "./features/instruction/routes/InstructionDashboard";
 import LessonTracker from "./features/instruction/routes/LessonTracker";
 import AdminSyllabiMonitor from "./features/instruction/routes/AdminSyllabiMonitor";
+import RecentActivitiesPage from "./features/dashboard/routes/RecentActivitiesPage";
 import TimeBlocksPage from "./features/scheduling/routes/TimeBlocksPage";
 import RoomsPage from "./features/scheduling/routes/RoomsPage";
 import SectionsPage from "./features/scheduling/routes/SectionsPage";
@@ -25,15 +26,14 @@ import EventCreationPage from "./features/events/routes/EventCreationPage";
 import EventListPage from "./features/events/routes/EventListPage";
 import EventApprovalPage from "./features/events/routes/EventApprovalPage";
 import MyEventsPage from "./features/events/routes/MyEventsPage";
-import GlobalCalendarPage from "./features/events/routes/GlobalCalendarPage";
 import StudentSchedulePage from "./features/scheduling/routes/StudentSchedulePage";
 import FacultyMyClassesPage from "./features/faculty/routes/FacultyMyClassesPage";
 import FacultyClassStudentsPage from "./features/faculty/routes/FacultyClassStudentsPage";
 import FacultyClassOverviewPage from "./features/faculty/routes/FacultyClassOverviewPage";
 import FacultyClassAttendancePage from "./features/faculty/routes/FacultyClassAttendancePage";
 import FacultyPortalDashboardPage from "./features/faculty/routes/FacultyPortalDashboardPage";
-import ReportsPage from "./features/reports/ReportsPage";
-import StudentDossier from "./features/reports/components/StudentDossier";
+import ReportsPage from './features/reports/routes/ReportsPage';
+import StudentDossierPage from './features/reports/routes/StudentDossierPage';
 import PasswordRequestPage from "./features/accounts/routes/PasswordRequestPage";
 import ReferenceOptionManagement from "./features/accounts/routes/ReferenceOptionManagement";
 import { useAuth } from "./providers/AuthContext";
@@ -83,6 +83,10 @@ function App() {
           </ProtectedRoute>
         }>
         <Route index element={<DashboardIndex />} />
+        <Route
+          path="activities"
+          element={<RecentActivitiesPage />}
+        />
         <Route
           path="student-info"
           element={
@@ -246,7 +250,7 @@ function App() {
           path="reports/student/:id"
           element={
             <NonStudentRoute>
-              <StudentDossier />
+              <StudentDossierPage />
             </NonStudentRoute>
           }
         />
@@ -306,6 +310,10 @@ function App() {
             </NonStudentRoute>
           }>
           <Route index element={<TimeBlocksPage />} />
+          <Route path="activity-log" element={<RecentActivitiesPage />} />
+          <Route path="reports" element={<ReportsPage />} />
+          <Route path="reports/dossier/:id" element={<StudentDossierPage />} />
+          <Route path="faculty" element={<FacultyInformation />} />
           <Route path="rooms" element={<RoomsPage />} />
           <Route path="sections" element={<SectionsPage />} />
           <Route path="my-schedule" element={<MySchedulePage />} />
@@ -350,8 +358,8 @@ function App() {
             </AdminRoute>
           }
         />
-        <Route path="events/calendar" element={<GlobalCalendarPage />} />
         <Route path="my-events" element={<MyEventsPage />} />
+        <Route path="activities" element={<AdminRoute><RecentActivitiesPage /></AdminRoute>} />
         <Route path="security" element={<PasswordRequestPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

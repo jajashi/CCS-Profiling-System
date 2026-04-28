@@ -3,12 +3,14 @@ import {
   FiUsers, FiBriefcase, FiBookOpen, FiActivity,
   FiAlertCircle, FiCheckCircle, FiDownload, FiEdit2, FiMessageCircle, FiCalendar
 } from 'react-icons/fi';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../providers/AuthContext';
 import { apiFetch } from '../../../lib/api';
+import DashboardAnalytics from '../components/DashboardAnalytics';
 import './DashboardHome.css';
 
 const DashboardHome = () => {
+  const navigate = useNavigate();
   const { isStudent, isAdmin } = useAuth();
   const [studentCount, setStudentCount] = useState(null);
   const [totalFacultyCount, setTotalFacultyCount] = useState(null);
@@ -269,11 +271,13 @@ const DashboardHome = () => {
           </div>
         </div>
       </div>
+      
+      {isAdmin && <DashboardAnalytics />}
 
       <div className="recent-activity-section">
         <div className="section-header">
           <h3>Recent Activities</h3>
-          <button className="btn btn-primary btn-sm">View All</button>
+          <button className="btn btn-primary btn-sm" onClick={() => navigate('/dashboard/activities')}>View All</button>
         </div>
         <div className="table-responsive">
           <table className="activity-table">
