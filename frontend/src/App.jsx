@@ -247,7 +247,7 @@ function App() {
           }
         />
         <Route
-          path="reports/student/:id"
+          path="reports/dossier/:id"
           element={
             <NonStudentRoute>
               <StudentDossierPage />
@@ -312,7 +312,6 @@ function App() {
           <Route index element={<TimeBlocksPage />} />
           <Route path="activity-log" element={<RecentActivitiesPage />} />
           <Route path="reports" element={<ReportsPage />} />
-          <Route path="reports/dossier/:id" element={<StudentDossierPage />} />
           <Route path="faculty" element={<FacultyInformation />} />
           <Route path="rooms" element={<RoomsPage />} />
           <Route path="sections" element={<SectionsPage />} />

@@ -1116,8 +1116,19 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, initialSectionI
                 FORM FOOTER — ACTION BUTTONS
             ════════════════════════════════════════ */}
             <div className="modal-footer syllabus-modal-footer">
-              <div className="syllabus-modal-footer-nav">
-                {activeStep > 0 ? (
+              <div className="syllabus-modal-footer-left">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={onClose}
+                  disabled={submitting}
+                >
+                  Cancel
+                </button>
+              </div>
+
+              <div className="syllabus-modal-footer-right">
+                {activeStep > 0 && (
                   <button
                     type="button"
                     className="btn btn-secondary syllabus-footer-back"
@@ -1127,7 +1138,8 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, initialSectionI
                     <FiChevronLeft aria-hidden />
                     Back
                   </button>
-                ) : null}
+                )}
+
                 {activeStep < SYLLABUS_STEPS.length - 1 ? (
                   <button
                     type="button"
@@ -1138,34 +1150,25 @@ function AddEditSyllabusModal({ isOpen, onClose, editSyllabusId, initialSectionI
                     Next
                     <FiChevronRight aria-hidden />
                   </button>
-                ) : null}
-              </div>
-              <div className="syllabus-modal-footer-actions">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={onClose}
-                  disabled={submitting}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={isDisabled}
-                >
-                  {submitting ? (
-                    <>
-                      <FiLoader className="spin-icon" />
-                      {isEditMode ? 'Saving...' : 'Creating...'}
-                    </>
-                  ) : (
-                    <>
-                      <FiSave />
-                      {isEditMode ? 'Save Changes' : 'Create Syllabus'}
-                    </>
-                  )}
-                </button>
+                ) : (
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={isDisabled}
+                  >
+                    {submitting ? (
+                      <>
+                        <FiLoader className="spin-icon" />
+                        {isEditMode ? 'Saving...' : 'Creating...'}
+                      </>
+                    ) : (
+                      <>
+                        <FiSave />
+                        {isEditMode ? 'Save Changes' : 'Create Syllabus'}
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
 

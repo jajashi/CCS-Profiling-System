@@ -48,12 +48,17 @@ const StudentList = ({ students, loading, pagination, onPageChange, onViewProfil
               <th>Year</th>
               <th>Section</th>
               <th>Status</th>
-              <th>Actions</th>
+              <th style={{ textAlign: 'center' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {students.map((student) => (
-              <tr key={student._id} className="student-row">
+              <tr 
+                key={student._id} 
+                className="student-row"
+                style={{ cursor: 'pointer' }}
+                onClick={() => onViewProfile(student._id)}
+              >
                 <td className="student-id">{student.id}</td>
                 <td className="student-name">
                   <div className="name-cell">
@@ -77,9 +82,12 @@ const StudentList = ({ students, loading, pagination, onPageChange, onViewProfil
                     {student.status}
                   </span>
                 </td>
-                <td className="student-actions">
+                <td className="student-actions" style={{ textAlign: 'center' }}>
                   <button
-                    onClick={() => onViewProfile(student._id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onViewProfile(student._id);
+                    }}
                     className="btn btn-primary btn-sm"
                     disabled={loading}
                   >

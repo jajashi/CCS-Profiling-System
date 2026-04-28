@@ -60,7 +60,7 @@ const StudentDossierPage = () => {
   return (
     <div className="dossier-page">
       <div className="dossier-header">
-        <button className="back-btn" onClick={() => navigate(-1)}>
+        <button className="back-btn" onClick={() => navigate('/dashboard/reports')}>
           <FiArrowLeft /> Back to Reports
         </button>
         <button className="spec-btn-primary" onClick={handleExportPDF}>
@@ -98,6 +98,46 @@ const StudentDossierPage = () => {
             <div className="info-item">
               <span className="info-label">Section</span>
               <span className="info-value">{dossier.section}</span>
+            </div>
+            <div className="info-item">
+              <span className="info-label">Type</span>
+              <span className="info-value">{dossier.studentType || 'Regular'}</span>
+            </div>
+          </div>
+
+          <div className="dossier-info-group">
+            <h4 className="group-title">Contact & Location</h4>
+            <div className="info-item">
+              <span className="info-label">Email</span>
+              <span className="info-value">{dossier.email}</span>
+            </div>
+            <div className="info-item">
+              <span className="info-label">Phone</span>
+              <span className="info-value">{dossier.contact}</span>
+            </div>
+            <div className="info-item">
+              <span className="info-label">Address</span>
+              <span className="info-value">
+                {dossier.address?.street && `${dossier.address.street}, `}
+                {dossier.address?.city && `${dossier.address.city}, `}
+                {dossier.address?.province} {dossier.address?.postalCode}
+              </span>
+            </div>
+          </div>
+
+          <div className="dossier-info-group">
+            <h4 className="group-title">Emergency Contact</h4>
+            <div className="info-item">
+              <span className="info-label">Name</span>
+              <span className="info-value">{dossier.emergencyContact?.name || dossier.guardian}</span>
+            </div>
+            <div className="info-item">
+              <span className="info-label">Relationship</span>
+              <span className="info-value">{dossier.emergencyContact?.relationship || 'Guardian'}</span>
+            </div>
+            <div className="info-item">
+              <span className="info-label">Phone</span>
+              <span className="info-value">{dossier.emergencyContact?.phone || dossier.guardianContact}</span>
             </div>
           </div>
         </div>
@@ -152,11 +192,57 @@ const StudentDossierPage = () => {
           <section className="dossier-section">
             <h3 className="section-title"><FiAward /> Skills & Competencies</h3>
             <div className="skills-grid-mini">
-              {dossier.skills?.map((skill, idx) => (
-                <span key={idx} className="skill-tag-mini">{skill}</span>
-              ))}
+              {dossier.skills?.length > 0 ? (
+                dossier.skills.map((skill, idx) => (
+                  <span key={idx} className="skill-tag-mini">{skill}</span>
+                ))
+              ) : (
+                <p className="text-slate-400 text-sm">No skills recorded.</p>
+              )}
             </div>
           </section>
+
+          {(dossier.academicHistory?.previousSchools?.length > 0 || dossier.academicHistory?.achievements?.length > 0) && (
+            <section className="dossier-section">
+              <h3 className="section-title"><FiUser /> Academic Background</h3>
+              {dossier.academicHistory.previousSchools?.length > 0 && (
+                <div className="mb-4">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Previous Schools</span>
+                  <ul className="list-disc list-inside text-sm text-slate-600">
+                    {dossier.academicHistory.previousSchools.map((s, i) => <li key={i}>{s}</li>)}
+                  </ul>
+                </div>
+              )}
+              {dossier.academicHistory.achievements?.length > 0 && (
+                <div>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Achievements</span>
+                  <ul className="list-disc list-inside text-sm text-slate-600">
+                    {dossier.academicHistory.achievements.map((a, i) => <li key={i}>{a}</li>)}
+                  </ul>
+                </div>
+              )}
+            </section>
+          )}
+
+          {(dossier.healthInfo?.conditions?.length > 0 || dossier.healthInfo?.allergies?.length > 0) && (
+            <section className="dossier-section warning-section">
+              <h3 className="section-title"><FiAlertTriangle /> Medical Information</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {dossier.healthInfo.conditions?.length > 0 && (
+                  <div>
+                    <span className="text-xs font-bold text-rose-400 uppercase tracking-wider mb-1 block">Conditions</span>
+                    <p className="text-sm text-rose-700">{dossier.healthInfo.conditions.join(', ')}</p>
+                  </div>
+                )}
+                {dossier.healthInfo.allergies?.length > 0 && (
+                  <div>
+                    <span className="text-xs font-bold text-rose-400 uppercase tracking-wider mb-1 block">Allergies</span>
+                    <p className="text-sm text-rose-700">{dossier.healthInfo.allergies.join(', ')}</p>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
         </div>
       </div>
     </div>

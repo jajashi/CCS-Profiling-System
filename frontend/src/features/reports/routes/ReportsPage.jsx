@@ -221,7 +221,7 @@ const ReportsPage = () => {
                   <th>Student</th>
                   <th>Academic Info</th>
                   <th>Status</th>
-                  <th className="text-right">Actions</th>
+                  <th className="text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -240,7 +240,11 @@ const ReportsPage = () => {
                   </tr>
                 ) : (
                   students.map(student => (
-                    <tr key={student._id}>
+                    <tr 
+                      key={student._id} 
+                      className="clickable-row"
+                      onClick={() => window.open(`/dashboard/reports/dossier/${student._id}`, '_blank')}
+                    >
                       <td>
                         <div className="flex items-center gap-3">
                           <div className="report-avatar">
@@ -263,8 +267,8 @@ const ReportsPage = () => {
                           {student.status}
                         </span>
                       </td>
-                      <td className="text-right">
-                        <div className="flex justify-end gap-2">
+                      <td className="text-center">
+                        <div className="flex justify-center gap-2">
                           <button 
                             className="action-btn view" 
                             title="View 360 Dossier"
@@ -293,7 +297,7 @@ const ReportsPage = () => {
                   <th>Faculty Member</th>
                   <th>Teaching Load</th>
                   <th>Contact</th>
-                  <th className="text-right">Specializations</th>
+                  <th className="text-center">Specializations</th>
                 </tr>
               </thead>
               <tbody>
@@ -333,8 +337,8 @@ const ReportsPage = () => {
                       <td>
                          <span className="text-sm text-slate-600">{f.email}</span>
                       </td>
-                      <td className="text-right">
-                        <div className="flex flex-wrap justify-end gap-1">
+                      <td className="text-center">
+                        <div className="flex flex-wrap justify-center gap-1">
                           {f.specializations?.map((s, i) => (
                             <span key={i} className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
                               {s}
