@@ -1966,12 +1966,64 @@ async function getSchedulingAnalytics(req, res, next) {
   }
 }
 
+async function deleteSection(req, res, next) {
+  try {
+    const { id } = req.params;
+    const Section = await resolveSectionModel();
+    const section = await Section.findById(id);
+    if (!section) return res.status(404).json({ message: "Section not found." });
+
+    // Logical delete or check if it can be deleted
+    // For now, allow deletion if it has no students or based on admin preference
+    await Section.findByIdAndDelete(id);
+
+    await logActivity(req, {
+      action: "Deleted section",
+      module: "Scheduling",
+      target: section.sectionIdentifier,
+      status: "Completed",
+    });
+
+    return res.status(200).json({ message: "Section deleted successfully." });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function batchDeleteSections(req, res, next) {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: "ids must be a non-empty array." });
+    }
+
+    const Section = await resolveSectionModel();
+    const result = await Section.deleteMany({ _id: { $in: ids } });
+
+    await logActivity(req, {
+      action: "Batch deleted sections",
+      module: "Scheduling",
+      target: `${result.deletedCount} sections`,
+      status: "Completed",
+    });
+
+    return res.status(200).json({
+      message: `${result.deletedCount} sections deleted successfully.`,
+      deletedCount: result.deletedCount,
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   listSections,
   createSection,
   updateSection,
   updateSectionResources,
   getSectionById,
+  deleteSection,
+  batchDeleteSections,
   getScheduleMatrix,
   getRoomUtilization,
   getSchedulingAnalytics,

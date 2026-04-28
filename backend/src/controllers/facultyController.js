@@ -251,7 +251,36 @@ async function getFacultyById(req, res, next) {
       return res.status(404).json({ message: 'Faculty record not found.' });
     }
 
-    return res.status(200).json(mapFacultyResponse(faculty));
+    // Fetch teaching load (sections where this faculty is assigned in schedules)
+    const sections = await Section.find({ 'schedules.facultyId': faculty._id })
+      .populate('curriculumId', 'courseCode courseTitle')
+      .populate('schedules.roomId', 'name type')
+      .lean();
+
+    const teachingLoad = sections.map((sec) => {
+      const mySchedules = (sec.schedules || []).filter(
+        (s) => s.facultyId && s.facultyId.toString() === faculty._id.toString(),
+      );
+      return {
+        sectionId: sec._id,
+        sectionIdentifier: sec.sectionIdentifier,
+        courseCode: sec.curriculumId?.courseCode || 'N/A',
+        courseTitle: sec.curriculumId?.courseTitle || 'N/A',
+        academicYear: sec.academicYear,
+        term: sec.term,
+        schedules: mySchedules.map((ms) => ({
+          dayOfWeek: ms.dayOfWeek,
+          startTime: ms.startTime,
+          endTime: ms.endTime,
+          room: ms.roomId?.name || 'Unknown',
+        })),
+      };
+    });
+
+    const responseData = mapFacultyResponse(faculty);
+    responseData.teachingLoad = teachingLoad;
+
+    return res.status(200).json(responseData);
   } catch (err) {
     return next(err);
   }

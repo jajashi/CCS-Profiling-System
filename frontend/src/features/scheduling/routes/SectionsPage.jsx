@@ -16,6 +16,9 @@ import {
   FiChevronRight,
   FiInfo,
   FiArrowRight,
+  FiCheckSquare,
+  FiSquare,
+  FiAlertTriangle,
 } from "react-icons/fi";
 import { apiFetch } from "../../../lib/api";
 import toast from "react-hot-toast";
@@ -997,7 +1000,66 @@ export default function SectionsPage() {
     termFilter,
     yearFilter,
     statusFilter,
-  ]);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [isBulkMode, setIsBulkMode] = useState(false);
+  const [deletingId, setDeletingId] = useState("");
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selectedIds.size === paginatedSections.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(paginatedSections.map((s) => s._id)));
+    }
+  };
+
+  const handleDeleteSection = async (id, identifier) => {
+    if (!window.confirm(`Are you sure you want to delete section ${identifier}? This will remove all student assignments and schedules.`)) return;
+    setDeletingId(id);
+    try {
+      const res = await apiFetch(`/api/scheduling/sections/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "Failed to delete section.");
+      }
+      toast.success("Section deleted successfully.");
+      setSections(sections.filter(s => s._id !== id));
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setDeletingId("");
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`Are you sure you want to delete ${selectedIds.size} sections? This action is permanent.`)) return;
+
+    try {
+      const res = await apiFetch("/api/scheduling/sections/batch-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Bulk delete failed.");
+
+      toast.success(data.message || "Sections deleted successfully.");
+      setSections(sections.filter((s) => !selectedIds.has(s._id)));
+      setSelectedIds(new Set());
+      setIsBulkMode(false);
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
 
   const totalPages = Math.max(
     Math.ceil(filteredSections.length / PAGE_SIZE),
@@ -1114,11 +1176,30 @@ export default function SectionsPage() {
               ))}
             </select>
           </div>
-          <button
-            className="spec-btn-primary"
-            onClick={() => setShowCreate(true)}>
-            <FiPlus /> New Section
-          </button>
+          <div className="section-toolbar-right" style={{ display: "flex", gap: "0.75rem" }}>
+            {isAdmin && (
+              <>
+                <button
+                  className={`spec-btn-secondary ${isBulkMode ? "active" : ""}`}
+                  onClick={() => {
+                    setIsBulkMode(!isBulkMode);
+                    setSelectedIds(new Set());
+                  }}>
+                  <FiCheckSquare /> {isBulkMode ? "Cancel Bulk" : "Bulk Delete"}
+                </button>
+                {isBulkMode && selectedIds.size > 0 && (
+                  <button className="spec-btn-danger" onClick={handleBulkDelete}>
+                    <FiTrash2 /> Delete Selected ({selectedIds.size})
+                  </button>
+                )}
+              </>
+            )}
+            <button
+              className="spec-btn-primary"
+              onClick={() => setShowCreate(true)}>
+              <FiPlus /> New Section
+            </button>
+          </div>
         </div>
         {!loading ? (
           <div className="results-count">
@@ -1332,7 +1413,22 @@ export default function SectionsPage() {
                       <FiBook /> Add Syllabus
                     </button>
                   ))}
+                {isAdmin && (
+                  <button
+                    className="btn-assign btn-delete-action"
+                    disabled={deletingId === section._id}
+                    onClick={() => handleDeleteSection(section._id, section.sectionIdentifier)}>
+                    <FiTrash2 /> {deletingId === section._id ? "..." : "Delete"}
+                  </button>
+                )}
               </div>
+              {isBulkMode && (
+                <div className="section-card-overlay" onClick={() => toggleSelect(section._id)}>
+                  <div className={`selection-checkbox ${selectedIds.has(section._id) ? "checked" : ""}`}>
+                    {selectedIds.has(section._id) ? <FiCheckSquare /> : <FiSquare />}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

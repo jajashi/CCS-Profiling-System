@@ -311,7 +311,12 @@ async function getSyllabi(req, res, next) {
     const { facultyId, curriculumId, sectionId, status } = req.query;
     const query = {};
 
-    if (facultyId) {
+    if (!isAdmin(req)) {
+      const facultyScope = await resolveFacultyActor(req);
+      if (facultyScope) {
+        query.facultyId = facultyScope._id;
+      }
+    } else if (facultyId) {
       if (!mongoose.Types.ObjectId.isValid(facultyId)) {
         return res.status(400).json({ message: 'facultyId must be a valid ObjectId.' });
       }
@@ -362,6 +367,13 @@ async function getSyllabusById(req, res, next) {
     const syllabus = await Syllabus.findById(id).populate(buildDetailPopulateOptions(Boolean(Section)));
     if (!syllabus) {
       return res.status(404).json({ message: 'Syllabus not found.' });
+    }
+
+    if (!isAdmin(req)) {
+      const facultyScope = await resolveFacultyActor(req);
+      if (facultyScope && String(facultyScope._id) !== String(syllabus.facultyId)) {
+        return res.status(403).json({ message: 'You do not have permission to view this syllabus.' });
+      }
     }
 
     return res.status(200).json(syllabus.toJSON());

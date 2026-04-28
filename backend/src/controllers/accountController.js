@@ -550,10 +550,36 @@ async function deleteAccount(req, res, next) {
   }
 }
 
+async function searchUsers(req, res, next) {
+  try {
+    const { q } = req.query;
+    const limit = Math.min(toPositiveInt(req.query?.limit, 10), 50);
+    if (!q || String(q).trim().length < 2) return res.status(200).json([]);
+
+    const pattern = new RegExp(escapeRegex(q), 'i');
+    const users = await User.find({
+      $or: [
+        { name: pattern },
+        { username: pattern },
+        { studentId: pattern },
+        { employeeId: pattern },
+      ],
+    })
+      .limit(limit)
+      .select('_id name username role studentId employeeId')
+      .lean();
+
+    return res.status(200).json(users.map(publicUser));
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   listAccounts,
   listStudentAccountProfiles,
   listFacultyAccountProfiles,
+  searchUsers,
   createAdminAccount,
   provisionStudentAccount,
   provisionFacultyAccount,

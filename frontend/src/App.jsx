@@ -13,6 +13,8 @@ import CurriculaManagement from "./features/instruction/routes/CurriculaManageme
 import SyllabusListPage from "./features/instruction/routes/SyllabusListPage";
 import SyllabusDetailPage from "./features/instruction/routes/SyllabusDetailPage";
 import InstructionDashboard from "./features/instruction/routes/InstructionDashboard";
+import LessonTracker from "./features/instruction/routes/LessonTracker";
+import AdminSyllabiMonitor from "./features/instruction/routes/AdminSyllabiMonitor";
 import TimeBlocksPage from "./features/scheduling/routes/TimeBlocksPage";
 import RoomsPage from "./features/scheduling/routes/RoomsPage";
 import SectionsPage from "./features/scheduling/routes/SectionsPage";
@@ -278,6 +280,22 @@ function App() {
             <NonStudentRoute>
               <SyllabusDetailPage />
             </NonStudentRoute>
+          }
+        />
+        <Route
+          path="instruction/tracking"
+          element={
+            <FacultyOnlyRoute>
+              <LessonTracker />
+            </FacultyOnlyRoute>
+          }
+        />
+        <Route
+          path="instruction/monitor"
+          element={
+            <AdminRoute>
+              <AdminSyllabiMonitor />
+            </AdminRoute>
           }
         />
         <Route

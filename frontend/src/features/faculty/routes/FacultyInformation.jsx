@@ -1105,9 +1105,30 @@ const FacultyInformation = () => {
               ) : null}
 
               <CollapsibleSection title="Teaching Load Summary">
-                <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '8px', color: '#64748b', textAlign: 'center', fontStyle: 'italic' }}>
-                  Teaching load data will be available once the Scheduling module is integrated.
-                </div>
+                {selectedFaculty.teachingLoad?.length > 0 ? (
+                  <div className="teaching-load-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {selectedFaculty.teachingLoad.map((load, idx) => (
+                      <div key={load.sectionId || idx} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{load.courseCode} - {load.sectionIdentifier}</span>
+                          <span style={{ fontSize: '0.85rem', color: '#64748b' }}>{load.academicYear} | {load.term}</span>
+                        </div>
+                        <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#475569' }}>{load.courseTitle}</p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                          {load.schedules.map((sched, sIdx) => (
+                            <div key={sIdx} style={{ fontSize: '0.8rem', background: '#fff', padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
+                              <strong>{sched.dayOfWeek}</strong> {sched.startTime} - {sched.endTime} ({sched.room})
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '8px', color: '#64748b', textAlign: 'center', fontStyle: 'italic' }}>
+                    No teaching assignments found for this faculty member.
+                  </div>
+                )}
               </CollapsibleSection>
             </div>
           </div>

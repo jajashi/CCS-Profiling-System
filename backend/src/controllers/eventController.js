@@ -62,6 +62,10 @@ const canUserAccessEvent = (event, user, targetingMeta) => {
     (org) => String(org.userId?._id || org.userId) === String(user.id || user._id)
   );
   if (user.role === 'admin' || isOrganizer) return true;
+
+  // Non-admins and non-organizers can only see published events
+  if (event.status !== 'published') return false;
+
   return isUserInTargetGroups(event, targetingMeta);
 };
 
@@ -320,24 +324,7 @@ const getEvents = async (req, res) => {
       .populate('organizers.userId', 'name username role');
 
     const filteredEvents = events
-      .filter((event) => {
-        // Check if user is an organizer
-        const isOrganizer = (event.organizers || []).some(
-          (org) => String(org.userId?._id || org.userId) === String(req.user?.id || '')
-        );
-        
-        // Admins and faculty can see all events they're eligible for
-        if (req.user?.role === 'admin' || req.user?.role === 'faculty') {
-          return canUserAccessEvent(event, req.user, targetingMeta);
-        }
-        
-        // For students and student_leaders, show events they're organizing OR targeted for
-        if (isOrganizer || canUserAccessEvent(event, req.user, targetingMeta)) {
-          return true;
-        }
-        
-        return false;
-      })
+      .filter((event) => canUserAccessEvent(event, req.user, targetingMeta))
       .map((event) => mapEventWithViewerState(event, req.user?.id));
 
     res.json(filteredEvents);

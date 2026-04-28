@@ -96,7 +96,7 @@ router.delete('/:id/rsvp', requireRoles('student', 'faculty'), cancelRsvp);
 router.post('/:id/unrsvp', requireRoles('student', 'faculty'), cancelRsvp);
 router.patch('/:id/attendees/:userId', requireRoles('admin'), updateAttendance);
 
-router.patch('/:id/status', requireRoles('admin'), updateEventStatus);
+router.patch('/:id/status', requireRoles('admin', 'faculty'), updateEventStatus);
 router.get('/:id/analytics', requireRoles('admin'), getEventAnalytics);
 router.post('/:id/feedback', submitFeedback);
 router.post('/:id/certificates', requireRoles('admin'), generateCertificates);
