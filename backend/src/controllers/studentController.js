@@ -58,11 +58,14 @@ async function getStudents(req, res, next) {
         filter.program = program.trim();
       }
 
-      if (skill && skill.trim() !== "") {
+      if (skill) {
         const skills = Array.isArray(skill)
           ? skill
           : skill.split(",").map((s) => s.trim());
-        filter.skills = { $all: skills };
+        const validSkills = skills.filter(s => s && s.trim() !== "");
+        if (validSkills.length > 0) {
+          filter.skills = { $all: validSkills };
+        }
       }
 
       if (yearLevel && yearLevel.trim() !== "") {

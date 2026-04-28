@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { FiPlus, FiX } from "react-icons/fi";
+import "./SkillsFilter.css";
 
 const SkillsFilter = ({
   label,
