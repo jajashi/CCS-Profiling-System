@@ -1313,15 +1313,13 @@ async function getSectionRoster(req, res, next) {
 }
 
 async function patchSectionRoster(req, res, next) {
-  const session = await mongoose.startSession();
-  session.startTransaction();
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: "Invalid section id." });
     }
     const Section = await resolveSectionModel();
-    const section = await Section.findById(id).session(session);
+    const section = await Section.findById(id);
     if (!section)
       return res.status(404).json({ message: "Section not found." });
 
@@ -1352,7 +1350,6 @@ async function patchSectionRoster(req, res, next) {
     const newAddIds = addIds.filter((aid) => !currentIds.has(aid.toString()));
 
     if (currentIds.size - removeIds.length + newAddIds.length > 55) {
-      await session.abortTransaction();
       return res.status(400).json({
         message: "Enrollment failed: Section capacity (55) would be exceeded.",
       });
@@ -1365,7 +1362,7 @@ async function patchSectionRoster(req, res, next) {
         await Student.findByIdAndUpdate(
           rid,
           { sectionId: null, section: "" },
-          { session, runValidators: true },
+          { runValidators: true },
         );
 
         await logActivity(req, {
@@ -1384,11 +1381,9 @@ async function patchSectionRoster(req, res, next) {
     // Process Additions
     for (const aid of newAddIds) {
       // 1. Check if student was in another section and remove them from there
-      const student = await Student.findById(aid).session(session);
+      const student = await Student.findById(aid);
       if (student && student.sectionId && student.sectionId.toString() !== id) {
-        const prevSection = await Section.findById(student.sectionId).session(
-          session,
-        );
+        const prevSection = await Section.findById(student.sectionId);
         if (prevSection) {
           prevSection.enrolledStudentIds =
             prevSection.enrolledStudentIds.filter(
@@ -1396,7 +1391,7 @@ async function patchSectionRoster(req, res, next) {
             );
           prevSection.currentEnrollmentCount =
             prevSection.enrolledStudentIds.length;
-          await prevSection.save({ session });
+          await prevSection.save();
         }
       }
 
@@ -1404,7 +1399,7 @@ async function patchSectionRoster(req, res, next) {
       await Student.findByIdAndUpdate(
         aid,
         { sectionId: id, section: section.sectionIdentifier },
-        { session, runValidators: true },
+        { runValidators: true },
       );
     }
 
@@ -1412,9 +1407,7 @@ async function patchSectionRoster(req, res, next) {
       (s) => new mongoose.Types.ObjectId(s),
     );
     section.currentEnrollmentCount = section.enrolledStudentIds.length;
-    await section.save({ session });
-
-    await session.commitTransaction();
+    await section.save();
 
     const populated = await Section.findById(id)
       .populate("curriculumId", "courseCode courseTitle")
@@ -1454,16 +1447,11 @@ async function patchSectionRoster(req, res, next) {
       })),
     });
   } catch (err) {
-    await session.abortTransaction();
     return next(err);
-  } finally {
-    session.endSession();
   }
 }
 
 async function transferStudent(req, res, next) {
-  const session = await mongoose.startSession();
-  session.startTransaction();
   try {
     const { studentId, targetSectionId } = req.body;
     if (
@@ -1476,25 +1464,22 @@ async function transferStudent(req, res, next) {
     }
 
     const Section = await resolveSectionModel();
-    const targetSection =
-      await Section.findById(targetSectionId).session(session);
+    const targetSection = await Section.findById(targetSectionId);
     if (!targetSection)
       return res.status(404).json({ message: "Target section not found." });
 
     if (targetSection.currentEnrollmentCount >= 55) {
-      await session.abortTransaction();
       return res
         .status(400)
         .json({ message: "Transfer failed: Target section is full." });
     }
 
-    const student = await Student.findById(studentId).session(session);
+    const student = await Student.findById(studentId);
     if (!student)
       return res.status(404).json({ message: "Student not found." });
 
     const prevSectionId = student.sectionId;
     if (prevSectionId && prevSectionId.toString() === targetSectionId) {
-      await session.abortTransaction();
       return res
         .status(400)
         .json({ message: "Student is already in the target section." });
@@ -1502,15 +1487,14 @@ async function transferStudent(req, res, next) {
 
     // 1. Remove from previous section
     if (prevSectionId) {
-      const prevSection =
-        await Section.findById(prevSectionId).session(session);
+      const prevSection = await Section.findById(prevSectionId);
       if (prevSection) {
         prevSection.enrolledStudentIds = prevSection.enrolledStudentIds.filter(
           (id) => id.toString() !== studentId,
         );
         prevSection.currentEnrollmentCount =
           prevSection.enrolledStudentIds.length;
-        await prevSection.save({ session });
+        await prevSection.save();
       }
     }
 
@@ -1520,14 +1504,12 @@ async function transferStudent(req, res, next) {
     );
     targetSection.currentEnrollmentCount =
       targetSection.enrolledStudentIds.length;
-    await targetSection.save({ session });
+    await targetSection.save();
 
     // 3. Update student
     student.sectionId = targetSectionId;
     student.section = targetSection.sectionIdentifier;
-    await student.save({ session });
-
-    await session.commitTransaction();
+    await student.save();
 
     await logActivity(req, {
       action: "Transferred student between sections",
@@ -1541,10 +1523,7 @@ async function transferStudent(req, res, next) {
       .status(200)
       .json({ message: "Student transferred successfully.", student });
   } catch (err) {
-    await session.abortTransaction();
     return next(err);
-  } finally {
-    session.endSession();
   }
 }
 

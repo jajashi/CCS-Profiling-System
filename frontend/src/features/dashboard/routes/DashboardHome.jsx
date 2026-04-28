@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { 
   FiUsers, FiBriefcase, FiBookOpen, FiActivity,
-  FiAlertCircle, FiCheckCircle, FiDownload, FiEdit2, FiMessageCircle 
+  FiAlertCircle, FiCheckCircle, FiDownload, FiEdit2, FiMessageCircle, FiCalendar
 } from 'react-icons/fi';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../../providers/AuthContext';
 import { apiFetch } from '../../../lib/api';
 import './DashboardHome.css';

@@ -158,13 +158,10 @@ async function createStudent(req, res, next) {
       "lastName",
       "program",
       "yearLevel",
-      "section",
       "status",
       "email",
       "contact",
       "dateEnrolled",
-      "guardian",
-      "guardianContact",
     ];
     const missing = requiredFields.filter((key) => {
       const value = payload[key];
@@ -229,6 +226,7 @@ async function createStudent(req, res, next) {
         .json({ message: "Please check the form fields and try again." });
     }
 
+    console.error("Error creating student:", err);
     next(err);
   }
 }
@@ -249,8 +247,6 @@ async function updateStudent(req, res, next) {
       "email",
       "contact",
       "dateEnrolled",
-      "guardian",
-      "guardianContact",
     ];
     const missing = requiredFields.filter((key) => {
       const value = payload[key];

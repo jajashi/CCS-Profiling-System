@@ -224,11 +224,11 @@ export default function AddStudentForm({
       { key: "email", label: "Email Address", required: true },
       { key: "contact", label: "Contact Number", required: true },
       { key: "dateEnrolled", label: "Date Enrolled", required: true },
-      { key: "guardian", label: "Guardian", required: true },
+      { key: "guardian", label: "Guardian", required: false },
       {
         key: "guardianContact",
         label: "Guardian Contact Information",
-        required: true,
+        required: false,
       },
     ];
     if (isEditMode) {
