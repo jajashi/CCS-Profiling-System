@@ -1,0 +1,4 @@
+backend/.env.example
+backend/.env.example
+frontend/.env.development
+frontend/.env.production
