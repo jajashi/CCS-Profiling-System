@@ -18,6 +18,10 @@ function resolveFallbackBaseUrl() {
   if (host === 'localhost' || host === '127.0.0.1') {
     return 'http://localhost:5000';
   }
+  // Render production fallback when env var is not set.
+  if (host.includes('onrender.com')) {
+    return 'https://testing-lang-lgsz.onrender.com';
+  }
   return '';
 }
 
