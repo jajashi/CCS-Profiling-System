@@ -12,6 +12,8 @@ const { logActivity } = require("../services/activityLogService");
 const CURRENT_ACADEMIC_YEAR = process.env.CURRENT_ACADEMIC_YEAR || "2024-2025";
 const CURRENT_TERM = process.env.CURRENT_TERM || "First Semester";
 
+const toObjectId = (id) => (mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : null);
+
 async function getStudentsForReports(req, res, next) {
   try {
     const {
@@ -747,5 +749,5 @@ module.exports = {
   getStudentsForReports,
   getStudentDossier,
   exportStudentProfilePDF,
-  getFacultyForReports,
+  getFacultyForReports
 };

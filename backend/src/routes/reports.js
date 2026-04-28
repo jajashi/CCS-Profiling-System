@@ -14,15 +14,6 @@ router.use(authenticate);
 // Apply role-based access control - only Admin can access reports
 router.use(requireRoles('admin'));
 
-// GET /api/reports/students - Get filtered list of students for reporting
-router.get('/students', getStudentsForReports);
-
-// GET /api/reports/students/:id/dossier - Get complete 360-degree student dossier
-router.get('/students/:id/dossier', getStudentDossier);
-
-// GET /api/reports/students/:id/export - Export student profile as PDF
-router.get('/students/:id/export', exportStudentProfilePDF);
-
 // GET /api/reports/faculty - Get faculty list for reporting
 router.get('/faculty', getFacultyForReports);
 

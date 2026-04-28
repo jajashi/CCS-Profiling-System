@@ -3,6 +3,7 @@ import { FiFileText, FiDownload, FiSearch, FiFilter, FiUser, FiInfo, FiChevronLe
 import { apiFetch } from '../../../lib/api';
 import FilterDropdown from '../../../components/Elements/FilterDropdown';
 import toast from 'react-hot-toast';
+import StudentSummaryModal from '../components/StudentSummaryModal';
 import './ReportsPage.css';
 
 const PROGRAM_OPTIONS = [
@@ -44,6 +45,8 @@ const ReportsPage = () => {
   const [facultyLoading, setFacultyLoading] = useState(false);
   
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedStudentForSummary, setSelectedStudentForSummary] = useState(null);
+  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
 
   const fetchReports = useCallback(async () => {
     if (activeTab === 'students') {
@@ -118,6 +121,15 @@ const ReportsPage = () => {
     } catch (error) {
       toast.error(error.message);
     }
+  };
+
+  const handleRowClick = (student) => {
+    setSelectedStudentForSummary(student);
+    setIsSummaryModalOpen(true);
+  };
+
+  const handleViewDossier = (studentId) => {
+    window.open(`/dashboard/reports/dossier/${studentId}`, '_blank');
   };
 
   return (
@@ -210,7 +222,7 @@ const ReportsPage = () => {
         )}
 
         <div className="results-summary">
-          <span>Showing <strong>{students.length}</strong> of <strong>{total}</strong> students</span>
+          <span>Showing <strong>{activeTab === 'students' ? students.length : faculty.length}</strong> of <strong>{total}</strong> records</span>
         </div>
 
         <div className="reports-table-container">
@@ -243,7 +255,7 @@ const ReportsPage = () => {
                     <tr 
                       key={student._id} 
                       className="clickable-row"
-                      onClick={() => window.open(`/dashboard/reports/dossier/${student._id}`, '_blank')}
+                      onClick={() => handleRowClick(student)}
                     >
                       <td>
                         <div className="flex items-center gap-3">
@@ -272,7 +284,10 @@ const ReportsPage = () => {
                           <button 
                             className="action-btn view" 
                             title="View 360 Dossier"
-                            onClick={() => window.open(`/dashboard/reports/dossier/${student._id}`, '_blank')}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewDossier(student._id);
+                            }}
                           >
                             <FiExternalLink />
                           </button>
@@ -320,7 +335,11 @@ const ReportsPage = () => {
                       <td>
                         <div className="flex items-center gap-3">
                           <div className="report-avatar faculty">
-                            {f.firstName[0]}{f.lastName[0]}
+                            {f.profileAvatar ? (
+                               <img src={f.profileAvatar} alt={f.firstName} className="w-full h-full object-cover rounded-full" />
+                            ) : (
+                               <span>{f.firstName[0]}{f.lastName[0]}</span>
+                            )}
                           </div>
                           <div className="flex flex-col">
                             <span className="font-bold text-slate-800">{f.lastName}, {f.firstName}</span>
@@ -374,6 +393,17 @@ const ReportsPage = () => {
           </div>
         )}
       </div>
+
+      {isSummaryModalOpen && selectedStudentForSummary && (
+        <StudentSummaryModal 
+          student={selectedStudentForSummary}
+          onClose={() => {
+            setIsSummaryModalOpen(false);
+            setSelectedStudentForSummary(null);
+          }}
+          onViewFullDossier={handleViewDossier}
+        />
+      )}
     </div>
   );
 };

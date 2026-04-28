@@ -92,10 +92,11 @@ export default function EventListPage() {
   };
 
   const filteredEvents = events.filter(event => {
+    const searchLower = search.toLowerCase();
     const matchesSearch = !search || 
-      event.title.toLowerCase().includes(search.toLowerCase()) ||
-      (event.type === 'Other' ? (event.typeOtherLabel || 'Other') : event.type).toLowerCase().includes(search.toLowerCase()) ||
-      (event.isVirtual ? event.meetingUrl : event.roomId?.name || '').toLowerCase().includes(search.toLowerCase());
+      (event.title?.toLowerCase() || '').includes(searchLower) ||
+      (getEventTypeLabel(event)?.toLowerCase() || '').includes(searchLower) ||
+      (event.isVirtual ? (event.meetingUrl?.toLowerCase() || '') : (event.roomId?.name?.toLowerCase() || '')).includes(searchLower);
     
     const matchesType = typeFilter === 'All' || event.type === typeFilter;
     const matchesStatus = statusFilter === 'All' || event.status === statusFilter;
@@ -350,18 +351,6 @@ export default function EventListPage() {
               </div>
             ) : null}
             <div className="syllabus-toolbar-actions">
-              <button type="button" className="spec-btn-secondary" onClick={() => window.location.reload()}>
-                <FiRefreshCw />
-                <span>Refresh</span>
-              </button>
-              <button
-                type="button"
-                className="spec-btn-secondary"
-                onClick={() => navigate('/dashboard/events/calendar')}
-              >
-                <FiCalendar />
-                <span>Events Calendar</span>
-              </button>
               {!isFacultyViewer ? (
                 <button
                   type="button"
@@ -421,14 +410,6 @@ export default function EventListPage() {
             >
               <FiLayers />
               <span>Table</span>
-            </button>
-            <button 
-              className={`view-mode-btn ${viewMode === 'calendar' ? 'active' : ''}`}
-              onClick={() => setViewMode('calendar')}
-              title="Calendar View"
-            >
-              <FiCalendar />
-              <span>Calendar</span>
             </button>
           </div>
         </div>
@@ -565,29 +546,6 @@ export default function EventListPage() {
                 ))}
               </tbody>
             </table>
-          </div>
-        ) : viewMode === 'calendar' ? (
-          <div className="event-calendar-view" style={{ background: 'white', padding: '1.5rem', borderRadius: '16px', border: '1px solid #e2e8f0', height: '650px' }}>
-             <Calendar
-              localizer={localizer}
-              events={filteredEvents.map(evt => ({
-                id: evt._id,
-                title: evt.title,
-                start: new Date(evt.schedule.startTime),
-                end: new Date(evt.schedule.endTime),
-                type: evt.type,
-                resource: evt
-              }))}
-              startAccessor="start"
-              endAccessor="end"
-              onSelectEvent={(e) => handleOpenViewModal(e.id)}
-              views={['month', 'week', 'day']}
-              defaultView="month"
-              eventPropGetter={(event) => {
-                const backgroundColor = event.type === 'Curricular' ? '#2563eb' : '#10b981';
-                return { style: { backgroundColor, borderRadius: '6px', border: 'none' } };
-              }}
-            />
           </div>
         ) : (
           <div className="events-grid-view">

@@ -8,7 +8,11 @@ const FacultyCard = ({ member, onView, onEdit, onToggleStatus, isAdmin }) => {
   const isInactive = member.status === 'Inactive';
 
   return (
-    <div className={`faculty-card ${isInactive ? 'inactive' : ''}`}>
+    <div 
+      className={`faculty-card clickable-card ${isInactive ? 'inactive' : ''}`}
+      onClick={() => onView(member)}
+      style={{ cursor: 'pointer' }}
+    >
       <div className="faculty-card-header">
         <div className="faculty-avatar-wrap">
           <img src={avatar} alt={member.firstName} className="faculty-avatar" />
@@ -59,7 +63,7 @@ const FacultyCard = ({ member, onView, onEdit, onToggleStatus, isAdmin }) => {
         </div>
       </div>
 
-      <div className="faculty-card-footer">
+      <div className="faculty-card-footer" onClick={(e) => e.stopPropagation()}>
         <button className="card-action-btn view" onClick={() => onView(member)} title="View Profile">
           <FiEye />
         </button>
