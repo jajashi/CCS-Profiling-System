@@ -7,10 +7,8 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 const Student = require("../models/Student");
 
-/** Sequential numeric IDs start here (2201001, 2201002, … through the full seed list). */
 const SEED_ID_FIRST = 2201001;
 
-/** Explicit profiles (`id` assigned sequentially when seeding). Middle name is full name or empty — not initials. */
 const MOCK_STUDENTS = [
   {
     firstName: "Jan Earl",
@@ -322,7 +320,6 @@ function generateRandomStudent(sequenceIndex) {
   const lastNames = ["Garcia", "Rodriguez", "Lopez", "Martinez", "Gonzalez", "Perez", "Sanchez", "Ramirez", "Cruz", "Flores",
     "Torres", "Rivera", "Morales", "Reyes", "Jimenez", "Mendoza", "Castillo", "Vargas", "Diaz", "Hernandez",
     "Gutierrez", "Silva", "Molina", "Alvarez", "Ortiz", "Gomez", "Guerrero", "Santos", "Cortez", "Luna"];
-  /** Full middle names or empty — no initials-only */
   const middleNamesPool = [
     "",
     "",
