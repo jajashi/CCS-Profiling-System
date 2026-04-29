@@ -1,5 +1,5 @@
 /**
- * One-time seed: inserts mock students matching the frontend mock data.
+ * One-time seed: inserts sample student records for development and demos.
  * Run: npm run seed (from backend directory, with .env and MongoDB available).
  */
 require("dotenv").config();
