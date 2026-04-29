@@ -244,6 +244,26 @@ async function seedFaculty(specializationsDocs) {
     });
   }
 
+  // Create primary admin user
+  usersData.push({
+    username: 'admin',
+    email: 'admin@university.edu.ph',
+    password: process.env.SEED_ADMIN_PASSWORD || 'admin123',
+    role: 'admin',
+    name: 'System Admin',
+    isActive: true
+  });
+
+  // Create secondary admin user
+  usersData.push({
+    username: 'admin2',
+    email: 'admin2@university.edu.ph',
+    password: process.env.SEED_ADMIN_PASSWORD || 'admin123',
+    role: 'admin',
+    name: 'Secondary Admin',
+    isActive: true
+  });
+
   await User.insertMany(usersData);
   console.log(`Created ${faculty.length} faculty and users.`);
   

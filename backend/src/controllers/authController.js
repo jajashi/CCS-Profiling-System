@@ -13,6 +13,7 @@ const login = async (req, res, next) => {
     }
 
     const user = await User.findOne({ username: trimmedUsername });
+    console.log("Login attempt:", { username: trimmedUsername, userFound: !!user });
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
@@ -21,6 +22,7 @@ const login = async (req, res, next) => {
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log("isMatch:", isMatch, "req.password:", password, "db.password:", user.password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }

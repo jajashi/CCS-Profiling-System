@@ -27,8 +27,8 @@ async function seed() {
     const SEED_USERS = buildSeedUsers();
     await connectDB();
 
-    console.log('Clearing existing users...');
-    await User.deleteMany({});
+    console.log('Seeding admin user...');
+    // Removed User.deleteMany({}) to preserve faculty accounts
 
     console.log('Seeding users...');
     for (const u of SEED_USERS) {
