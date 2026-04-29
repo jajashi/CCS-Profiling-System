@@ -34,9 +34,33 @@ function isAdmin(req) {
  */
 async function resolveFacultyActor(req) {
   if (!req.user || req.user.role !== 'faculty') return null;
-  const user = await User.findById(req.user.id).select('username role').lean();
+  const user = await User.findById(req.user.id).select('username role employeeId').lean();
   if (!user || user.role !== 'faculty') return null;
-  return Faculty.findOne({ employeeId: user.username }).select('_id').lean();
+  
+  // Try to find faculty by employeeId first (from JWT or User record)
+  const employeeIdLookup = req.user.employeeId || user.employeeId;
+  if (employeeIdLookup) {
+    const facultyByEmployeeId = await Faculty.findOne({ 
+      employeeId: new RegExp(`^${String(employeeIdLookup).trim()}$`, 'i')
+    }).select('_id').lean();
+    if (facultyByEmployeeId) return facultyByEmployeeId;
+  }
+  
+  // Fallback: try to find faculty by username
+  if (user.username) {
+    const facultyByUsername = await Faculty.findOne({ 
+      employeeId: new RegExp(`^${user.username}$`, 'i')
+    }).select('_id').lean();
+    if (facultyByUsername) return facultyByUsername;
+    
+    // Also try to find by institutional email containing username
+    const facultyByEmail = await Faculty.findOne({
+      institutionalEmail: new RegExp(`${user.username}`, 'i'),
+    }).select('_id').lean();
+    if (facultyByEmail) return facultyByEmail;
+  }
+  
+  return null;
 }
 
 async function assertCanManageWeeklyLessons(req, syllabus) {

@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const PasswordChangeRequest = require('../models/PasswordChangeRequest');
 const { logActivity } = require('../services/activityLogService');
@@ -6,24 +7,36 @@ const { logActivity } = require('../services/activityLogService');
 async function createRequest(req, res) {
   try {
     const { newPassword } = req.body;
+    console.log('Creating password change request. req.user:', req.user);
+    console.log('req.user.id:', req.user?.id);
     if (!newPassword || newPassword.length < 6) {
       return res.status(400).json({ message: 'Password must be at least 6 characters long.' });
     }
 
+    if (!req.user?.id) {
+      console.error('req.user.id is undefined!');
+      return res.status(401).json({ message: 'Authentication required.' });
+    }
+
+    const userId = new mongoose.Types.ObjectId(req.user.id);
+    console.log('Converted userId:', userId);
+
     // Check if there is already a pending request
     const existing = await PasswordChangeRequest.findOne({
-      userId: req.user._id,
+      userId: userId,
       status: 'Pending',
     });
 
     if (existing) {
+      console.log('User already has a pending request');
       return res.status(400).json({ message: 'You already have a pending password change request.' });
     }
 
     const request = await PasswordChangeRequest.create({
-      userId: req.user._id,
+      userId: userId,
       requestedPassword: newPassword, // Will be hashed by model hook
     });
+    console.log('Password change request created:', request);
 
     await logActivity(req, {
       action: 'Submitted password change request',
@@ -44,12 +57,15 @@ async function createRequest(req, res) {
 /** Admin lists all pending requests. */
 async function getPendingRequests(req, res) {
   try {
+    console.log('Fetching pending password change requests...');
     const requests = await PasswordChangeRequest.find({ status: 'Pending' })
       .populate('userId', 'username name role')
       .sort({ createdAt: -1 });
+    console.log('Found requests:', requests.length, requests);
 
     return res.status(200).json(requests);
   } catch (err) {
+    console.error('Error fetching pending requests:', err);
     return res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -79,7 +95,7 @@ async function approveRequest(req, res) {
 
     request.status = 'Approved';
     request.adminNotes = adminNotes || '';
-    request.approvedBy = req.user._id;
+    request.approvedBy = new mongoose.Types.ObjectId(req.user.id);
     request.approvedAt = new Date();
     await request.save();
 
@@ -128,7 +144,8 @@ async function rejectRequest(req, res) {
 /** User checks status of their own request. */
 async function getMyRequests(req, res) {
   try {
-    const requests = await PasswordChangeRequest.find({ userId: req.user._id })
+    const userId = new mongoose.Types.ObjectId(req.user.id);
+    const requests = await PasswordChangeRequest.find({ userId: userId })
       .sort({ createdAt: -1 });
 
     return res.status(200).json(requests);

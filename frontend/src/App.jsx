@@ -34,7 +34,6 @@ import FacultyClassAttendancePage from "./features/faculty/routes/FacultyClassAt
 import FacultyPortalDashboardPage from "./features/faculty/routes/FacultyPortalDashboardPage";
 import ReportsPage from './features/reports/routes/ReportsPage';
 import StudentDossierPage from './features/reports/routes/StudentDossierPage';
-import PasswordRequestPage from "./features/accounts/routes/PasswordRequestPage";
 import ReferenceOptionManagement from "./features/accounts/routes/ReferenceOptionManagement";
 import { useAuth } from "./providers/AuthContext";
 
@@ -46,8 +45,7 @@ import {
   AdminRoute,
   NonStudentRoute,
   FacultyOnlyRoute,
-  StudentDirectoryRoute,
-  StudentProfileRoute,
+  StudentInfoRoute,
   FacultyDirectoryRoute,
   FacultyProfileRoute,
   FacultyProfileIndexRedirect
@@ -88,19 +86,11 @@ function App() {
           element={<RecentActivitiesPage />}
         />
         <Route
-          path="student-info"
+          path="student-info/:id?"
           element={
-            <StudentDirectoryRoute>
+            <StudentInfoRoute>
               <StudentInformation />
-            </StudentDirectoryRoute>
-          }
-        />
-        <Route
-          path="student-info/:id"
-          element={
-            <StudentProfileRoute>
-              <StudentInformation />
-            </StudentProfileRoute>
+            </StudentInfoRoute>
           }
         />
         <Route
@@ -359,7 +349,6 @@ function App() {
         />
         <Route path="my-events" element={<MyEventsPage />} />
         <Route path="activities" element={<AdminRoute><RecentActivitiesPage /></AdminRoute>} />
-        <Route path="security" element={<PasswordRequestPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

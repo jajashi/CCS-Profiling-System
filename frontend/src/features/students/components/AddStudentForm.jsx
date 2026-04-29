@@ -56,7 +56,7 @@ const emptyForm = {
   skills: [],
   address: { street: "", city: "", province: "", postalCode: "" },
   emergencyContact: { name: "", relationship: "", phone: "" },
-  academicHistory: { previousSchools: [], achievements: [] },
+  academicHistory: { elementary: '', elementaryAchievements: [], highSchool: '', highSchoolAchievements: [] },
   healthInfo: { conditions: [], medications: [], allergies: [] },
 };
 
@@ -121,8 +121,10 @@ function mapStudentToFormData(student) {
       phone: String(student?.emergencyContact?.phone || ""),
     },
     academicHistory: {
-      previousSchools: Array.isArray(student?.academicHistory?.previousSchools) ? student.academicHistory.previousSchools : [],
-      achievements: Array.isArray(student?.academicHistory?.achievements) ? student.academicHistory.achievements : [],
+      elementary: String(student?.academicHistory?.elementary || ''),
+      elementaryAchievements: Array.isArray(student?.academicHistory?.elementaryAchievements) ? student.academicHistory.elementaryAchievements : [],
+      highSchool: String(student?.academicHistory?.highSchool || ''),
+      highSchoolAchievements: Array.isArray(student?.academicHistory?.highSchoolAchievements) ? student.academicHistory.highSchoolAchievements : [],
     },
     healthInfo: {
       conditions: Array.isArray(student?.healthInfo?.conditions) ? student.healthInfo.conditions : [],
@@ -830,6 +832,99 @@ export default function AddStudentForm({
 
                 <section className="add-student-category">
                   <h4 className="add-student-section-heading">
+                    Academic History
+                  </h4>
+                  <div className="add-student-grid">
+                    <div className="md:col-span-2">
+                      <label htmlFor="academicHistory.elementary" className={labelClass}>
+                        Elementary School
+                      </label>
+                      <input
+                        id="academicHistory.elementary"
+                        name="academicHistory.elementary"
+                        value={formData.academicHistory?.elementary || ''}
+                        onChange={(e) => setFormData(p => ({
+                          ...p,
+                          academicHistory: {
+                            ...p.academicHistory,
+                            elementary: e.target.value
+                          }
+                        }))}
+                        className={controlClass}
+                        placeholder="Enter elementary school name"
+                        autoComplete="off"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label htmlFor="academicHistory.highSchool" className={labelClass}>
+                        High School
+                      </label>
+                      <input
+                        id="academicHistory.highSchool"
+                        name="academicHistory.highSchool"
+                        value={formData.academicHistory?.highSchool || ''}
+                        onChange={(e) => setFormData(p => ({
+                          ...p,
+                          academicHistory: {
+                            ...p.academicHistory,
+                            highSchool: e.target.value
+                          }
+                        }))}
+                        className={controlClass}
+                        placeholder="Enter high school name"
+                        autoComplete="off"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label htmlFor="academicHistory.elementaryAchievements" className={labelClass}>
+                        Elementary Achievements
+                      </label>
+                      <input
+                        id="academicHistory.elementaryAchievements"
+                        name="academicHistory.elementaryAchievements"
+                        value={formData.academicHistory?.elementaryAchievements?.join(', ') || ''}
+                        onChange={(e) => setFormData(p => ({
+                          ...p,
+                          academicHistory: {
+                            ...p.academicHistory,
+                            elementaryAchievements: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
+                          }
+                        }))}
+                        className={controlClass}
+                        placeholder="Enter elementary achievements separated by commas"
+                        autoComplete="off"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Separate multiple achievements with commas</p>
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label htmlFor="academicHistory.highSchoolAchievements" className={labelClass}>
+                        High School Achievements
+                      </label>
+                      <input
+                        id="academicHistory.highSchoolAchievements"
+                        name="academicHistory.highSchoolAchievements"
+                        value={formData.academicHistory?.highSchoolAchievements?.join(', ') || ''}
+                        onChange={(e) => setFormData(p => ({
+                          ...p,
+                          academicHistory: {
+                            ...p.academicHistory,
+                            highSchoolAchievements: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
+                          }
+                        }))}
+                        className={controlClass}
+                        placeholder="Enter high school achievements separated by commas"
+                        autoComplete="off"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Separate multiple achievements with commas</p>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="add-student-category">
+                  <h4 className="add-student-section-heading">
                     Contact & Address
                   </h4>
                   <div className="add-student-grid">
@@ -1101,6 +1196,34 @@ export default function AddStudentForm({
                     <span className="preview-value">
                       {formData.skills.length
                         ? formData.skills.join(", ")
+                        : "-"}
+                    </span>
+                  </div>
+                  <div className="preview-item">
+                    <span className="preview-label">Elementary School</span>
+                    <span className="preview-value">
+                      {formData.academicHistory?.elementary || "-"}
+                    </span>
+                  </div>
+                  <div className="preview-item">
+                    <span className="preview-label">High School</span>
+                    <span className="preview-value">
+                      {formData.academicHistory?.highSchool || "-"}
+                    </span>
+                  </div>
+                  <div className="preview-item preview-item-full">
+                    <span className="preview-label">Elementary Achievements</span>
+                    <span className="preview-value">
+                      {formData.academicHistory?.elementaryAchievements?.length
+                        ? formData.academicHistory.elementaryAchievements.join(", ")
+                        : "-"}
+                    </span>
+                  </div>
+                  <div className="preview-item preview-item-full">
+                    <span className="preview-label">High School Achievements</span>
+                    <span className="preview-value">
+                      {formData.academicHistory?.highSchoolAchievements?.length
+                        ? formData.academicHistory.highSchoolAchievements.join(", ")
                         : "-"}
                     </span>
                   </div>

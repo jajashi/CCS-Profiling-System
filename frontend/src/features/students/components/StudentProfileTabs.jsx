@@ -3,8 +3,9 @@ import PersonalTab from './tabs/PersonalTab';
 import AcademicTab from './tabs/AcademicTab';
 import HealthTab from './tabs/HealthTab';
 import HistoryTab from './tabs/HistoryTab';
+import AcademicHistoryTab from './tabs/AcademicHistoryTab';
 
-import { FiUser, FiBook, FiHeart, FiClock } from 'react-icons/fi';
+import { FiUser, FiBook, FiHeart, FiClock, FiBookOpen } from 'react-icons/fi';
 
 const StudentProfileTabs = ({ student }) => {
   const [activeTab, setActiveTab] = useState('personal');
@@ -13,6 +14,7 @@ const StudentProfileTabs = ({ student }) => {
     { id: 'personal', label: 'Personal', icon: <FiUser /> },
     { id: 'academic', label: 'Academic', icon: <FiBook /> },
     { id: 'health', label: 'Health', icon: <FiHeart /> },
+    { id: 'academic-history', label: 'Academic History', icon: <FiBookOpen /> },
     { id: 'history', label: 'History', icon: <FiClock /> }
   ];
 
@@ -21,6 +23,7 @@ const StudentProfileTabs = ({ student }) => {
       case 'personal': return <PersonalTab student={student} />;
       case 'academic': return <AcademicTab student={student} />;
       case 'health': return <HealthTab student={student} />;
+      case 'academic-history': return <AcademicHistoryTab student={student} />;
       case 'history': return <HistoryTab student={student} />;
       default: return null;
     }
