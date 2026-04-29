@@ -30,7 +30,7 @@ const CURRICULA = [
     status: 'Active',
   },
   {
-    courseCode: 'CCS201',
+    courseCode: 'ITEW101',
     courseTitle: 'Database Systems',
     curriculumYear: '2024',
     description: `${TEST_TAG} relational design and SQL.`,

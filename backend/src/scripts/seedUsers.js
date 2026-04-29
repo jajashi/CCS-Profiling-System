@@ -21,31 +21,10 @@ function requireEnv(name) {
 
 function buildSeedUsers() {
   const adminPassword = requireEnv('SEED_ADMIN_PASSWORD');
-  const facultyPassword = requireEnv('SEED_FACULTY_PASSWORD');
-  const studentPassword = requireEnv('SEED_STUDENT_PASSWORD');
 
   return [
-    { username: 'admin', password: adminPassword, name: 'System Admin', role: 'admin' },
-    {
-      username: FACULTY_LOGIN_ID,
-      password: facultyPassword,
-      name: 'Luvim M. Eusebio',
-      role: 'faculty',
-    },
-    {
-      username: '2201001',
-      password: studentPassword,
-      name: 'Jan Earl Eclarinal Olivar',
-      role: 'student',
-      studentId: '2201001',
-    },
-    {
-      username: '2201002',
-      password: studentPassword,
-      name: 'Eden Santos Nataya',
-      role: 'student',
-      studentId: '2201002',
-    },
+    { username: 'admin', password: adminPassword, name: 'System Admin', role: 'admin' }
+    // no faculty or student accounts
   ];
 }
 
