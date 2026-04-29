@@ -9,24 +9,29 @@ const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
+    try {
+      const result = await login(username, password);
 
-    const result = await login(username, password);
-
-    if (result.success) {
-      if (result.user?.mustChangePassword) {
-        navigate('/change-password');
+      if (result.success) {
+        if (result.user?.mustChangePassword) {
+          navigate('/change-password');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
-        navigate('/dashboard');
+        setError(result.error);
+        setPassword(''); // clear password field on failure
       }
-    } else {
-      setError(result.error);
-      setPassword(''); // clear password field on failure
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -72,6 +77,7 @@ const LoginPage = () => {
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Enter your username"
                 required
+                disabled={isSubmitting}
                 autoComplete="username"
               />
             </div>
@@ -85,14 +91,20 @@ const LoginPage = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
                 required
+                disabled={isSubmitting}
                 autoComplete="current-password"
               />
             </div>
 
             {error ? <div className="auth-error" role="alert">{error}</div> : null}
 
-            <button type="submit" className="login-submit-btn">
-              Login
+            <button
+              type="submit"
+              className="login-submit-btn"
+              disabled={isSubmitting}
+              aria-busy={isSubmitting}
+            >
+              {isSubmitting ? 'Logging in...' : 'Login'}
             </button>
           </form>
         </div>
