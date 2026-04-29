@@ -77,3 +77,69 @@ export const apiFetch = async (path, options = {}) => {
 
   return response;
 };
+
+const GET_CACHE = new Map();
+const INFLIGHT_GET = new Map();
+
+function buildGetCacheKey(path, options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
+  const auth = getAuthHeaders().Authorization || "";
+  return `${method}:${apiUrl(path)}:${auth}`;
+}
+
+export function invalidateApiCache(pathPrefix = "") {
+  const prefix = String(pathPrefix || "").trim();
+  if (!prefix) {
+    GET_CACHE.clear();
+    INFLIGHT_GET.clear();
+    return;
+  }
+  const fullPrefix = apiUrl(prefix);
+  for (const key of GET_CACHE.keys()) {
+    if (key.includes(fullPrefix)) GET_CACHE.delete(key);
+  }
+  for (const key of INFLIGHT_GET.keys()) {
+    if (key.includes(fullPrefix)) INFLIGHT_GET.delete(key);
+  }
+}
+
+export async function apiGetCached(path, options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
+  if (method !== "GET") {
+    throw new Error("apiGetCached only supports GET requests.");
+  }
+
+  const ttlMs = Number.isFinite(options.ttlMs) ? options.ttlMs : 15000;
+  const force = options.force === true;
+  const key = buildGetCacheKey(path, options);
+  const now = Date.now();
+  const cached = GET_CACHE.get(key);
+
+  if (!force && cached && cached.expiresAt > now) {
+    return cached.data;
+  }
+
+  if (!force && INFLIGHT_GET.has(key)) {
+    return INFLIGHT_GET.get(key);
+  }
+
+  const promise = (async () => {
+    const response = await apiFetch(path, { ...options, method: "GET" });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      const error = new Error(payload?.message || `Request failed: ${response.status}`);
+      error.status = response.status;
+      throw error;
+    }
+    const data = await response.json();
+    GET_CACHE.set(key, { data, expiresAt: now + Math.max(0, ttlMs) });
+    return data;
+  })();
+
+  INFLIGHT_GET.set(key, promise);
+  try {
+    return await promise;
+  } finally {
+    INFLIGHT_GET.delete(key);
+  }
+}

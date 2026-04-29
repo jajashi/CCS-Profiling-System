@@ -33,7 +33,7 @@ const extractYearLevelFromSection = (sectionIdentifier) => {
   return "Unknown";
 };
 
-export default function MasterScheduleMatrix({ term, academicYear, onEditSection }) {
+export default function MasterScheduleMatrix({ term, academicYear, onEditSection, refreshToken = 0 }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState("DayTime"); // 'DayTime' | 'RoomTime' | 'FacultyTime'
@@ -66,7 +66,7 @@ export default function MasterScheduleMatrix({ term, academicYear, onEditSection
     return () => {
       cancelled = true;
     };
-  }, [term, academicYear]);
+  }, [term, academicYear, refreshToken]);
 
   // Memoization constraint to optimize heavy processing of mapped grouping elements
   const matrixData = useMemo(() => {

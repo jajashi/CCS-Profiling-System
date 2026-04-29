@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { apiFetch } from '../../../lib/api';
+import { apiFetch, apiGetCached, invalidateApiCache } from '../../../lib/api';
 import { useAuth } from '../../../providers/AuthContext';
 import { FiRefreshCw, FiPlus, FiEye, FiEdit2, FiTool, FiX, FiTrash2, FiBarChart2, FiUsers, FiDownload, FiAward, FiStar, FiCheckCircle, FiXCircle, FiClock, FiCalendar, FiChevronLeft, FiChevronRight, FiGrid, FiLayers, FiMapPin } from 'react-icons/fi';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
@@ -39,22 +39,16 @@ export default function EventListPage() {
   const [page, setPage] = useState(1);
   const [pageInput, setPageInput] = useState('1');
   const [viewMode, setViewMode] = useState('grid'); // Default to grid
+  const [viewCacheById, setViewCacheById] = useState({});
   const isFacultyViewer = user?.role === 'faculty';
   const canManageEvents = user?.role === 'admin';
 
   const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await apiFetch('/api/events');
-      
-      if (res.ok) {
-        const data = await res.json();
-        setEvents(data);
-        setError(null);
-      } else {
-        const errorData = await res.json().catch(() => ({}));
-        setError(errorData.message || 'Failed to fetch events');
-      }
+      const data = await apiGetCached('/api/events', { ttlMs: 10000 });
+      setEvents(Array.isArray(data) ? data : []);
+      setError(null);
     } catch (err) {
       setError(err.message || 'Error fetching events');
     } finally {
@@ -168,6 +162,15 @@ export default function EventListPage() {
   const handleOpenViewModal = async (eventId) => {
     setIsViewModalOpen(true);
     setViewTab('details');
+    const cached = viewCacheById[eventId];
+    if (cached?.event) {
+      setViewEvent(cached.event);
+      setViewReport(cached.report || null);
+      setViewLoading(false);
+      setViewReportLoading(false);
+      return;
+    }
+
     setViewLoading(true);
     setViewError('');
     setViewEvent(null);
@@ -175,23 +178,15 @@ export default function EventListPage() {
     setViewReportError('');
     setViewReportLoading(true);
     try {
-      const res = await apiFetch(`/api/events/${eventId}`);
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setViewError(data.message || 'Failed to load event details.');
-        return;
-      }
+      const data = await apiGetCached(`/api/events/${eventId}`, { ttlMs: 10000 });
       setViewEvent(data);
+      let reportPayload = null;
 
       if (!isFacultyViewer) {
-        const reportRes = await apiFetch(`/api/events/${eventId}/analytics`);
-        const reportData = await reportRes.json().catch(() => ({}));
-        if (!reportRes.ok) {
-          setViewReportError(reportData.message || 'Failed to load report data.');
-        } else {
-          setViewReport(reportData);
-        }
+        reportPayload = await apiGetCached(`/api/events/${eventId}/analytics`, { ttlMs: 10000 });
+        setViewReport(reportPayload);
       }
+      setViewCacheById((prev) => ({ ...prev, [eventId]: { event: data, report: reportPayload } }));
     } catch (err) {
       setViewError(err.message || 'Error loading event details.');
     } finally {
@@ -220,11 +215,16 @@ export default function EventListPage() {
       if (res.ok) {
         const data = await res.json();
         window.alert(`Successfully generated ${data.certificatesGenerated} certificates`);
+        invalidateApiCache(`/api/events/${viewEvent._id}/analytics`);
         const analyticsRes = await apiFetch(`/api/events/${viewEvent._id}/analytics`);
         if (analyticsRes.ok) {
           const analyticsData = await analyticsRes.json();
           setViewReport(analyticsData);
           setViewReportError('');
+          setViewCacheById((prev) => ({
+            ...prev,
+            [viewEvent._id]: { event: prev[viewEvent._id]?.event || viewEvent, report: analyticsData },
+          }));
         }
       } else {
         const errorData = await res.json().catch(() => ({}));
@@ -278,6 +278,10 @@ export default function EventListPage() {
       }
       if (data?.event) {
         setViewEvent(data.event);
+        setViewCacheById((prev) => ({
+          ...prev,
+          [viewEvent._id]: { event: data.event, report: prev[viewEvent._id]?.report || null },
+        }));
       }
     } catch (err) {
       setAttendanceUpdateError(err.message || 'Error updating attendance.');
@@ -297,6 +301,8 @@ export default function EventListPage() {
         window.alert(data.message || 'Failed to delete event.');
         return;
       }
+      invalidateApiCache('/api/events');
+      setViewCacheById({});
       fetchEvents();
     } catch (err) {
       window.alert(err.message || 'Error deleting event.');
@@ -668,10 +674,14 @@ export default function EventListPage() {
                 hideTitle={true}
                 onCreated={() => {
                   setIsCreateModalOpen(false);
+                  invalidateApiCache('/api/events');
+                  setViewCacheById({});
                   fetchEvents();
                 }}
                 onUpdated={() => {
                   setIsCreateModalOpen(false);
+                  invalidateApiCache('/api/events');
+                  setViewCacheById({});
                   fetchEvents();
                 }}
               />

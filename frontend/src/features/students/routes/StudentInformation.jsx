@@ -9,212 +9,9 @@ import DeleteConfirmationModal from "../../../components/Elements/DeleteConfirma
 import FilterDropdown from "../../../components/Elements/FilterDropdown";
 import SkillsFilter from "../../../components/Elements/SkillsFilter";
 import { useAuth } from '../../../providers/AuthContext';
-import { apiFetch } from "../../../lib/api";
+import { apiFetch, apiGetCached, invalidateApiCache } from "../../../lib/api";
 import StudentProfileTabs from "../components/StudentProfileTabs";
 import "./StudentInformation.css";
-
-const mockStudents = [
-  {
-    id: "2023-001",
-    firstName: "Althea",
-    middleName: "M.",
-    lastName: "Santos",
-    gender: "Female",
-    dob: "2005-02-18",
-    program: "BSCS",
-    yearLevel: "2",
-    section: "CS2A",
-    status: "Enrolled",
-    scholarship: "Academic Scholar",
-    email: "althea.santos@ccs.edu",
-    contact: "+63 917 555 1001",
-    dateEnrolled: "2023-08-21",
-    guardian: "Maria Santos",
-    guardianContact: "+63 917 777 8800",
-    violation: "None",
-    skills: ["Programming", "Web Development", "Problem Solving"],
-  },
-  {
-    id: '2023-002',
-    firstName: 'Bryan',
-    middleName: 'L.',
-    lastName: 'Reyes',
-    gender: 'Male',
-    dob: '2004-11-05',
-    program: 'BSIT',
-    yearLevel: '3',
-    section: 'IT3B',
-    status: 'Enrolled',
-    scholarship: "Dean's Lister",
-    email: "bryan.reyes@ccs.edu",
-    contact: "+63 917 555 1002",
-    dateEnrolled: "2022-08-22",
-    guardian: "Leo Reyes",
-    guardianContact: "+63 917 555 9988",
-    violation: "None",
-    skills: ["Database Management", "Data Analysis", "Communication"],
-  },
-  {
-    id: "2023-003",
-    firstName: "Claire",
-    middleName: "D.",
-    lastName: "Valdez",
-    gender: "Female",
-    dob: "2005-07-12",
-    program: "BSCS",
-    yearLevel: "1",
-    section: "CS1C",
-    status: "Enrolled",
-    scholarship: "None",
-    email: "claire.valdez@ccs.edu",
-    contact: "+63 917 555 1003",
-    dateEnrolled: "2024-08-23",
-    guardian: "Diana Valdez",
-    guardianContact: "+63 917 555 8833",
-    violation: "None",
-    skills: ["Programming", "UI/UX Design"],
-  },
-  {
-    id: "2023-004",
-    firstName: "Dylan",
-    middleName: "R.",
-    lastName: "Lopez",
-    gender: "Male",
-    dob: "2003-03-30",
-    program: "BSIT",
-    yearLevel: "4",
-    section: "IT4A",
-    status: "On Leave",
-    scholarship: "Athletic Grant",
-    email: "dylan.lopez@ccs.edu",
-    contact: "+63 917 555 1004",
-    dateEnrolled: "2021-08-20",
-    guardian: "Rosa Lopez",
-    guardianContact: "+63 917 555 4411",
-    violation: "None",
-    skills: ["Leadership", "Communication", "Problem Solving"],
-  },
-  {
-    id: "2023-005",
-    firstName: "Elaine",
-    middleName: "C.",
-    lastName: "Tan",
-    gender: "Female",
-    dob: "2004-01-15",
-    program: "BSIT",
-    yearLevel: "3",
-    section: "IT3A",
-    status: "Enrolled",
-    scholarship: "CHED Scholar",
-    email: "elaine.tan@ccs.edu",
-    contact: "+63 917 555 1005",
-    dateEnrolled: "2022-08-22",
-    guardian: "Carlos Tan",
-    guardianContact: "+63 917 555 2288",
-    violation: "Warning (late)",
-    skills: ["Web Development", "Database Management", "Programming"],
-  },
-  {
-    id: "2023-006",
-    firstName: "Franco",
-    middleName: "N.",
-    lastName: "Garcia",
-    gender: "Male",
-    dob: "2003-09-08",
-    program: "BSCS",
-    yearLevel: "4",
-    section: "CS4B",
-    status: "Enrolled",
-    scholarship: "None",
-    email: "franco.garcia@ccs.edu",
-    contact: "+63 917 555 1006",
-    dateEnrolled: "2021-08-20",
-    guardian: "Norma Garcia",
-    guardianContact: "+63 917 555 6699",
-    violation: "Academic probation",
-    skills: ["Programming", "Data Analysis"],
-  },
-  {
-    id: "2023-007",
-    firstName: "Giselle",
-    middleName: "P.",
-    lastName: "Chua",
-    gender: "Female",
-    dob: "2005-04-27",
-    program: "BSCS",
-    yearLevel: "2",
-    section: "CS2B",
-    status: "Enrolled",
-    scholarship: "Academic Scholar",
-    email: "giselle.chua@ccs.edu",
-    contact: "+63 917 555 1007",
-    dateEnrolled: "2023-08-21",
-    guardian: "Patricia Chua",
-    guardianContact: "+63 917 555 4477",
-    violation: "None",
-    skills: ["UI/UX Design", "Communication", "Leadership"],
-  },
-  {
-    id: "2023-008",
-    firstName: "Hans",
-    middleName: "E.",
-    lastName: "Uy",
-    gender: "Male",
-    dob: "2004-06-02",
-    program: "BSIT",
-    yearLevel: "3",
-    section: "IT3C",
-    status: "Enrolled",
-    scholarship: "Industry Partner",
-    email: "hans.uy@ccs.edu",
-    contact: "+63 917 555 1008",
-    dateEnrolled: "2022-08-22",
-    guardian: "Erica Uy",
-    guardianContact: "+63 917 555 6622",
-    violation: "None",
-    skills: ["Web Development", "Programming", "Database Management"],
-  },
-  {
-    id: "2023-009",
-    firstName: "Isabel",
-    middleName: "V.",
-    lastName: "Cruz",
-    gender: "Female",
-    dob: "2005-12-10",
-    program: "BSIT",
-    yearLevel: "2",
-    section: "IT2B",
-    status: "Enrolled",
-    scholarship: "None",
-    email: "isabel.cruz@ccs.edu",
-    contact: "+63 917 555 1009",
-    dateEnrolled: "2023-08-21",
-    guardian: "Vicente Cruz",
-    guardianContact: "+63 917 555 5577",
-    violation: "None",
-    skills: ["Data Analysis", "Communication"],
-  },
-  {
-    id: "2023-010",
-    firstName: "Javier",
-    middleName: "Santos",
-    lastName: "Delos Reyes",
-    gender: "Male",
-    dob: "2003-10-19",
-    program: "BSCS",
-    yearLevel: "4",
-    section: "CS4A",
-    status: "Graduating",
-    scholarship: "None",
-    email: "javier.delosreyes@ccs.edu",
-    contact: "+63 917 555 1010",
-    dateEnrolled: "2021-08-20",
-    guardian: "Sara Delos Reyes",
-    guardianContact: "+63 917 555 3344",
-    violation: "None",
-    skills: ["Programming", "Leadership", "Problem Solving", "Web Development"],
-  },
-];
 
 const StudentInformation = () => {
   const navigate = useNavigate();
@@ -231,7 +28,7 @@ const StudentInformation = () => {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const [students, setStudents] = useState(mockStudents);
+  const [students, setStudents] = useState([]);
   const [loadingStudents, setLoadingStudents] = useState(true);
   const [studentLoadError, setStudentLoadError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -341,9 +138,7 @@ const StudentInformation = () => {
       const url = `/api/students?${params.toString()}`;
       console.log("[fetchStudents] Fetching:", url);
 
-      const res = await apiFetch(url);
-      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
-      const data = await res.json();
+      const data = await apiGetCached(url, { ttlMs: 8000 });
       setStudents(Array.isArray(data.students) ? data.students : []);
       setPagination(data.pagination || { page: 1, limit: 50, total: 0, totalPages: 1, hasNext: false, hasPrev: false });
     } catch (err) {
@@ -351,22 +146,7 @@ const StudentInformation = () => {
       setStudentLoadError(
         `Could not load students from the server: ${err.message}. Please ensure the backend is running.`,
       );
-      // Only use mock data if no filters are active
-      if (
-        !filters.search &&
-        !filters.program &&
-        (!filters.skill || filters.skill.length === 0) &&
-        !filters.yearLevel &&
-        !filters.section &&
-        !filters.status &&
-        !filters.scholarship &&
-        !filters.gender &&
-        !filters.violation
-      ) {
-        setStudents(mockStudents);
-      } else {
-        setStudents([]);
-      }
+      setStudents([]);
     } finally {
       setLoadingStudents(false);
       setIsFetching(false);
@@ -575,8 +355,7 @@ const StudentInformation = () => {
       setSelectedStudent(null);
       return;
     }
-    const match = students.find((student) => String(student.id) === String(selectedStudentId)) 
-               || mockStudents.find((student) => String(student.id) === String(selectedStudentId));
+    const match = students.find((student) => String(student.id) === String(selectedStudentId));
     setSelectedStudent(match || null);
   }, [selectedStudentId, students]);
 
@@ -593,6 +372,7 @@ const StudentInformation = () => {
     try {
       const res = await apiFetch(`/api/students/${deleteTarget._id}`, { method: 'DELETE' });
       if (res.status === 200 || res.status === 204) {
+        invalidateApiCache('/api/students');
         setStudents((prev) => prev.filter((s) => s._id !== deleteTarget._id));
         toast.success("Student record successfully deleted!");
         setIsDeleteModalOpen(false);
@@ -1163,12 +943,14 @@ const StudentInformation = () => {
           targetMongoId={studentFormTarget?._id}
           onClose={() => setIsStudentFormOpen(false)}
           onCreated={(createdStudent) => {
+            invalidateApiCache('/api/students');
             setStudents((prev) => [createdStudent, ...prev]);
             setQuery('');
             setSelectedStudent(createdStudent);
             setSuccessMessage('Student profile created successfully.');
           }}
           onUpdated={(updatedStudent) => {
+            invalidateApiCache('/api/students');
             setStudents((prev) =>
               prev.map((s) => (s._id && updatedStudent._id && s._id === updatedStudent._id ? updatedStudent : s)),
             );

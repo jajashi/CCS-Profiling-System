@@ -22,52 +22,57 @@ export default function SchedulingDashboard() {
   const [loadingResources, setLoadingResources] = useState(false);
   const [sections, setSections] = useState([]);
   const [showWizard, setShowWizard] = useState(false);
+  const [matrixRefreshToken, setMatrixRefreshToken] = useState(0);
 
-  useEffect(() => {
-    apiFetch('/api/scheduling/sections?status=All')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setSections(data);
-          const terms = [...new Set(data.map(s => String(s.term || '').trim()).filter(Boolean))];
-          const years = [...new Set(data.map(s => String(s.academicYear || '').trim()).filter(Boolean))];
-          if (terms.length > 0) {
-            setTermOptions(terms);
-            setTerm(terms[0]);
-          } else {
-            setTerm('1st Term');
-          }
-          if (years.length > 0) {
-            setYearOptions(years.sort((a,b) => b.localeCompare(a)));
-            setAcademicYear(years.sort((a,b) => b.localeCompare(a))[0]);
-          } else {
-            setAcademicYear('2025-2026');
-          }
+  const loadSchedulingData = useCallback(async () => {
+    try {
+      const sectionsRes = await apiFetch('/api/scheduling/sections?status=All');
+      const sectionsData = await sectionsRes.json();
+      if (Array.isArray(sectionsData)) {
+        setSections(sectionsData);
+        const terms = [...new Set(sectionsData.map(s => String(s.term || '').trim()).filter(Boolean))];
+        const years = [...new Set(sectionsData.map(s => String(s.academicYear || '').trim()).filter(Boolean))];
+        if (terms.length > 0) {
+          setTermOptions(terms);
+          setTerm((prev) => (prev && terms.includes(prev) ? prev : terms[0]));
+        } else {
+          setTerm('1st Term');
         }
-      })
-      .catch(() => {
-        setTerm('1st Term');
-        setAcademicYear('2025-2026');
-      });
+        if (years.length > 0) {
+          const sortedYears = years.sort((a, b) => b.localeCompare(a));
+          setYearOptions(sortedYears);
+          setAcademicYear((prev) => (prev && sortedYears.includes(prev) ? prev : sortedYears[0]));
+        } else {
+          setAcademicYear('2025-2026');
+        }
+      }
+    } catch {
+      setTerm('1st Term');
+      setAcademicYear('2025-2026');
+    }
 
-    // Pre-fetch resources for scheduling modal
     setLoadingResources(true);
-    Promise.all([
-      apiFetch("/api/curricula?status=Active"),
-      apiFetch("/api/scheduling/rooms?status=Active"),
-      apiFetch("/api/faculty?status=Active"),
-      apiFetch("/api/scheduling/timeblocks"),
-    ]).then(async ([curRes, roomRes, facRes, tbRes]) => {
+    try {
+      const [curRes, roomRes, facRes, tbRes] = await Promise.all([
+        apiFetch("/api/curricula?status=Active"),
+        apiFetch("/api/scheduling/rooms?status=Active"),
+        apiFetch("/api/faculty?status=Active"),
+        apiFetch("/api/scheduling/timeblocks"),
+      ]);
       setCurricula(await curRes.json());
       setRooms(await roomRes.json());
       setFaculty(await facRes.json());
       setTimeBlocks(await tbRes.json());
-    }).catch(err => {
+    } catch (err) {
       console.error("Failed to load resources", err);
-    }).finally(() => {
+    } finally {
       setLoadingResources(false);
-    });
+    }
   }, []);
+
+  useEffect(() => {
+    loadSchedulingData();
+  }, [loadSchedulingData]);
 
   const handleEditSection = useCallback(async (sectionId) => {
     try {
@@ -126,6 +131,7 @@ export default function SchedulingDashboard() {
             term={term} 
             academicYear={academicYear} 
             onEditSection={handleEditSection}
+            refreshToken={matrixRefreshToken}
           />
         </div>
       </div>
@@ -136,10 +142,8 @@ export default function SchedulingDashboard() {
           onClose={() => setEditSection(null)}
           onUpdated={() => {
             setEditSection(null);
-            // Refresh matrix by triggering a state change if needed, 
-            // but MasterScheduleMatrix already reacts to term/academicYear.
-            // We might need a refresh key or just let the user toggle filters.
-            window.location.reload(); // Simple refresh for now to ensure matrix updates
+            setMatrixRefreshToken((n) => n + 1);
+            loadSchedulingData();
           }}
           rooms={rooms}
           faculty={faculty}
@@ -153,8 +157,9 @@ export default function SchedulingDashboard() {
           sections={sections}
           onClose={() => setShowWizard(false)}
           onCompleted={() => {
-            // Trigger a data refresh
-            window.location.reload();
+            setMatrixRefreshToken((n) => n + 1);
+            loadSchedulingData();
+            setShowWizard(false);
           }}
         />
       )}
