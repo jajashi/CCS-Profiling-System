@@ -182,7 +182,7 @@ export default function EventListPage() {
       setViewEvent(data);
       let reportPayload = null;
 
-      if (!isFacultyViewer) {
+      if (!isFacultyViewer && user?.role !== 'student') {
         reportPayload = await apiGetCached(`/api/events/${eventId}/analytics`, { ttlMs: 10000 });
         setViewReport(reportPayload);
       }
@@ -986,7 +986,7 @@ export default function EventListPage() {
             </div>
             <div className="event-view-modal-footer">
               <div className="flex gap-2">
-                {!canManageEvents && viewEvent.registration && (
+                {!canManageEvents && viewEvent && viewEvent.registration && (
                   <>
                     {(viewEvent.registration.isRegistered || viewEvent.registration.isWaitlisted) ? (
                       <button

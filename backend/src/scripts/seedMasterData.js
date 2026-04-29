@@ -317,6 +317,15 @@ async function seedSections(students, faculty) {
       section.enrolledStudentIds = toEnroll.map(s => s._id);
       section.currentEnrollmentCount = toEnroll.length;
       await section.save();
+      
+      // Update student records with section information
+      for (const student of toEnroll) {
+        await Student.findByIdAndUpdate(student._id, {
+          sectionId: section._id,
+          section: section.sectionName
+        });
+      }
+      
       enrolled += toEnroll.length;
     }
   }
