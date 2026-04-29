@@ -7,13 +7,14 @@ const login = async (req, res, next) => {
   try {
     const { username, password } = req.body;
 
-    if (!username || !password) {
+    const trimmedUsername = username != null ? String(username).trim() : '';
+    if (!trimmedUsername || !password) {
       return res.status(400).json({ message: 'Username and password are required' });
     }
 
-    const user = await User.findOne({ username: username.toLowerCase() });
+    const user = await User.findOne({ username: trimmedUsername });
     if (!user) {
-      return res.status(401).json({ message: 'Invalid username' });
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
     if (user.isActive === false) {
       return res.status(403).json({ message: 'Your account is inactive. Please contact an administrator.' });
@@ -21,7 +22,7 @@ const login = async (req, res, next) => {
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid password' });
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     const trimmedStudentId =
