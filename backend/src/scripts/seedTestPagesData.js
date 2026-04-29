@@ -13,76 +13,113 @@ const Student = require('../models/Student');
 const User = require('../models/User');
 const ActivityLog = require('../models/ActivityLog');
 
-const TEST_TAG = 'qa-seed-2026';
+/** Only used in ActivityLog.metadata for idempotent cleanup — not shown in UI copy. */
+const SEED_METADATA_TAG = 'ccs-profiling-demo';
+
+const EVENT_TITLE_TECH_FORUM = 'CCS Technical Forum';
+const EVENT_TITLE_CAREER = 'Career Development Workshop';
 
 const CURRICULA = [
   {
     courseCode: 'CCS101',
     courseTitle: 'Introduction to Computing',
     curriculumYear: '2024',
-    description: `${TEST_TAG} foundational computing concepts.`,
+    description:
+      'Foundational concepts in computing, problem decomposition, and basic programming literacy for computing majors.',
     program: 'CS',
     creditUnits: 3,
     lectureHours: 2,
     labHours: 2,
     prerequisites: [],
-    courseLearningOutcomes: ['Explain core computing concepts', 'Use basic problem-solving patterns'],
+    courseLearningOutcomes: [
+      'Explain core computing concepts',
+      'Use basic problem-solving patterns in small programs',
+    ],
     status: 'Active',
   },
   {
-    courseCode: 'ITEW101',
+    courseCode: 'CCS201',
     courseTitle: 'Database Systems',
     curriculumYear: '2024',
-    description: `${TEST_TAG} relational design and SQL.`,
+    description:
+      'Relational data modeling, normalization, SQL, and practical use of database management systems in applications.',
     program: 'IT',
     creditUnits: 3,
     lectureHours: 2,
     labHours: 2,
     prerequisites: ['CCS101'],
-    courseLearningOutcomes: ['Design normalized schemas', 'Build SQL queries'],
+    courseLearningOutcomes: ['Design normalized schemas', 'Implement and optimize SQL queries'],
     status: 'Active',
   },
   {
     courseCode: 'CCS301',
     courseTitle: 'Software Engineering',
     curriculumYear: '2024',
-    description: `${TEST_TAG} lifecycle and team delivery.`,
+    description:
+      'Software lifecycle, requirements, design, testing, teamwork, and delivery practices for medium-scale systems.',
     program: 'CS',
     creditUnits: 3,
     lectureHours: 3,
     labHours: 0,
     prerequisites: ['CCS101'],
-    courseLearningOutcomes: ['Plan iterative delivery', 'Apply quality practices'],
+    courseLearningOutcomes: ['Plan iterative delivery', 'Apply quality and testing practices'],
     status: 'Active',
   },
   {
     courseCode: 'CCS401',
     courseTitle: 'Network Administration',
     curriculumYear: '2024',
-    description: `${TEST_TAG} network setup and operations.`,
+    description:
+      'LAN/WAN fundamentals, addressing, routing, services, security basics, and troubleshooting in lab environments.',
     program: 'IT',
     creditUnits: 3,
     lectureHours: 2,
     labHours: 2,
     prerequisites: ['CCS201'],
-    courseLearningOutcomes: ['Configure network services', 'Troubleshoot connectivity'],
+    courseLearningOutcomes: ['Configure common network services', 'Diagnose connectivity and performance issues'],
     status: 'Active',
   },
 ];
 
 const ROOMS = [
-  { roomCode: 'RM101', name: 'CCS Lecture 101', type: 'Lecture', maximumCapacity: 45, building: 'Main', status: 'Active' },
-  { roomCode: 'RM102', name: 'CCS Lecture 102', type: 'Lecture', maximumCapacity: 40, building: 'Main', status: 'Active' },
-  { roomCode: 'LAB201', name: 'CCS IT Lab 201', type: 'IT Lab', maximumCapacity: 35, building: 'Annex', status: 'Active' },
-  { roomCode: 'LAB202', name: 'CCS IT Lab 202', type: 'IT Lab', maximumCapacity: 35, building: 'Annex', status: 'Active' },
+  { roomCode: 'RM101', name: 'CCS Lecture Hall 101', type: 'Lecture', maximumCapacity: 45, building: 'Main', status: 'Active' },
+  { roomCode: 'RM102', name: 'CCS Lecture Hall 102', type: 'Lecture', maximumCapacity: 40, building: 'Main', status: 'Active' },
+  { roomCode: 'LAB201', name: 'CCS Computer Laboratory 201', type: 'IT Lab', maximumCapacity: 35, building: 'Annex', status: 'Active' },
+  { roomCode: 'LAB202', name: 'CCS Computer Laboratory 202', type: 'IT Lab', maximumCapacity: 35, building: 'Annex', status: 'Active' },
 ];
 
-const TIME_BLOCKS = [
-  { label: `${TEST_TAG} Morning Block`, durationMinutes: 120, daysOfWeek: ['Mon', 'Wed'], startTime: '08:00', endTime: '10:00' },
-  { label: `${TEST_TAG} Midday Block`, durationMinutes: 120, daysOfWeek: ['Tue', 'Thu'], startTime: '10:00', endTime: '12:00' },
-  { label: `${TEST_TAG} Afternoon Block`, durationMinutes: 120, daysOfWeek: ['Mon', 'Wed'], startTime: '13:00', endTime: '15:00' },
-  { label: `${TEST_TAG} Late Block`, durationMinutes: 120, daysOfWeek: ['Tue', 'Thu'], startTime: '15:00', endTime: '17:00' },
+const TIME_BLOCK_SPECS = [
+  {
+    label: 'Monday & Wednesday morning',
+    durationMinutes: 120,
+    daysOfWeek: ['Mon', 'Wed'],
+    startTime: '08:00',
+    endTime: '10:00',
+  },
+  {
+    label: 'Tuesday & Thursday late morning',
+    durationMinutes: 120,
+    daysOfWeek: ['Tue', 'Thu'],
+    startTime: '10:00',
+    endTime: '12:00',
+  },
+  {
+    label: 'Monday & Wednesday afternoon',
+    durationMinutes: 120,
+    daysOfWeek: ['Mon', 'Wed'],
+    startTime: '13:00',
+    endTime: '15:00',
+  },
+  {
+    label: 'Tuesday & Thursday afternoon',
+    durationMinutes: 120,
+    daysOfWeek: ['Tue', 'Thu'],
+    startTime: '15:00',
+    endTime: '17:00',
+  },
 ];
+
+const TIME_BLOCK_LABELS = TIME_BLOCK_SPECS.map((b) => b.label);
 
 const SECTION_BLUEPRINTS = [
   { key: 'CCS101', term: 'First Semester', academicYear: '2026-2027', status: 'Open' },
@@ -91,59 +128,152 @@ const SECTION_BLUEPRINTS = [
   { key: 'CCS401', term: 'First Semester', academicYear: '2026-2027', status: 'Closed' },
 ];
 
-function buildExtraCurricula(total = 120) {
+const EXTRA_COURSE_TITLES = [
+  'Human-Computer Interaction',
+  'Web Systems and Technologies',
+  'Information Assurance and Security',
+  'Data Structures and Algorithms',
+  'Operating Systems',
+  'Computer Networks',
+  'Object-Oriented Programming',
+  'Discrete Structures for Computing',
+  'Theory of Computation',
+  'Mobile Application Development',
+  'Cloud Computing Fundamentals',
+  'Data Analytics with Python',
+  'Systems Analysis and Design',
+  'Internet of Things',
+  'Digital Logic Design',
+  'Computer Organization and Architecture',
+  'Programming Languages',
+  'Distributed Systems',
+  'Machine Learning Fundamentals',
+  'Ethics and Professional Practice in Computing',
+];
+
+function buildExtraCurricula(total = 40) {
   return Array.from({ length: total }, (_, index) => {
-    const num = String(index + 1).padStart(4, '0');
+    const num = index + 1;
+    const courseCode = `CCS${String(500 + index).padStart(3, '0')}`;
     const isEven = index % 2 === 0;
+    const title = `${EXTRA_COURSE_TITLES[index % EXTRA_COURSE_TITLES.length]} (${isEven ? 'CS' : 'IT'} offering)`;
     return {
-      courseCode: `QA${num}`,
-      courseTitle: `${isEven ? 'CS' : 'IT'} QA Seed Course ${index + 1}`,
-      curriculumYear: String(2020 + (index % 7)),
-      description: `${TEST_TAG} pagination curriculum ${index + 1}`,
+      courseCode,
+      courseTitle: title,
+      curriculumYear: String(2020 + (index % 6)),
+      description: `Upper-level or service course in the CCS curriculum catalog. Credit-bearing; prerequisites vary by program adviser approval.`,
       program: isEven ? 'CS' : 'IT',
       creditUnits: 3,
       lectureHours: 2,
-      labHours: 2,
-      prerequisites: index > 0 ? [`QA${String(index).padStart(4, '0')}`] : [],
-      courseLearningOutcomes: ['Understand core concepts', 'Apply practical techniques'],
-      status: index % 11 === 0 ? 'Archived' : 'Active',
+      labHours: index % 3 === 0 ? 1 : 2,
+      prerequisites: num > 1 ? [`CCS${String(500 + index - 1).padStart(3, '0')}`] : [],
+      courseLearningOutcomes: [
+        'Demonstrate mastery of core topics in the course outline',
+        'Complete laboratory or project work to program standards',
+      ],
+      status: index % 13 === 0 ? 'Archived' : 'Active',
     };
   });
 }
 
+const MIDDLE_POOL = [
+  'Marie',
+  'Anne',
+  'Rose',
+  'James',
+  'Paul',
+  'Grace',
+  'Luis',
+  '',
+  'Carmen',
+  'Rafael',
+];
+
+const EMERGENCY_NAMES = [
+  'Maria Santos',
+  'Jose Reyes',
+  'Ana Cruz',
+  'Roberto Lim',
+  'Elena Torres',
+  'Carlos Mendoza',
+];
+
+const CERT_POOL = [
+  'Cisco CCNA (expired renewal in progress)',
+  'Microsoft Azure Fundamentals',
+  'Google Cloud Associate Engineer',
+  'CompTIA Security+',
+  '',
+  'AWS Cloud Practitioner',
+];
+
 function buildExtraFaculty(year, total = 30) {
-  const firstNames = ['Adrian', 'Bea', 'Carlo', 'Diana', 'Enzo', 'Faith', 'Gino', 'Hanna', 'Ivan', 'Jessa'];
-  const lastNames = ['Alonzo', 'Bautista', 'Castro', 'Domingo', 'Estrada', 'Flores', 'Garcia', 'Herrera', 'Ignacio', 'Jimenez'];
+  const firstNames = [
+    'Adrian',
+    'Beatriz',
+    'Carlo',
+    'Diana',
+    'Enzo',
+    'Faith',
+    'Gino',
+    'Hannah',
+    'Ivan',
+    'Jessa',
+    'Kevin',
+    'Lara',
+    'Miguel',
+    'Nina',
+    'Oscar',
+  ];
+  const lastNames = [
+    'Alonzo',
+    'Bautista',
+    'Castro',
+    'Domingo',
+    'Estrada',
+    'Flores',
+    'Garcia',
+    'Herrera',
+    'Ignacio',
+    'Jimenez',
+    'Lopez',
+    'Morales',
+    'Navarro',
+    'Ocampo',
+    'Pascual',
+  ];
   return Array.from({ length: total }, (_, index) => {
     const n = index + 1;
     const employeeId = `FAC-${year}-${String(100 + n).padStart(3, '0')}`;
     const firstName = firstNames[index % firstNames.length];
     const lastName = lastNames[Math.floor(index / firstNames.length) % lastNames.length];
     const department = index % 2 === 0 ? 'CS' : 'IT';
+    const suffix = employeeId.split('-').pop();
+    const institutionalEmail = `${firstName.toLowerCase()}.${lastName.toLowerCase()}.${suffix}@ccs.edu`;
     return {
       employeeId,
       firstName,
-      middleName: String.fromCharCode(65 + (index % 26)) + '.',
+      middleName: MIDDLE_POOL[index % MIDDLE_POOL.length],
       lastName,
       dob: `${1980 + (index % 15)}-${String((index % 12) + 1).padStart(2, '0')}-${String((index % 28) + 1).padStart(2, '0')}`,
       department,
       profileAvatar: '',
-      institutionalEmail: `${firstName.toLowerCase()}.${lastName.toLowerCase()}.${n}.${TEST_TAG.replace(/[^a-z0-9]/gi, '').toLowerCase()}@ccs.edu`,
+      institutionalEmail,
       personalEmail: '',
       mobileNumber: `0917${String(1000000 + n).slice(-7)}`,
-      emergencyContactName: `Emergency Contact ${n}`,
+      emergencyContactName: EMERGENCY_NAMES[index % EMERGENCY_NAMES.length],
       emergencyContactNumber: `0918${String(1000000 + n).slice(-7)}`,
       position: index % 3 === 0 ? 'Associate Professor' : 'Assistant Professor',
       employmentType: index % 4 === 0 ? 'Part-time' : 'Full-time',
       contractType: index % 4 === 0 ? 'Semester-based' : '',
       dateHired: `${2010 + (index % 12)}-06-15`,
       status: index % 9 === 0 ? 'Inactive' : 'Active',
-      inactiveReason: index % 9 === 0 ? `${TEST_TAG} leave` : '',
+      inactiveReason: index % 9 === 0 ? 'On approved leave / inactive assignment' : '',
       highestEducation: index % 2 === 0 ? 'MS Computer Science' : 'MS Information Technology',
       fieldOfStudy: department === 'CS' ? 'Computer Science' : 'Information Technology',
-      certifications: 'QA seed certification',
+      certifications: CERT_POOL[index % CERT_POOL.length],
       specializations: [],
-      internalNotes: TEST_TAG,
+      internalNotes: '',
     };
   });
 }
@@ -157,10 +287,13 @@ function addDays(baseDate, days) {
 function buildWeeklyLessons(facultyId) {
   return [1, 2, 3, 4].map((weekNumber) => ({
     weekNumber,
-    topic: `Week ${weekNumber} Lesson Plan (${TEST_TAG})`,
-    objectives: [`Objective ${weekNumber}A`, `Objective ${weekNumber}B`],
-    materials: ['Slides', 'Lab handout'],
-    assessments: `Quiz ${weekNumber}`,
+    topic: `Week ${weekNumber}: Topics per course outline (lecture and laboratory as scheduled)`,
+    objectives: [
+      `Meet learning outcome ${weekNumber}.1 from the official syllabus`,
+      `Complete guided exercises for week ${weekNumber}`,
+    ],
+    materials: ['Lecture slides', 'Laboratory manual', 'Learning management system readings'],
+    assessments: weekNumber <= 2 ? `Formative assessment ${weekNumber}` : `Summative checkpoint ${weekNumber}`,
     timeAllocation: { lectureMinutes: 60, labMinutes: 60 },
     status: weekNumber === 1 ? 'Delivered' : 'Pending',
     deliveredAt: weekNumber === 1 ? new Date() : null,
@@ -183,10 +316,13 @@ async function upsertManyByFilter(Model, docsWithFilter) {
 
 async function run() {
   await connectDB();
-  console.log('Seeding test-page data...');
+  console.log('Seeding curriculum, scheduling, syllabi, events, and activity data…');
 
   const year = new Date().getUTCFullYear();
-  const extraCurricula = buildExtraCurricula(120);
+
+  await Curriculum.deleteMany({ courseCode: { $regex: /^QA\d{4}$/ } }).catch(() => {});
+
+  const extraCurricula = buildExtraCurricula(40);
   const extraFaculty = buildExtraFaculty(year, 30);
 
   await upsertManyByFilter(
@@ -228,7 +364,7 @@ async function run() {
 
   await upsertManyByFilter(
     TimeBlock,
-    TIME_BLOCKS.map((block, index) => ({
+    TIME_BLOCK_SPECS.map((block, index) => ({
       filter: { label: block.label },
       doc: {
         ...block,
@@ -237,7 +373,7 @@ async function run() {
       },
     })),
   );
-  const timeBlocks = await TimeBlock.find({ label: { $regex: TEST_TAG } }).lean();
+  const timeBlocks = await TimeBlock.find({ label: { $in: TIME_BLOCK_LABELS } }).lean();
   console.log(`Time blocks ready: ${timeBlocks.length}`);
   console.log(`Faculty ready: ${activeFaculty.length} active / ${await Faculty.countDocuments({})} total`);
 
@@ -249,9 +385,10 @@ async function run() {
 
     const faculty = activeFaculty[index % activeFaculty.length];
     const room = rooms[index % rooms.length];
-    const scheduleTime = index % 2 === 0
-      ? { dayOfWeek: 'Mon', startTime: '08:00', endTime: '10:00' }
-      : { dayOfWeek: 'Tue', startTime: '10:00', endTime: '12:00' };
+    const scheduleTime =
+      index % 2 === 0
+        ? { dayOfWeek: 'Mon', startTime: '08:00', endTime: '10:00' }
+        : { dayOfWeek: 'Tue', startTime: '10:00', endTime: '12:00' };
 
     const identifier = `${curriculum.courseCode}-${item.term.startsWith('First') ? 'FS' : 'SS'}-${item.academicYear.slice(-2)}-S${index + 1}`;
     const enrolled = students.slice(index * 15, index * 15 + 15).map((s) => s._id);
@@ -286,6 +423,7 @@ async function run() {
   }
   console.log(`Sections ready: ${seededSections.length}`);
 
+  const syllabusDescriptionPrefix = /^Official syllabus for section /;
   for (let index = 0; index < seededSections.length; index += 1) {
     const section = seededSections[index];
     const facultyId = section.schedules?.[0]?.facultyId || activeFaculty[index % activeFaculty.length]._id;
@@ -298,9 +436,10 @@ async function run() {
           sectionId: section._id,
           curriculumId: section.curriculumId,
           facultyId,
-          description: `${TEST_TAG} syllabus for ${section.sectionIdentifier}`,
-          gradingSystem: '40% Exams, 40% Projects, 20% Participation',
-          coursePolicies: 'Attendance and submission policy for seeded QA data.',
+          description: `Official syllabus for section ${section.sectionIdentifier}. Aligned with the College of Computing Studies curriculum guide; includes outcomes, grading, policies, and weekly pacing.`,
+          gradingSystem: '40% examinations, 40% projects and laboratory work, 20% participation and formative tasks',
+          coursePolicies:
+            'Attendance follows university rules; late submissions incur penalties unless excused; academic integrity policy applies to all work.',
           status: syllabusStatus,
           weeklyLessons: buildWeeklyLessons(facultyId),
         },
@@ -308,7 +447,7 @@ async function run() {
       { upsert: true },
     );
   }
-  const syllabiCount = await Syllabus.countDocuments({ description: { $regex: TEST_TAG } });
+  const syllabiCount = await Syllabus.countDocuments({ description: { $regex: syllabusDescriptionPrefix } });
   console.log(`Syllabi ready: ${syllabiCount}`);
 
   const adminUser = users.find((u) => u.role === 'admin') || users[0];
@@ -318,7 +457,7 @@ async function run() {
 
   const eventDocs = [
     {
-      title: `${TEST_TAG} Tech Forum`,
+      title: EVENT_TITLE_TECH_FORUM,
       type: 'Curricular',
       status: 'published',
       schedule: {
@@ -338,7 +477,7 @@ async function run() {
       certificatesGenerated: false,
     },
     {
-      title: `${TEST_TAG} Career Coaching`,
+      title: EVENT_TITLE_CAREER,
       type: 'Extra-Curricular',
       status: 'published',
       schedule: {
@@ -348,7 +487,7 @@ async function run() {
       },
       timezone: 'Asia/Manila',
       isVirtual: true,
-      meetingUrl: 'https://meet.example.com/qa-seed-session',
+      meetingUrl: 'https://meet.google.com/lookup/ccs-career-workshop',
       targetGroups: { roles: ['student'], programs: ['BSIT'], yearLevels: ['2', '3'] },
       organizers: [{ userId: adminUser._id, role: 'Moderator' }],
       attendees: [],
@@ -359,7 +498,6 @@ async function run() {
     },
   ];
 
-  // Set specific clock times so event validation and overlap checks behave predictably.
   eventDocs[0].schedule.startTime.setHours(9, 0, 0, 0);
   eventDocs[0].schedule.endTime.setHours(11, 0, 0, 0);
   eventDocs[1].schedule.startTime.setHours(14, 0, 0, 0);
@@ -372,7 +510,9 @@ async function run() {
       doc,
     })),
   );
-  const eventsCount = await Event.countDocuments({ title: { $regex: TEST_TAG } });
+  const eventsCount = await Event.countDocuments({
+    title: { $in: [EVENT_TITLE_TECH_FORUM, EVENT_TITLE_CAREER] },
+  });
   console.log(`Events ready: ${eventsCount}`);
 
   const activityDocs = [
@@ -385,7 +525,7 @@ async function run() {
       module: 'Instruction',
       target: 'CCS101',
       status: 'Completed',
-      metadata: { seedTag: TEST_TAG },
+      metadata: { seedTag: SEED_METADATA_TAG },
     },
     {
       actorUserId: facultyUser._id,
@@ -396,7 +536,7 @@ async function run() {
       module: 'Scheduling',
       target: 'CCS101-FS-27-S1',
       status: 'Completed',
-      metadata: { seedTag: TEST_TAG },
+      metadata: { seedTag: SEED_METADATA_TAG },
     },
     {
       actorUserId: adminUser._id,
@@ -405,21 +545,21 @@ async function run() {
       actorIdentifier: adminUser.username || 'admin',
       action: 'Published event',
       module: 'Events',
-      target: `${TEST_TAG} Tech Forum`,
+      target: EVENT_TITLE_TECH_FORUM,
       status: 'Published',
-      metadata: { seedTag: TEST_TAG },
+      metadata: { seedTag: SEED_METADATA_TAG },
     },
   ];
 
-  await ActivityLog.deleteMany({ 'metadata.seedTag': TEST_TAG });
+  await ActivityLog.deleteMany({ 'metadata.seedTag': SEED_METADATA_TAG });
   await ActivityLog.insertMany(activityDocs);
   console.log(`Activity logs ready: ${activityDocs.length}`);
 
-  console.log('\nDone. Seeded test data for pages/modules:');
-  console.log('- Curriculum / Curricula Management');
+  console.log('\nDone. Seeded data for:');
+  console.log('- Curriculum / curricula management');
   console.log('- Scheduling (sections, rooms, time blocks)');
-  console.log('- Syllabus pages');
-  console.log('- Events pages');
+  console.log('- Syllabus');
+  console.log('- Events');
   console.log('- Dashboard recent activities');
 
   await mongoose.disconnect();
