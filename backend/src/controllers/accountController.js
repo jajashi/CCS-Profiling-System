@@ -286,7 +286,7 @@ async function listFacultyAccountProfiles(req, res, next) {
 async function createAdminAccount(req, res, next) {
   try {
     const { username, name } = req.body || {};
-    const u = String(username || '').trim().toLowerCase();
+    const u = String(username || '').trim();
     const n = String(name || '').trim();
 
     if (!u || !n) {
@@ -330,7 +330,7 @@ async function provisionStudentAccount(req, res, next) {
     }
 
     const duplicate = await User.findOne({
-      $or: [{ username: studentId.toLowerCase() }, { studentId }],
+      $or: [{ username: studentId }, { studentId }],
     }).lean();
     if (duplicate) {
       return res.status(409).json({ message: 'Student login account already exists for this student ID.' });
@@ -349,7 +349,7 @@ async function provisionStudentAccount(req, res, next) {
       studentId;
 
     const created = await User.create({
-      username: studentId.toLowerCase(),
+      username: studentId,
       password: resolvedPassword,
       name: resolvedName,
       role: 'student',
@@ -386,10 +386,7 @@ async function provisionFacultyAccount(req, res, next) {
 
     const canonicalEmployeeId = String(faculty.employeeId || '').trim();
     const duplicate = await User.findOne({
-      $or: [
-        { username: canonicalEmployeeId.toLowerCase() },
-        { employeeId: canonicalEmployeeId },
-      ],
+      $or: [{ username: canonicalEmployeeId }, { employeeId: canonicalEmployeeId }],
     }).lean();
     if (duplicate) {
       return res.status(409).json({ message: 'Faculty login account already exists for this employee ID.' });
@@ -408,7 +405,7 @@ async function provisionFacultyAccount(req, res, next) {
       canonicalEmployeeId;
 
     const created = await User.create({
-      username: canonicalEmployeeId.toLowerCase(),
+      username: canonicalEmployeeId,
       password: resolvedPassword,
       name: resolvedName,
       role: 'faculty',

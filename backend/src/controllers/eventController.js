@@ -139,9 +139,9 @@ const createEvent = async (req, res) => {
             user = await User.findOne({ studentId: trimmedId });
           }
           
-          // If still not found, try username (case insensitive)
+          // If still not found, try username (exact match)
           if (!user) {
-            user = await User.findOne({ username: trimmedId.toLowerCase() });
+            user = await User.findOne({ username: trimmedId });
           }
           
           // If still not found, try name (case insensitive)
@@ -719,7 +719,7 @@ const updateEvent = async (req, res) => {
           user = await User.findOne({ studentId: trimmedId });
         }
         if (!user) {
-          user = await User.findOne({ username: trimmedId.toLowerCase() });
+          user = await User.findOne({ username: trimmedId });
         }
         if (!user) {
           user = await User.findOne({ name: { $regex: new RegExp(`^${trimmedId}$`, 'i') } });
