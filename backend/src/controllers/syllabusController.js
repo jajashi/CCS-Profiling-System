@@ -395,7 +395,8 @@ async function getSyllabusById(req, res, next) {
 
     if (!isAdmin(req)) {
       const facultyScope = await resolveFacultyActor(req);
-      if (facultyScope && String(facultyScope._id) !== String(syllabus.facultyId)) {
+      const syllabusFacultyId = syllabus.facultyId?._id || syllabus.facultyId;
+      if (facultyScope && String(facultyScope._id) !== String(syllabusFacultyId)) {
         return res.status(403).json({ message: 'You do not have permission to view this syllabus.' });
       }
     }

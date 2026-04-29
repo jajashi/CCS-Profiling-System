@@ -512,7 +512,7 @@ const Sidebar = () => {
                 <span className="nav-icon">
                   <FiFileText />
                 </span>
-                <span className="nav-text">360° Reports</span>
+                <span className="nav-text">Reports</span>
               </NavLink>
             </li>
           ) : null}

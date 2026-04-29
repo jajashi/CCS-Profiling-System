@@ -290,6 +290,45 @@ export default function EventListPage() {
     }
   };
 
+  const handleRSVP = async () => {
+    if (!viewEvent?._id) return;
+    try {
+      const res = await apiFetch(`/api/events/${viewEvent._id}/rsvp`, { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'Failed to RSVP');
+      window.alert(data.message || 'Successfully registered!');
+      
+      // Update cache
+      invalidateApiCache('/api/events');
+      invalidateApiCache(`/api/events/${viewEvent._id}`);
+      
+      handleOpenViewModal(viewEvent._id);
+      fetchEvents();
+    } catch (err) {
+      window.alert(err.message);
+    }
+  };
+
+  const handleCancelRSVP = async () => {
+    if (!viewEvent?._id) return;
+    if (!window.confirm('Are you sure you want to cancel your registration?')) return;
+    try {
+      const res = await apiFetch(`/api/events/${viewEvent._id}/rsvp`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'Failed to cancel RSVP');
+      window.alert(data.message || 'Successfully cancelled registration!');
+      
+      // Update cache
+      invalidateApiCache('/api/events');
+      invalidateApiCache(`/api/events/${viewEvent._id}`);
+      
+      handleOpenViewModal(viewEvent._id);
+      fetchEvents();
+    } catch (err) {
+      window.alert(err.message);
+    }
+  };
+
   const handleDeleteEvent = async (event) => {
     const confirmed = window.confirm(`Delete "${event.title}"? This action cannot be undone.`);
     if (!confirmed) return;
@@ -946,13 +985,38 @@ export default function EventListPage() {
               ) : null}
             </div>
             <div className="event-view-modal-footer">
-              <button
-                type="button"
-                className="spec-btn-secondary"
-                onClick={() => setIsViewModalOpen(false)}
-              >
-                Close
-              </button>
+              <div className="flex gap-2">
+                {!canManageEvents && viewEvent.registration && (
+                  <>
+                    {(viewEvent.registration.isRegistered || viewEvent.registration.isWaitlisted) ? (
+                      <button
+                        type="button"
+                        className="spec-btn-secondary delete text-red-600"
+                        onClick={handleCancelRSVP}
+                        disabled={viewEvent.registration.isClosed}
+                      >
+                        Cancel Registration
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="spec-btn-primary"
+                        onClick={handleRSVP}
+                        disabled={viewEvent.registration.isClosed}
+                      >
+                        {viewEvent.registration.isFull ? 'Join Waitlist' : 'Register for Event'}
+                      </button>
+                    )}
+                  </>
+                )}
+                <button
+                  type="button"
+                  className="spec-btn-secondary"
+                  onClick={() => setIsViewModalOpen(false)}
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>

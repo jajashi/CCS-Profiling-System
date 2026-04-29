@@ -40,8 +40,6 @@ const ReportsPage = () => {
   const [gender, setGender] = useState('');
   const [scholarship, setScholarship] = useState('');
   
-  const [activeTab, setActiveTab] = useState('students');
-  const [faculty, setFaculty] = useState([]);
   const [facultyLoading, setFacultyLoading] = useState(false);
   
   const [showFilters, setShowFilters] = useState(false);
@@ -49,7 +47,6 @@ const ReportsPage = () => {
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
 
   const fetchReports = useCallback(async () => {
-    if (activeTab === 'students') {
       setLoading(true);
       try {
         const params = new URLSearchParams({
@@ -75,31 +72,11 @@ const ReportsPage = () => {
       } finally {
         setLoading(false);
       }
-    } else {
-      setFacultyLoading(true);
-      try {
-        const params = new URLSearchParams({
-          page,
-          limit: 10,
-          search
-        });
-        const res = await apiFetch(`/api/reports/faculty?${params.toString()}`);
-        if (!res.ok) throw new Error('Failed to fetch faculty reports');
-        const data = await res.json();
-        setFaculty(data.faculty);
-        setTotal(data.pagination.total);
-        setTotalPages(data.pagination.totalPages);
-      } catch (error) {
-        toast.error(error.message);
-      } finally {
-        setFacultyLoading(false);
-      }
-    }
-  }, [page, search, program, yearLevel, status, gender, scholarship, activeTab]);
+  }, [page, search, program, yearLevel, status, gender, scholarship]);
 
   useEffect(() => {
     setPage(1);
-  }, [activeTab, search, program, yearLevel, status, gender, scholarship]);
+  }, [search, program, yearLevel, status, gender, scholarship]);
 
   useEffect(() => {
     fetchReports();
@@ -149,18 +126,10 @@ const ReportsPage = () => {
 
       <div className="reports-tabs">
         <button 
-          className={`report-tab ${activeTab === 'students' ? 'active' : ''}`}
-          onClick={() => setActiveTab('students')}
+          className="report-tab active"
         >
           <FiUser />
           <span>Student Reports</span>
-        </button>
-        <button 
-          className={`report-tab ${activeTab === 'faculty' ? 'active' : ''}`}
-          onClick={() => setActiveTab('faculty')}
-        >
-          <FiBriefcase className="mr-1" />
-          <span>Faculty Load Reports</span>
         </button>
       </div>
 
@@ -222,11 +191,10 @@ const ReportsPage = () => {
         )}
 
         <div className="results-summary">
-          <span>Showing <strong>{activeTab === 'students' ? students.length : faculty.length}</strong> of <strong>{total}</strong> records</span>
+          <span>Showing <strong>{students.length}</strong> of <strong>{total}</strong> records</span>
         </div>
 
         <div className="reports-table-container">
-          {activeTab === 'students' ? (
             <table className="student-table">
               <thead>
                 <tr>
@@ -305,72 +273,6 @@ const ReportsPage = () => {
                 )}
               </tbody>
             </table>
-          ) : (
-            <table className="student-table">
-              <thead>
-                <tr>
-                  <th>Faculty Member</th>
-                  <th>Teaching Load</th>
-                  <th>Contact</th>
-                  <th className="text-center">Specializations</th>
-                </tr>
-              </thead>
-              <tbody>
-                {facultyLoading ? (
-                  <tr>
-                    <td colSpan="4" className="text-center py-10">
-                      <FiLoader className="animate-spin inline-block mr-2" />
-                      Loading faculty data...
-                    </td>
-                  </tr>
-                ) : faculty.length === 0 ? (
-                  <tr>
-                    <td colSpan="4" className="text-center py-10 text-slate-500">
-                      No faculty found.
-                    </td>
-                  </tr>
-                ) : (
-                  faculty.map(f => (
-                    <tr key={f._id}>
-                      <td>
-                        <div className="flex items-center gap-3">
-                          <div className="report-avatar faculty">
-                            {f.profileAvatar ? (
-                               <img src={f.profileAvatar} alt={f.firstName} className="w-full h-full object-cover rounded-full" />
-                            ) : (
-                               <span>{f.firstName[0]}{f.lastName[0]}</span>
-                            )}
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="font-bold text-slate-800">{f.lastName}, {f.firstName}</span>
-                            <span className="text-xs text-slate-500">{f.employeeId}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-orange-600">{f.sectionCount} Sections</span>
-                          <span className="text-xs text-slate-400">Current Semester</span>
-                        </div>
-                      </td>
-                      <td>
-                         <span className="text-sm text-slate-600">{f.email}</span>
-                      </td>
-                      <td className="text-center">
-                        <div className="flex flex-wrap justify-center gap-1">
-                          {f.specializations?.map((s, i) => (
-                            <span key={i} className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                              {s}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          )}
         </div>
 
         {totalPages > 1 && (
