@@ -863,8 +863,12 @@ async function updateSectionResources(req, res, next) {
     }
 
     // Replace the existing schedules with the new ones provided
-    section.schedules = schedules;
-    await section.save();
+    // Use findByIdAndUpdate to only update schedules without triggering full validation
+    await Section.findByIdAndUpdate(
+      id,
+      { $set: { schedules: schedules } },
+      { runValidators: false }
+    );
 
     // US-008: Notify newly assigned faculty
     const newFacultyIds = new Set(schedules.map((s) => s.facultyId.toString()));
@@ -1083,9 +1087,11 @@ async function getMyClasses(req, res, next) {
     const { term } = req.query;
     const resolved = await resolveFacultyForSchedulingUser(req);
     if (!resolved.ok) {
+      console.log('[getMyClasses] Faculty resolution failed:', resolved);
       return res.status(resolved.status).json({ message: resolved.message });
     }
     const { faculty } = resolved;
+    console.log('[getMyClasses] Faculty resolved:', { facultyId: faculty._id, employeeId: faculty.employeeId });
 
     const Section = await resolveSectionModel();
     if (!Section) {
@@ -1098,13 +1104,23 @@ async function getMyClasses(req, res, next) {
     const SyllabusModel = Syllabus;
 
     const baseQuery = {
-      status: { $in: ["Open", "Waitlisted", "Closed"] },
+      status: { $in: ["Active", "Open", "Waitlisted", "Closed"] },
     };
     if (term) {
       baseQuery.term = term;
     }
 
+    console.log('[getMyClasses] Searching with baseQuery:', baseQuery, 'facultyId:', faculty._id);
+
     const sectionIdSet = new Set();
+
+    // Debug: Check all sections with their schedule facultyIds
+    const allSections = await Section.find(baseQuery).select("_id sectionIdentifier schedules").lean();
+    console.log('[getMyClasses] All sections count:', allSections.length);
+    for (const sec of allSections.slice(0, 5)) {
+      console.log(`[getMyClasses] Section ${sec.sectionIdentifier} schedules:`, 
+        sec.schedules?.map(s => ({ facultyId: s.facultyId?.toString(), type: typeof s.facultyId })));
+    }
 
     const sectionsWithFaculty = await Section.find({
       ...baseQuery,
@@ -1112,6 +1128,8 @@ async function getMyClasses(req, res, next) {
     })
       .select("_id")
       .lean();
+    console.log('[getMyClasses] Sections with faculty in schedules:', sectionsWithFaculty.length);
+    console.log('[getMyClasses] Query used facultyId:', faculty._id, 'type:', typeof faculty._id);
     sectionsWithFaculty.forEach((s) => sectionIdSet.add(s._id.toString()));
 
     const syllabiWithSections = await SyllabusModel.find({
@@ -1417,11 +1435,22 @@ async function patchSectionRoster(req, res, next) {
       );
     }
 
-    section.enrolledStudentIds = Array.from(currentIds).map(
+    const newEnrolledIds = Array.from(currentIds).map(
       (s) => new mongoose.Types.ObjectId(s),
     );
-    section.currentEnrollmentCount = section.enrolledStudentIds.length;
-    await section.save();
+    const newCount = newEnrolledIds.length;
+
+    // Use findByIdAndUpdate to only update specific fields without triggering full validation
+    await Section.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          enrolledStudentIds: newEnrolledIds,
+          currentEnrollmentCount: newCount,
+        },
+      },
+      { runValidators: false },
+    );
 
     const populated = await Section.findById(id)
       .populate("curriculumId", "courseCode courseTitle")

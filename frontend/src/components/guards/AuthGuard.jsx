@@ -88,6 +88,24 @@ export const StudentProfileRoute = ({ children }) => {
   return children;
 };
 
+// Combined route guard for student info (both list and detail)
+export const StudentInfoRoute = ({ children }) => {
+  const { id } = useParams();
+  const { isAuthenticated, isStudent, user } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  // If student user with no ID, redirect to their own profile
+  if (isStudent && user?.studentId && !id) {
+    return <Navigate to={`/dashboard/student-info/${user.studentId}`} replace />;
+  }
+  // If student trying to access another student's profile
+  if (isStudent && user?.studentId && String(id) !== String(user.studentId)) {
+    return <Navigate to={`/dashboard/student-info/${user.studentId}`} replace />;
+  }
+  return children;
+};
+
 export const FacultyDirectoryRoute = ({ children }) => {
   const { isAuthenticated, isFaculty, user } = useAuth();
   if (!isAuthenticated) {

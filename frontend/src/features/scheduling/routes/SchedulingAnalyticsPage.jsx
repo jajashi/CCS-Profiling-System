@@ -116,14 +116,14 @@ export default function SchedulingAnalyticsPage() {
         <div className="chart-container">
           <h4 className="chart-title">Program Distribution</h4>
           <div className="chart-wrapper">
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={programData}
                   cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
+                  cy="45%"
+                  innerRadius={50}
+                  outerRadius={70}
                   paddingAngle={5}
                   dataKey="value"
                 >
@@ -141,11 +141,11 @@ export default function SchedulingAnalyticsPage() {
         <div className="chart-container">
           <h4 className="chart-title">Year Level Distribution</h4>
           <div className="chart-wrapper">
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={yearData}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={yearData} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" />
-                <YAxis />
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip />
                 <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -156,13 +156,13 @@ export default function SchedulingAnalyticsPage() {
         <div className="chart-container">
           <h4 className="chart-title">Faculty Coverage</h4>
           <div className="chart-wrapper">
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={facultyData}
                   cx="50%"
-                  cy="50%"
-                  outerRadius={80}
+                  cy="45%"
+                  outerRadius={70}
                   dataKey="value"
                 >
                   <Cell fill="#10b981" />

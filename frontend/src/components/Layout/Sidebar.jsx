@@ -557,19 +557,6 @@ const Sidebar = () => {
               ) : null}
             </li>
           ) : null}
-          <li className="nav-item">
-            <NavLink
-              to="/dashboard/security"
-              end
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }>
-              <span className="nav-icon">
-                <FiKey />
-              </span>
-              <span className="nav-text">Security</span>
-            </NavLink>
-          </li>
         </ul>
       </nav>
 

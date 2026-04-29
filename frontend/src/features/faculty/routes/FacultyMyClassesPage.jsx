@@ -42,15 +42,19 @@ export default function FacultyMyClassesPage() {
     if (!hasCache) setLoading(true);
     setError('');
     try {
+      console.log('[FacultyMyClasses] Fetching my-classes for user:', user?.username, user?.employeeId);
       const res = await apiFetch('/api/scheduling/my-classes');
+      console.log('[FacultyMyClasses] Response status:', res.status);
       if (!res.ok) {
         throw new Error(await parseErrorMessage(res));
       }
       const data = await res.json();
+      console.log('[FacultyMyClasses] Data received:', data?.length || 0, 'classes');
       const next = Array.isArray(data) ? data : [];
       writeFacultyCache(MY_CLASSES_CACHE_KEY, next);
       setClasses(next);
     } catch (e) {
+      console.log('[FacultyMyClasses] Error:', e.message);
       if (!hasCache) {
         setError(e.message || 'Something went wrong.');
         setClasses([]);
@@ -58,7 +62,7 @@ export default function FacultyMyClassesPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     load();

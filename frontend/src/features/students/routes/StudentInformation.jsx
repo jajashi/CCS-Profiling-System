@@ -175,7 +175,7 @@ const StudentInformation = () => {
       scholarship: scholarshipFilter,
       gender: genderFilter,
       violation: violationFilter,
-    }, 1);
+    }, pagination.page);
   }, [
     debouncedQuery,
     programFilter,
@@ -187,6 +187,24 @@ const StudentInformation = () => {
     genderFilter,
     violationFilter,
     fetchStudents,
+  ]);
+
+  // Reset to page 1 when filters change (but not when pagination changes)
+  useEffect(() => {
+    if (pagination.page !== 1) {
+      setPagination(prev => ({ ...prev, page: 1 }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    debouncedQuery,
+    programFilter,
+    skillFilter,
+    yearLevelFilter,
+    sectionFilter,
+    statusFilter,
+    scholarshipFilter,
+    genderFilter,
+    violationFilter,
   ]);
 
   const handleClearFilters = () => {

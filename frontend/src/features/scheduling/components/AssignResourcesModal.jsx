@@ -79,7 +79,7 @@ export default function AssignResourcesModal({
   return (
     <div className="spec-modal-backdrop" onClick={onClose}>
       <div
-        className="spec-modal spec-modal--wide"
+        className="spec-modal spec-modal--wide assign-resources-modal"
         onClick={(e) => e.stopPropagation()}>
         <div className="spec-modal-header">
           <div>
@@ -108,8 +108,11 @@ export default function AssignResourcesModal({
             </div>
           )}
 
-          {schedules.map((sched, index) => (
-            <div key={index} className="resource-form-row" style={{ gridTemplateColumns: "1fr 1fr 1fr 1.2fr auto" }}>
+          {schedules.map((sched, index) => {
+            const filteredCurricula = curricula.filter(c => c.program === section.program);
+            const displayCurricula = filteredCurricula.length > 0 ? filteredCurricula : curricula;
+            return (
+            <div key={index} className="resource-form-row" style={{ gridTemplateColumns: "1fr 1fr 1fr 2fr auto" }}>
               <div className="form-field">
                 <label className="form-label">Subject / Course</label>
                 <select
@@ -121,13 +124,11 @@ export default function AssignResourcesModal({
                   disabled={section.currentEnrollmentCount === 0}
                   required>
                   <option value="">Select Subject...</option>
-                  {curricula
-                    .filter(c => c.program === section.program)
-                    .map((c) => (
-                      <option key={c._id} value={c._id}>
-                        {c.courseCode} - {c.courseTitle}
-                      </option>
-                    ))}
+                  {displayCurricula.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.courseCode} - {c.courseTitle} {filteredCurricula.length === 0 ? `(${c.program})` : ''}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="form-field">
@@ -211,7 +212,7 @@ export default function AssignResourcesModal({
                 <FiTrash2 />
               </button>
             </div>
-          ))}
+          )})}
 
           <button 
             type="button" 

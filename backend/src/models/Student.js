@@ -40,8 +40,10 @@ const studentSchema = new mongoose.Schema(
       phone: { type: String, default: "" },
     },
     academicHistory: {
-      previousSchools: { type: [String], default: [] },
-      achievements: { type: [String], default: [] },
+      elementary: { type: String, default: "" },
+      elementaryAchievements: { type: [String], default: [] },
+      highSchool: { type: String, default: "" },
+      highSchoolAchievements: { type: [String], default: [] },
     },
     healthInfo: {
       conditions: { type: [String], default: [] },

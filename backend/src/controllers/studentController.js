@@ -226,11 +226,13 @@ async function createStudent(req, res, next) {
         phone: String(payload.emergencyContact?.phone || "").trim(),
       },
       academicHistory: {
-        previousSchools: Array.isArray(payload.academicHistory?.previousSchools)
-          ? payload.academicHistory.previousSchools.map((s) => String(s).trim()).filter(Boolean)
+        elementary: String(payload.academicHistory?.elementary || "").trim(),
+        elementaryAchievements: Array.isArray(payload.academicHistory?.elementaryAchievements)
+          ? payload.academicHistory.elementaryAchievements.map((s) => String(s).trim()).filter(Boolean)
           : [],
-        achievements: Array.isArray(payload.academicHistory?.achievements)
-          ? payload.academicHistory.achievements.map((s) => String(s).trim()).filter(Boolean)
+        highSchool: String(payload.academicHistory?.highSchool || "").trim(),
+        highSchoolAchievements: Array.isArray(payload.academicHistory?.highSchoolAchievements)
+          ? payload.academicHistory.highSchoolAchievements.map((s) => String(s).trim()).filter(Boolean)
           : [],
       },
       healthInfo: {
@@ -370,11 +372,13 @@ async function updateStudent(req, res, next) {
       phone: String(payload.emergencyContact?.phone || "").trim(),
     };
     normalized.academicHistory = {
-      previousSchools: Array.isArray(payload.academicHistory?.previousSchools)
-        ? payload.academicHistory.previousSchools.map((s) => String(s).trim()).filter(Boolean)
+      elementary: String(payload.academicHistory?.elementary || "").trim(),
+      elementaryAchievements: Array.isArray(payload.academicHistory?.elementaryAchievements)
+        ? payload.academicHistory.elementaryAchievements.map((s) => String(s).trim()).filter(Boolean)
         : [],
-      achievements: Array.isArray(payload.academicHistory?.achievements)
-        ? payload.academicHistory.achievements.map((s) => String(s).trim()).filter(Boolean)
+      highSchool: String(payload.academicHistory?.highSchool || "").trim(),
+      highSchoolAchievements: Array.isArray(payload.academicHistory?.highSchoolAchievements)
+        ? payload.academicHistory.highSchoolAchievements.map((s) => String(s).trim()).filter(Boolean)
         : [],
     };
     normalized.healthInfo = {

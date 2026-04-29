@@ -345,10 +345,19 @@ function MassEnrollModal({ section, onClose, onUpdated }) {
   const [availableStudents, setAvailableStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [programFilter, setProgramFilter] = useState("All");
   const [yearFilter, setYearFilter] = useState("All");
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [submitting, setSubmitting] = useState(false);
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   useEffect(() => {
     async function loadAvailable() {
@@ -361,7 +370,7 @@ function MassEnrollModal({ section, onClose, onUpdated }) {
         });
         if (programFilter !== "All") params.append("program", programFilter);
         if (yearFilter !== "All") params.append("yearLevel", yearFilter);
-        if (searchTerm) params.append("search", searchTerm);
+        if (debouncedSearchTerm) params.append("search", debouncedSearchTerm);
 
         const res = await apiFetch(`/api/students?${params.toString()}`);
         const data = await res.json();
@@ -379,7 +388,7 @@ function MassEnrollModal({ section, onClose, onUpdated }) {
       }
     }
     loadAvailable();
-  }, [programFilter, yearFilter, searchTerm, section._id]);
+  }, [programFilter, yearFilter, debouncedSearchTerm, section._id]);
 
   const toggleSelect = (id) => {
     setSelectedIds((prev) => {
@@ -472,18 +481,18 @@ function MassEnrollModal({ section, onClose, onUpdated }) {
               value={programFilter}
               onChange={(e) => setProgramFilter(e.target.value)}>
               <option value="All">All Programs</option>
-              <option value="IT">BSIT</option>
-              <option value="CS">BSCS</option>
+              <option value="BSIT">BSIT</option>
+              <option value="BSCS">BSCS</option>
             </select>
             <select
               className="form-select"
               value={yearFilter}
               onChange={(e) => setYearFilter(e.target.value)}>
               <option value="All">All Years</option>
-              <option value="1st Year">1st Year</option>
-              <option value="2nd Year">2nd Year</option>
-              <option value="3rd Year">3rd Year</option>
-              <option value="4th Year">4th Year</option>
+              <option value="1">1st Year</option>
+              <option value="2">2nd Year</option>
+              <option value="3">3rd Year</option>
+              <option value="4">4th Year</option>
             </select>
           </div>
 
@@ -1375,8 +1384,8 @@ export default function SectionsPage() {
                 {section.enrolledStudentIds &&
                 section.enrolledStudentIds.length > 0 ? (
                   <div className="student-list-mini">
-                    {section.enrolledStudentIds.slice(0, 6).map((student) => (
-                      <div key={student._id} className="student-chip">
+                    {section.enrolledStudentIds.slice(0, 6).map((student, idx) => (
+                      <div key={student._id || student.id || `student-${idx}`} className="student-chip">
                         <span className="student-chip-name">
                           {student.firstName} {student.lastName}
                         </span>
