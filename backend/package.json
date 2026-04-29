@@ -8,6 +8,7 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "seed": "node src/scripts/seedStudents.js",
+    "seed:master": "node src/scripts/seedMasterData.js",
     "seed:faculty": "node src/scripts/seedFaculty.js",
     "seed:specializations": "node src/scripts/seedSpecializations.js",
     "seed:users": "node src/scripts/seedUsers.js",
@@ -28,6 +29,7 @@
     "pdfkit": "^0.15.0"
   },
   "devDependencies": {
+    "@faker-js/faker": "^8.4.1",
     "nodemon": "^3.1.9"
   }
 }

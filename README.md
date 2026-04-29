@@ -19,6 +19,13 @@ A full-stack web application for managing student and faculty profiles, schedule
 cd backend
 npm install
 
+# Install faker.js for generating fake data
+npm install @faker-js/faker --save-dev --legacy-peer-deps
+
+# seed all of the users
+npm run seed:master
+
+
 # Install frontend dependencies
 cd ../frontend
 npm install
