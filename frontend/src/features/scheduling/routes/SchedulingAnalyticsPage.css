@@ -207,3 +207,53 @@
   padding: 2rem;
   font-style: italic;
 }
+
+.pdf-only-header {
+  display: none;
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.pdf-only-header h2 {
+  font-size: 2rem;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+}
+
+.pdf-only-header p {
+  color: #64748b;
+  font-size: 1rem;
+}
+
+.pdf-export-mode {
+  padding: 40px;
+  background: white;
+  width: 1200px !important;
+  max-width: none !important;
+}
+
+.pdf-export-mode .pdf-only-header {
+  display: block;
+}
+
+.pdf-export-mode .metrics-grid {
+  grid-template-columns: repeat(4, 1fr) !important;
+}
+
+.pdf-export-mode .charts-grid {
+  grid-template-columns: repeat(3, 1fr) !important;
+}
+
+.pdf-export-mode .alerts-section {
+  grid-template-columns: repeat(2, 1fr) !important;
+}
+
+.pdf-export-mode .chart-container {
+  break-inside: avoid;
+}
+
+.pdf-export-mode .metric-card {
+  break-inside: avoid;
+}

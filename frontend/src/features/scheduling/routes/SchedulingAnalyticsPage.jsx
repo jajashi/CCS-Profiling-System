@@ -10,6 +10,8 @@ import {
 } from 'react-icons/fi';
 import { apiFetch } from '../../../lib/api';
 import toast from 'react-hot-toast';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import './SchedulingAnalyticsPage.css';
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
@@ -55,13 +57,149 @@ export default function SchedulingAnalyticsPage() {
   ];
 
   const handleExport = () => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `scheduling-analytics-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    toast.success("Analytics exported as JSON.");
+    toast.loading("Generating PDF report...", { id: "pdf-export" });
+    try {
+      const doc = new jsPDF();
+      
+      // Header
+      doc.setFontSize(20);
+      doc.text("Scheduling Analytics Report", 14, 22);
+      
+      doc.setFontSize(11);
+      doc.setTextColor(100);
+      doc.text(`Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, 14, 30);
+      
+      let yPos = 40;
+      
+      // Summary Metrics
+      doc.setFontSize(14);
+      doc.setTextColor(0);
+      doc.text("Summary Metrics", 14, yPos);
+      yPos += 8;
+      
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Metric', 'Value']],
+        body: [
+          ['Total Sections', stats.totalSections],
+          ['Nearing Capacity', stats.nearingCapacity],
+          ['Empty Sections', stats.emptySections],
+          ['Average Utilization', `${stats.avgUtilization.toFixed(1)}%`]
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: [99, 102, 241] }
+      });
+      
+      yPos = doc.lastAutoTable.finalY + 15;
+      
+      // Program Distribution
+      doc.setFontSize(14);
+      doc.text("Program Distribution", 14, yPos);
+      yPos += 8;
+      
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Program', 'Count']],
+        body: programData.map(d => [d.name, d.value]),
+        theme: 'striped',
+        headStyles: { fillColor: [99, 102, 241] }
+      });
+      
+      yPos = doc.lastAutoTable.finalY + 15;
+      
+      // Year Level Distribution
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      doc.setFontSize(14);
+      doc.text("Year Level Distribution", 14, yPos);
+      yPos += 8;
+      
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Year Level', 'Count']],
+        body: yearData.map(d => [d.name, d.value]),
+        theme: 'striped',
+        headStyles: { fillColor: [99, 102, 241] }
+      });
+      
+      yPos = doc.lastAutoTable.finalY + 15;
+      
+      // Faculty Coverage
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      doc.setFontSize(14);
+      doc.text("Faculty Coverage", 14, yPos);
+      yPos += 8;
+      
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Status', 'Count']],
+        body: facultyData.map(d => [d.name, d.value]),
+        theme: 'striped',
+        headStyles: { fillColor: [99, 102, 241] }
+      });
+      
+      yPos = doc.lastAutoTable.finalY + 15;
+      
+      // Capacity Alerts
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      doc.setFontSize(14);
+      doc.text("Capacity Alerts (≥50 Students)", 14, yPos);
+      yPos += 8;
+      
+      const capacityAlertsBody = alerts.nearingCapacity.length > 0 
+        ? alerts.nearingCapacity.map(a => [a.identifier, `${a.count} / 55`])
+        : [['No sections nearing capacity', '']];
+        
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Section Identifier', 'Current Enrolled']],
+        body: capacityAlertsBody,
+        theme: 'striped',
+        headStyles: { fillColor: [245, 158, 11] }
+      });
+      
+      yPos = doc.lastAutoTable.finalY + 15;
+      
+      // Empty Sections
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      doc.setFontSize(14);
+      doc.text("Empty Sections", 14, yPos);
+      yPos += 8;
+      
+      const emptyAlertsBody = alerts.empty.length > 0
+        ? alerts.empty.map(a => [a.identifier, 'Requires Students'])
+        : [['All sections have students', '']];
+        
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Section Identifier', 'Status']],
+        body: emptyAlertsBody,
+        theme: 'striped',
+        headStyles: { fillColor: [239, 68, 68] }
+      });
+      
+      doc.save(`scheduling-analytics-report-${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success("PDF report generated successfully!", { id: "pdf-export" });
+    } catch (error) {
+      console.error(error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to generate PDF.";
+      toast.error(errorMessage, { id: "pdf-export" });
+    }
   };
 
   return (
@@ -77,11 +215,17 @@ export default function SchedulingAnalyticsPage() {
           </p>
         </div>
         <button className="export-btn" onClick={handleExport}>
-          <FiDownload /> Export Data
+          <FiDownload /> Export to PDF
         </button>
       </div>
 
-      <div className="metrics-grid">
+      <div id="analytics-report-content" className="analytics-report-content">
+        <div className="pdf-only-header">
+          <h2>Scheduling Analytics Report</h2>
+          <p>Generated on {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()}</p>
+        </div>
+
+        <div className="metrics-grid">
         <div className="metric-card">
           <div className="metric-icon"><FiLayers /></div>
           <div className="metric-content">
@@ -207,6 +351,7 @@ export default function SchedulingAnalyticsPage() {
             ))}
             {alerts.empty.length === 0 && <p className="empty-msg">All sections have students.</p>}
           </div>
+        </div>
         </div>
       </div>
     </div>
